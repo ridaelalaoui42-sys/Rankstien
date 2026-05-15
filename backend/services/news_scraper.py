@@ -13,6 +13,18 @@ import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger("rankstein.news")
+_SESSION = None
+
+def _get_session():
+    """Get or create a requests.Session with connection pooling."""
+    global _SESSION
+    if _SESSION is None:
+        from requests.adapters import HTTPAdapter
+        _SESSION = requests.Session()
+        adapter = HTTPAdapter(pool_connections=5, pool_maxsize=10)
+        _SESSION.mount("http://", adapter)
+        _SESSION.mount("https://", adapter)
+    return _SESSION
 
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 _SKIP_DOMAINS = {
@@ -102,7 +114,7 @@ def _ddg_lite_search(keyword, count):
     try:
         q = urllib.parse.quote(f"{keyword} receta")
         url = f"https://lite.duckduckgo.com/lite/?q={q}"
-        resp = requests.get(url, headers={"User-Agent": _UA}, timeout=15)
+        resp = _get_session().get(url, headers={"User-Agent": _UA}, timeout=15)
         soup = BeautifulSoup(resp.text, "html.parser")
         items = []
         # DDG Lite uses tables with <a> tags in specific cells
@@ -159,7 +171,7 @@ def _google_news_rss(keyword, lang, country, count):
 
         encoded = urllib.parse.quote(keyword)
         url = f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl={country}&ceid={country}:{lang}"
-        resp = requests.get(url, headers={"User-Agent": _UA}, timeout=15)
+        resp = _get_session().get(url, headers={"User-Agent": _UA}, timeout=15)
         resp.raise_for_status()
         root = ET.fromstring(resp.content)
         items = []
@@ -204,7 +216,7 @@ def extract_article(url: str) -> dict:
         return {"success": False, "error": "Invalid or empty URL", "url": url}
 
     try:
-        resp = requests.get(
+        resp = _get_session().get(
             url,
             headers={
                 "User-Agent": _UA,

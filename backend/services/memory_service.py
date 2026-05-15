@@ -25,6 +25,13 @@ class MemoryService:
         self.project = project
         self.cwd = cwd or str(Path(__file__).resolve().parents[2])
         self.timeout = timeout
+        
+        # Initialize pooled session
+        from requests.adapters import HTTPAdapter
+        self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=5, pool_maxsize=10)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -36,7 +43,7 @@ class MemoryService:
         return f"{self.base_url}/agentmemory/{path.lstrip('/')}"
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        resp = requests.post(self._url(path), json=payload, headers=self._headers(), timeout=self.timeout)
+        resp = self.session.post(self._url(path), json=payload, headers=self._headers(), timeout=self.timeout)
         if resp.status_code not in {200, 201}:
             raise RuntimeError(f"AgentMemory {path} returned {resp.status_code}: {resp.text[:300]}")
         return resp.json() if resp.content else {}
@@ -44,7 +51,7 @@ class MemoryService:
     def health(self) -> dict[str, Any]:
         """Return AgentMemory health information, or a structured error."""
         try:
-            resp = requests.get(self._url("health"), headers=self._headers(), timeout=self.timeout)
+            resp = self.session.get(self._url("health"), headers=self._headers(), timeout=self.timeout)
             body = resp.json() if resp.content else {}
             body.setdefault("ok", resp.status_code == 200)
             body.setdefault("status_code", resp.status_code)
@@ -111,7 +118,7 @@ class MemoryService:
         """Create a Knowledge Graph relationship between two memories."""
         payload = {"source": source_id, "target": target_id, "relation": relation}
         try:
-            resp = requests.post(
+            resp = self.session.post(
                 self._url("relate"), json=payload, headers=self._headers(), timeout=self.timeout
             )
             return resp.status_code == 200

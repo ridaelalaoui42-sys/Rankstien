@@ -9,9 +9,12 @@ import json
 import logging
 import os
 import re
+import requests
 import sys
 import unicodedata
 from pathlib import Path
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("TurboArticles")
@@ -169,8 +172,29 @@ def _build_article_payload(keyword: str, cluster: str, domain: Domain, hero_url:
     }
 
 
+_SESSION = None
+
+def _get_session():
+    global _SESSION
+    if _SESSION is None:
+        _SESSION = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(
+            pool_connections=10,
+            pool_maxsize=10,
+            max_retries=retry_strategy
+        )
+        _SESSION.mount("http://", adapter)
+        _SESSION.mount("https://", adapter)
+    return _SESSION
+
+
 def _update_domain_pin_id(domain: Domain, slug: str, pin_id: str) -> dict:
-    import requests
+    session = _get_session()
 
     key = domain.supabase_service_role_key.get_secret_value()
     if not key:
@@ -183,7 +207,7 @@ def _update_domain_pin_id(domain: Domain, slug: str, pin_id: str) -> dict:
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
     }
-    resp = requests.patch(
+    resp = session.patch(
         f"{domain.supabase_url}/rest/v1/posts?slug=eq.{slug}",
         headers=headers,
         json={"pinterest_pin_id": str(pin_id)},

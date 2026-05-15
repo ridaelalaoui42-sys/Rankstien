@@ -51,6 +51,25 @@ from mcp.server.fastmcp import FastMCP
 
 from backend.services.memory_service import memory
 
+# Global session for Supabase pooling
+_SUPABASE_SESSION = None
+
+
+def get_supabase_session():
+    """Get or create a requests.Session with connection pooling."""
+    global _SUPABASE_SESSION
+    if _SUPABASE_SESSION is None:
+        from requests.adapters import HTTPAdapter
+
+        session = requests.Session()
+        # pool_connections=10 because we might have many domains
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        _SUPABASE_SESSION = session
+    return _SUPABASE_SESSION
+
+
 # Domain registry — resolves a Domain by handle (or default).
 from rankstein.domain import get_registry
 
@@ -1415,7 +1434,8 @@ def create_hero_image_pollinations(
             f"create_hero_image_pollinations: requesting {width}x{height} "
             f"model={model} enhance={enhance} prompt={clean_prompt[:80]}..."
         )
-        resp = requests.get(url, params=params, timeout=timeout_seconds, allow_redirects=True)
+        session = get_supabase_session()
+        resp = session.get(url, params=params, timeout=timeout_seconds, allow_redirects=True)
         resp.raise_for_status()
         data = resp.content
 
@@ -2726,7 +2746,8 @@ def update_pinterest_pin_id(slug: str, pin_id: str) -> dict:
             "Content-Type": "application/json",
             "Prefer": "return=representation",
         }
-        resp = requests.patch(
+        session = get_supabase_session()
+        resp = session.patch(
             f"{SUPABASE_URL}/rest/v1/posts?slug=eq.{slug}",
             headers=headers,
             json={"pinterest_pin_id": pin_id},
@@ -2761,7 +2782,8 @@ def upload_image_to_supabase(local_path: str, storage_path: str, domain_handle: 
         content_type = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
         target_url = f"{url}/storage/v1/object/{BUCKET}/{storage_path}"
         with open(local_path, "rb") as f:
-            resp = requests.post(
+            session = get_supabase_session()
+            resp = session.post(
                 target_url,
                 headers={
                     "Authorization": f"Bearer {key}",
@@ -2890,7 +2912,8 @@ def publish_article_to_supabase(
         if category:
             try:
                 # Try to find category by name in the categories table
-                cat_resp = requests.get(
+                session = get_supabase_session()
+                cat_resp = session.get(
                     f"{url}/rest/v1/categories?name=eq.{category}",
                     headers={"apikey": key, "Authorization": f"Bearer {key}"},
                 )
@@ -2908,13 +2931,14 @@ def publish_article_to_supabase(
 
         base = f"{url}/rest/v1/posts"
         # Check existence using minimal selection
-        check = requests.get(f"{base}?slug=eq.{slug}&select=slug", headers=headers)
+        session = get_supabase_session()
+        check = session.get(f"{base}?slug=eq.{slug}&select=slug", headers=headers)
 
         if check.status_code == 200 and check.json():
-            resp = requests.patch(f"{base}?slug=eq.{slug}", headers=headers, json=payload)
+            resp = session.patch(f"{base}?slug=eq.{slug}", headers=headers, json=payload)
             action = "updated"
         else:
-            resp = requests.post(base, headers=headers, json=payload)
+            resp = session.post(base, headers=headers, json=payload)
             action = "created"
 
         if resp.status_code in [200, 201, 204]:
@@ -2950,9 +2974,9 @@ def publish_article_to_supabase(
                 "Retrying publish without unsupported column %s for domain=%s", missing, domain.handle
             )
             if action == "updated":
-                resp = requests.patch(f"{base}?slug=eq.{slug}", headers=headers, json=payload)
+                resp = session.patch(f"{base}?slug=eq.{slug}", headers=headers, json=payload)
             else:
-                resp = requests.post(base, headers=headers, json=payload)
+                resp = session.post(base, headers=headers, json=payload)
             if resp.status_code in [200, 201, 204]:
                 result = {
                     "success": True,
@@ -3000,7 +3024,8 @@ def check_supabase_connection(domain_handle: str = "") -> dict:
     if not key:
         return {"connected": False, "error": f"Supabase key not set for domain {domain.handle}"}
     try:
-        resp = requests.get(
+        session = get_supabase_session()
+        resp = session.get(
             f"{url}/rest/v1/posts?select=count",
             headers={
                 "apikey": key,
@@ -3037,7 +3062,8 @@ def get_article_data_from_supabase_by_slug(slug: str, domain_handle: str = "") -
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         }
-        resp = requests.get(
+        session = get_supabase_session()
+        resp = session.get(
             f"{url}/rest/v1/posts?slug=eq.{slug}&select=title,hero_image",
             headers=headers,
             timeout=10,
@@ -3100,7 +3126,8 @@ def health_check(domain_handle: str = "") -> dict:
 
     # 4. Supabase connectivity
     try:
-        resp = requests.get(
+        session = get_supabase_session()
+        resp = session.get(
             f"{domain.supabase_url}/rest/v1/posts?select=count",
             headers={
                 "apikey": key,

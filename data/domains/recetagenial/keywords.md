@@ -23,10 +23,10 @@
 | tarta bautizo | Postres | Pinterest Trends + Google News | Receta Genial | Low | Failed |
 | recetas con calabacin | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Needs Verification |
 | Descubre la Receta Perfecta | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
-| aperitivos que se hacen en | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| El Secreto para Aperitivos de Calidad Gourmet | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| Ideas de aperitivos para fiestas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| Tapas Españolas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
+| aperitivos que se hacen en | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| El Secreto para Aperitivos de Calidad Gourmet | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| Ideas de aperitivos para fiestas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| Tapas Españolas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | In Progress |
 | Ideas de aperitivos para fiestas pin page | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | Aperitivos Fáciles con Masa de Hojaldre para Antojos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | Ensalada de Burrata y Tomate Asado al Horno | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Pending |

@@ -33,6 +33,6 @@
 | Pastel Alemán de Chocolate | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Needs Verification |
 | Pastel Esponjoso de Frutas Secas y Nueces | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Needs Verification |
 | Recetas que realmente funcionan | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Failed |
-| Recetas del Día pin page | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | In Progress |
-| Mint Chocolate Dream Dessert pin page | Chocolates | Pinterest Trends + Google News | Receta Dolce | Low | In Progress |
-| Mint Chocolate Dream Dessert | Chocolates | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
+| Recetas del Día pin page | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Failed |
+| Mint Chocolate Dream Dessert pin page | Chocolates | Pinterest Trends + Google News | Receta Dolce | Low | Needs Verification |
+| Mint Chocolate Dream Dessert | Chocolates | Pinterest Trends + Google News | Receta Dolce | Low | In Progress |
