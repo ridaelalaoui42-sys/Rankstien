@@ -1,0 +1,46 @@
+{
+  "name": "recetasdolce",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "browserslist": [
+    "Chrome >= 105",
+    "Firefox >= 104",
+    "Safari >= 16",
+    "Edge >= 105"
+  ],
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.104.1",
+    "@types/js-cookie": "^3.0.6",
+    "@types/sanitize-html": "^2.16.1",
+    "cloudinary": "^2.10.0",
+    "dotenv": "^17.4.2",
+    "js-cookie": "^3.0.5",
+    "lucide-react": "^1.11.0",
+    "marked": "^18.0.2",
+    "next": "16.2.6",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-icons": "^5.6.0",
+    "sanitize-html": "^2.17.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.21.0",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}

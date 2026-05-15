@@ -1,0 +1,324 @@
+{
+  "seed": "cocina casera",
+  "timestamp": 148988.4083446,
+  "total_found": 20,
+  "data": [
+    {
+      "pin_id": "2533343538892614",
+      "url": "https://es.pinterest.com/pin/2533343538892614/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Mortadela casera hecha con ingredientes naturales, receta fácil y saludable.",
+      "extracted_keywords": [
+        "receta",
+        "hecha",
+        "mortadela",
+        "casera",
+        "contains",
+        "fácil",
+        "saludable",
+        "ingredientes",
+        "naturales"
+      ]
+    },
+    {
+      "pin_id": "4574037117329773",
+      "url": "https://es.pinterest.com/pin/4574037117329773/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a bowl of soup with bacon and tomatoes",
+      "extracted_keywords": [
+        "contain",
+        "bacon",
+        "tomatoes"
+      ]
+    },
+    {
+      "pin_id": "757378862384063418",
+      "url": "https://es.pinterest.com/pin/757378862384063418/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a skillet filled with pasta and chicken on top of a white stovetop next to bread",
+      "extracted_keywords": [
+        "stovetop",
+        "skillet",
+        "contain",
+        "filled",
+        "bread",
+        "white",
+        "chicken",
+        "pasta"
+      ]
+    },
+    {
+      "pin_id": "422281206163180",
+      "url": "https://es.pinterest.com/pin/422281206163180/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: the pizza is sliced and ready to be eaten",
+      "extracted_keywords": [
+        "eaten",
+        "contain",
+        "ready",
+        "pizza",
+        "sliced"
+      ]
+    },
+    {
+      "pin_id": "107945722314979359",
+      "url": "https://es.pinterest.com/pin/107945722314979359/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: the recipe for crepes casseroles is shown in three different pictures",
+      "extracted_keywords": [
+        "pictures",
+        "casseroles",
+        "contain",
+        "three",
+        "recipe",
+        "crepes",
+        "shown",
+        "different"
+      ]
+    },
+    {
+      "pin_id": "2674081024306373",
+      "url": "https://es.pinterest.com/pin/2674081024306373/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a bowl of tomato sauce next to a sign that reads italiano sala de tomate receta",
+      "extracted_keywords": [
+        "reads",
+        "tomato",
+        "sauce",
+        "italiano",
+        "tomate",
+        "contain",
+        "receta"
+      ]
+    },
+    {
+      "pin_id": "20195898325015713",
+      "url": "https://es.pinterest.com/pin/20195898325015713/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Cómo hacer huevos con tomate",
+      "extracted_keywords": [
+        "hacer",
+        "contains",
+        "tomate",
+        "huevos"
+      ]
+    },
+    {
+      "pin_id": "68749920608",
+      "url": "https://es.pinterest.com/pin/68749920608/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: the menu for an italian restaurant with chicken and cheeses in a wooden bowl on a table",
+      "extracted_keywords": [
+        "wooden",
+        "contain",
+        "italian",
+        "restaurant",
+        "cheeses",
+        "chicken",
+        "table"
+      ]
+    },
+    {
+      "pin_id": "3166662230059162",
+      "url": "https://es.pinterest.com/pin/3166662230059162/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: several slices of pizza sitting on top of a wooden cutting board with cheese and other toppings",
+      "extracted_keywords": [
+        "sitting",
+        "wooden",
+        "other",
+        "cheese",
+        "board",
+        "contain",
+        "cutting",
+        "pizza",
+        "toppings",
+        "slices",
+        "several"
+      ]
+    },
+    {
+      "pin_id": "17521886047318594",
+      "url": "https://es.pinterest.com/pin/17521886047318594/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Cómo hacer baguette casera fácil con pocos ingredientes y un resultado crujiente.",
+      "extracted_keywords": [
+        "ingredientes",
+        "casera",
+        "contains",
+        "crujiente",
+        "resultado",
+        "fácil",
+        "pocos",
+        "hacer",
+        "baguette"
+      ]
+    },
+    {
+      "pin_id": "4433299630206007",
+      "url": "https://es.pinterest.com/pin/4433299630206007/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: some meat and potatoes are cooking in a skillet with the words written on it",
+      "extracted_keywords": [
+        "written",
+        "cooking",
+        "skillet",
+        "contain",
+        "words",
+        "potatoes"
+      ]
+    },
+    {
+      "pin_id": "9359111718757048",
+      "url": "https://es.pinterest.com/pin/9359111718757048/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a bowl of soup with meat, potatoes and tomatoes on a table next to a glass of water",
+      "extracted_keywords": [
+        "water",
+        "tomatoes",
+        "contain",
+        "glass",
+        "potatoes",
+        "table"
+      ]
+    },
+    {
+      "pin_id": "5488830793008382",
+      "url": "https://es.pinterest.com/pin/5488830793008382/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: an omelet with cheese and meat in a black pan on a white counter",
+      "extracted_keywords": [
+        "black",
+        "cheese",
+        "counter",
+        "contain",
+        "white",
+        "omelet"
+      ]
+    },
+    {
+      "pin_id": "1055599902597969",
+      "url": "https://es.pinterest.com/pin/1055599902597969/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: the recipe for salsa is shown in a red pan",
+      "extracted_keywords": [
+        "contain",
+        "recipe",
+        "shown",
+        "salsa"
+      ]
+    },
+    {
+      "pin_id": "2040762321417542",
+      "url": "https://es.pinterest.com/pin/2040762321417542/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: hamburgers and french fries with the title 10 tips para hamburgergas caseras perfectas y jugosas",
+      "extracted_keywords": [
+        "hamburgers",
+        "hamburgergas",
+        "caseras",
+        "contain",
+        "perfectas",
+        "title",
+        "french",
+        "fries",
+        "jugosas"
+      ]
+    },
+    {
+      "pin_id": "1970393577724386",
+      "url": "https://es.pinterest.com/pin/1970393577724386/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a pizza sitting on top of a metal pan covered in cheese and toppings with green peppers",
+      "extracted_keywords": [
+        "green",
+        "sitting",
+        "peppers",
+        "cheese",
+        "covered",
+        "contain",
+        "pizza",
+        "toppings",
+        "metal"
+      ]
+    },
+    {
+      "pin_id": "70437490603106",
+      "url": "https://es.pinterest.com/pin/70437490603106/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains an image of: Cómo hacer focaccia casera fácil y rápida • [Receta tradicional italiana]",
+      "extracted_keywords": [
+        "receta",
+        "focaccia",
+        "italiana",
+        "casera",
+        "contains",
+        "image",
+        "fácil",
+        "tradicional",
+        "hacer",
+        "rápida"
+      ]
+    },
+    {
+      "pin_id": "52002570688802643",
+      "url": "https://es.pinterest.com/pin/52002570688802643/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there is a pizza with different toppings on it",
+      "extracted_keywords": [
+        "there",
+        "different",
+        "contain",
+        "pizza",
+        "toppings"
+      ]
+    },
+    {
+      "pin_id": "15410823721622163",
+      "url": "https://es.pinterest.com/pin/15410823721622163/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: some food is on a wooden plate with utensils and a knife next to it",
+      "extracted_keywords": [
+        "wooden",
+        "plate",
+        "contain",
+        "utensils",
+        "knife"
+      ]
+    },
+    {
+      "pin_id": "3799980930952163",
+      "url": "https://es.pinterest.com/pin/3799980930952163/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Receta de Fiambre casero de pollo paso a paso en La cocina de Lila",
+      "extracted_keywords": [
+        "pollo",
+        "fiambre",
+        "casero",
+        "contains",
+        "cocina",
+        "receta"
+      ]
+    }
+  ]
+}

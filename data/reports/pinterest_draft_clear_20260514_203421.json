@@ -1,0 +1,29 @@
+{
+  "run_id": "20260514_203421",
+  "started_at": "2026-05-14T20:34:21.511209+00:00",
+  "accounts": [
+    {
+      "account": "rida",
+      "session": "pinterest_rida_v7",
+      "browser": "firefox",
+      "started_at": "2026-05-14T20:34:21.511226+00:00",
+      "drafts_before": 50,
+      "delete_mode": "bulk",
+      "drafts_after": 0,
+      "deleted": 50,
+      "success": true,
+      "finished_at": "2026-05-14T20:35:04.727393+00:00"
+    },
+    {
+      "account": "media",
+      "session": "turbo_m1",
+      "browser": "chromium",
+      "started_at": "2026-05-14T20:35:04.727417+00:00",
+      "drafts_before": 0,
+      "success": true,
+      "deleted": 0,
+      "finished_at": "2026-05-14T20:35:26.190124+00:00"
+    }
+  ],
+  "finished_at": "2026-05-14T20:35:26.190184+00:00"
+}

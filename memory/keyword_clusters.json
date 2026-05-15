@@ -1,0 +1,179 @@
+{
+  "clusters": {
+    "postres-sin-horno": {
+      "pillar": "/categoria/postres",
+      "label": "Postres Sin Horno",
+      "keywords": [
+        "tarta queso sin horno",
+        "flan de chía",
+        "brownie aguacate",
+        "panna cotta coco",
+        "trufas de dátiles",
+        "galletas tahini"
+      ],
+      "articles": [
+        "brownie-de-aguacate-y-cacao-puro",
+        "panna-cotta-de-coco-y-maracuya",
+        "tarta-de-queso-kinder-bueno-sin-horno"
+      ]
+    },
+    "postres-premium": {
+      "pillar": "/categoria/postres",
+      "label": "Postres Premium",
+      "keywords": [
+        "coulant matcha chocolate blanco",
+        "tiramisú limón albahaca",
+        "tarta tatin dulce de leche",
+        "helado proteico skyr",
+        "cheesecake japonés"
+      ],
+      "articles": [
+        "coulant-de-chocolate-blanco-y-matcha",
+        "tiramisu-de-limon-y-albahaca",
+        "tarta-tatin-de-dulce-de-leche",
+        "helado-proteico-de-skyr-y-frutos-rojos",
+        "cheesecake-japones-de-2-ingredientes"
+      ]
+    },
+    "recetas-freidora-aire": {
+      "pillar": "cross-category",
+      "label": "Recetas Freidora de Aire",
+      "keywords": [
+        "patatas bravas airfryer",
+        "dorada a la sal freidora de aire",
+        "alcachofas confitadas freidora",
+        "airfryer recetas"
+      ],
+      "articles": [
+        "patatas-bravas-en-airfryer-con-alioli-negro",
+        "dorada-a-la-sal-en-freidora-de-aire",
+        "alcachofas-confitadas-en-freidora-de-aire"
+      ]
+    },
+    "aperitivos-gourmet": {
+      "pillar": "/categoria/aperitivos",
+      "label": "Aperitivos Gourmet",
+      "keywords": [
+        "hummus edamame",
+        "tartar tomate seco aguacate",
+        "croquetas cecina queso cabra",
+        "tequeños lomo ibérico",
+        "champiñones rellenos sobrasada"
+      ],
+      "articles": [
+        "hummus-de-edamame-con-chips-de-yuca",
+        "tartar-de-tomate-seco-y-aguacate",
+        "patatas-bravas-en-airfryer-con-alioli-negro"
+      ]
+    },
+    "cocina-fusion": {
+      "pillar": "cross-category",
+      "label": "Cocina Fusión",
+      "keywords": [
+        "dumplings kimchi",
+        "dumpling curry rojo",
+        "tacos lechuga atún",
+        "mini steaks col miso"
+      ],
+      "articles": [
+        "dumplings-de-repollo-y-kimchi",
+        "dumpling-easy-bake-curry-rojo",
+        "mini-steaks-de-col-con-salsa-miso"
+      ]
+    },
+    "pescados-premium": {
+      "pillar": "/categoria/pescados",
+      "label": "Pescados Premium",
+      "keywords": [
+        "salmón glaseado naranja soja",
+        "tataki atún rojo sésamo",
+        "ceviche lubina leche tigre",
+        "pulpo brasa parmentier",
+        "bacalao pil-pil ajo negro",
+        "dorada a la sal"
+      ],
+      "articles": []
+    },
+    "carnes-especiales": {
+      "pillar": "/categoria/carnes",
+      "label": "Carnes Especiales",
+      "keywords": [
+        "solomillo wellington mini",
+        "costillas baja temperatura guayaba",
+        "carrilleras ibéricas vino tinto chocolate",
+        "smash burger casera pan brioche",
+        "brochetas cordero marroquíes"
+      ],
+      "articles": []
+    },
+    "ensaladas-modernas": {
+      "pillar": "/categoria/ensaladas",
+      "label": "Ensaladas Modernas",
+      "keywords": [
+        "quinoa granada ensalada",
+        "poke bowl mediterráneo garbanzos",
+        "burrata melocotón asado",
+        "ensalada césar vegana kale",
+        "tabulé coliflor menta",
+        "bowl tofu marinado algas"
+      ],
+      "articles": []
+    },
+    "pasabocas-fiesta": {
+      "pillar": "/categoria/aperitivos",
+      "label": "Pasabocas para Fiestas",
+      "keywords": [
+        "brochetas frutas chocolate",
+        "sándwiches económicos fiestas",
+        "brochetas caprese",
+        "pasabocas guacamole"
+      ],
+      "articles": [
+        "brochetas-de-frutas-con-chocolate"
+      ]
+    }
+  },
+  "internal_linking_rules": {
+    "min_internal_links_per_article": 3,
+    "max_internal_links_per_article": 7,
+    "mandatory_links": [
+      {
+        "type": "category_pillar",
+        "description": "Every article must link to its category page",
+        "pattern": "/categoria/{category_slug}"
+      },
+      {
+        "type": "same_cluster",
+        "description": "Link to 2-3 articles within the same cluster",
+        "count": "2-3"
+      },
+      {
+        "type": "cross_cluster",
+        "description": "Link to 1 article from a related cluster",
+        "count": 1
+      }
+    ],
+    "authority_links": {
+      "frequency": "every 3rd article",
+      "targets": ["/seguridad-alimentaria", "/guia-higiene"]
+    },
+    "anchor_text_rules": {
+      "avoid": ["click here", "aquí", "ver más"],
+      "prefer": "descriptive keyword-rich anchors matching target article title"
+    }
+  },
+  "external_link_policy": {
+    "always_use": {
+      "target": "_blank",
+      "rel": "noopener noreferrer nofollow"
+    },
+    "trusted_domains": [
+      "recetadolce.com",
+      "aesan.gob.es",
+      "efsa.europa.eu",
+      "boe.es",
+      "fao.org"
+    ],
+    "trusted_rel": "noopener noreferrer"
+  }
+}

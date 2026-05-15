@@ -1,0 +1,39 @@
+# gitleaks fingerprint allowlist
+#
+# Format: <commit-sha>:<file>:<rule-id>:<line>
+#
+# Each entry below is intentionally suppressed. Add new entries only when the
+# match is genuinely a false positive OR when a real leak has been rotated AND
+# scrubbing history isn't worth the rewrite cost.
+
+# ── False positives (test fixtures) ────────────────────────────────────────
+# tests/conftest.py monkeypatches a fake env for every unit test to keep real
+# secrets from leaking into test runs. The string "test-secret-min-16-chars-
+# long-padding" is exactly that — a 16+ char dummy chosen to satisfy the
+# rankstein.config validator's min-length rule. Not a real secret.
+261a602739ef128c90049f08ca0f96624a598406:tests/conftest.py:generic-api-key:25
+3c7e36f887f6a20f4173eaf3129d2c2173242670:tests/conftest.py:generic-api-key:24
+
+# ── False positives (Pinterest scrape captures) ───────────────────────────
+# data/*.html files were Pinterest DOM dumps used during selector debugging.
+# They contain Pinterest's own tracking strings (`unauth_id`, `ads_lift_test_
+# me_exp_api_p_1`, etc.) which match the generic-api-key regex but are
+# Pinterest-side telemetry tokens, not credentials of ours. The files are
+# now gitignored and removed from working tree; the historical commit
+# 3c7e36f still contains them so gitleaks re-scans on every run.
+3c7e36f887f6a20f4173eaf3129d2c2173242670:data/full_page_debug.html:generic-api-key:161
+3c7e36f887f6a20f4173eaf3129d2c2173242670:data/drafts_html.html:generic-api-key:161
+3c7e36f887f6a20f4173eaf3129d2c2173242670:data/debug_source.html:generic-api-key:1766
+
+# ── Rotated leaks (kept in history) ───────────────────────────────────────
+# The Supabase service-role JWT below was hardcoded in three backend scripts
+# and shipped to public GitHub in commit 3c7e36f Initialize. ALL THREE
+# OCCURRENCES SHARED THE SAME TOKEN. Rotated in Supabase 2026-05-03; the
+# token visible at fingerprints below is invalid as of that date. HEAD now
+# reads SUPABASE_SERVICE_ROLE_KEY from the environment. Suppressing the
+# historical hits because rewriting public-repo history doesn't unlease
+# already-leaked credentials — only rotation does, and rotation is done.
+261a602739ef128c90049f08ca0f96624a598406:backend/scripts/force_fix_visibility.py:jwt:4
+3c7e36f887f6a20f4173eaf3129d2c2173242670:backend/scripts/force_fix_visibility.py:jwt:5
+3c7e36f887f6a20f4173eaf3129d2c2173242670:backend/scripts/deploy_asset.py:jwt:8
+3c7e36f887f6a20f4173eaf3129d2c2173242670:backend/scripts/deploy_v2.py:jwt:10

@@ -1,0 +1,38 @@
+{
+  "run_id": "media_upload_retry_20260514_114016",
+  "started_at": "2026-05-14T10:40:16.687041+00:00",
+  "log_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\logs\\production_validation_media_upload_retry_20260514_114016.log",
+  "report_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\reports\\production_validation_media_upload_retry_20260514_114016.json",
+  "case": {
+    "case": "media_upload_retry",
+    "type": "pin_upload",
+    "account": "media",
+    "board": "Galetas",
+    "slug": "pollo-teriyaki-miel-cana-autor",
+    "title": "Pollo Teriyaki de Autor con Miel de Caña",
+    "article_url": "https://recetadolce.com/pollo-teriyaki-miel-cana-autor",
+    "article_check": {
+      "ok": true,
+      "status_code": 200,
+      "final_url": "https://recetadolce.com/pollo-teriyaki-miel-cana-autor",
+      "bytes": 193125
+    },
+    "image_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\media\\remaster_final\\remastered_pollo-teriyaki-con-miel-de-cana-hero.jpg",
+    "started_at": "2026-05-14T10:40:19.820079+00:00",
+    "success": true,
+    "pin_id": "1148488342507902335",
+    "pin_url": "https://www.pinterest.com/pin/1148488342507902335/",
+    "pin_check": {
+      "ok": true,
+      "status_code": 200,
+      "final_url": "https://www.pinterest.com/pin/1148488342507902335/",
+      "bytes": 1034928
+    },
+    "supabase_pin_update": {
+      "ok": true
+    },
+    "duration_seconds": 48.8,
+    "finished_at": "2026-05-14T10:41:05.525536+00:00"
+  },
+  "finished_at": "2026-05-14T10:41:05.525549+00:00"
+}

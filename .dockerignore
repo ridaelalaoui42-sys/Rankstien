@@ -1,0 +1,80 @@
+# ── Secrets — NEVER ship into image ───────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# ── VCS ───────────────────────────────────────────────────────────────
+.git
+.gitignore
+.github
+.gitattributes
+
+# ── Python build / cache ──────────────────────────────────────────────
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+dist
+build
+
+# ── Local virtualenvs (Dockerfile installs its own) ───────────────────
+venv
+.venv
+
+# ── IDE / OS noise ────────────────────────────────────────────────────
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+
+# ── Frontend node_modules — never copy 100k+ files ────────────────────
+frontend/node_modules
+frontend/.next
+frontend/out
+
+# ── Local data: debug PNGs, sessions, logs, queue, sqlite, media ──────
+data/debug_*.png
+data/pre_publish_*.png
+data/sessions/
+data/logs/
+data/queue/
+data/media/
+data/healing_cache/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.sqlite
+
+# ── Generated images / scratch output ─────────────────────────────────
+nanobanana-output
+frontend.zip
+
+# ── Documentation in plan/audit form ──────────────────────────────────
+.planning
+plans
+memory
+MEMORY.md
+STATUS.md
+BACKEND_BLUEPRINT.md
+gemini_rankstein_prompt.md
+*.md
+
+# ── Archived / one-off / duplicate trees ──────────────────────────────
+archive
+scripts/oneoff
+Pinterest_Growth_Agent_core_repo
+Pinterest_Growth_Agent_core_tmp
+
+# ── Tests don't need to be in production image ────────────────────────
+tests
+.pre-commit-config.yaml
+
+# ── Already-built CLI harness / unrelated scratch ─────────────────────
+cli-harness

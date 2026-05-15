@@ -1,0 +1,606 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand-fresa: #A4133C;
+  --color-brand-fresa-light: #FF85A1;
+  --color-brand-fresa-deep: #590D22;
+  --color-brand-red: #800F2F;
+  --color-cream-base: #FFF8F0;
+  --color-cream-soft: #FBF2E9;
+  --color-cream-dark: #F3E5D8;
+  --color-cream-accent: #FFF1E6;
+  --color-gold-accent: #D4AF37;
+  --color-gold-light: #FAF3E0;
+  --color-ink: #2C2C2C;
+  
+  --letter-spacing-tightest: -0.05em;
+  
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Outfit", sans-serif;
+  --font-script: var(--font-great-vibes), cursive;
+  
+  --animate-fade-up: fade-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-grain: grain 8s steps(10) infinite;
+  --animate-draw: draw 1.5s ease-out forwards;
+  --animate-pulse-gold: pulse-gold 3s ease-in-out infinite;
+  --animate-bounce-small: bounce-small 0.5s ease-in-out;
+  --animate-zoom-in: zoom-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fade-in 0.3s ease-out forwards;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(30px); filter: blur(10px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes zoom-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  @keyframes draw {
+    from { stroke-dashoffset: 1000; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+    50% { box-shadow: 0 0 20px 10px rgba(212, 175, 55, 0); }
+  }
+  @keyframes bounce-small {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -10%); }
+    20% { transform: translate(-15%, 5%); }
+    30% { transform: translate(7%, -25%); }
+    40% { transform: translate(-5%, 25%); }
+    50% { transform: translate(-15%, 10%); }
+    60% { transform: translate(15%, 0%); }
+    70% { transform: translate(0%, 15%); }
+    80% { transform: translate(3%, 35%); }
+    90% { transform: translate(-10%, 10%); }
+  }
+}
+
+
+:root {
+  --background: #FFFBF5;
+  --foreground: #1A1A1A;
+  --selection-bg: rgba(255, 77, 109, 0.2);
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--color-brand-fresa-deep);
+}
+
+body {
+  background: var(--color-cream-base);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+.great-vibes-regular {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Noise Grain Texture Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9999;
+  animation: var(--animate-grain);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+  }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+/* Premium Utilities */
+.glass-fresa {
+  background: rgba(255, 251, 245, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 77, 109, 0.1);
+}
+
+.text-editorial {
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.5rem;
+  color: var(--color-brand-fresa-deep);
+}
+
+.text-fresa-gradient {
+  background: linear-gradient(135deg, var(--color-brand-fresa) 0%, var(--color-brand-red) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-cream-ripple {
+  background-color: var(--color-cream-base);
+  background-image: 
+    radial-gradient(circle at 20% 30%, var(--color-cream-accent) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, var(--color-cream-dark) 0%, transparent 50%);
+  background-size: 100% 200%;
+  animation: ripple-move 20s ease-in-out infinite alternate;
+}
+
+@keyframes ripple-move {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
+.card-shadow {
+  box-shadow: 0 20px 40px -15px rgba(164, 19, 60, 0.06);
+}
+
+.card-shadow-hover:hover {
+  box-shadow: 0 30px 60px -15px rgba(164, 19, 60, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Perspective utility for 3D hover effects */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.hover-fresa-line {
+  position: relative;
+  display: inline-block;
+}
+
+.hover-fresa-line::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1.5px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--color-brand-fresa);
+  transform-origin: bottom right;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-fresa-line:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Decorative Accents */
+.fresa-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-brand-fresa);
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 0.5rem;
+  box-shadow: 0 0 10px var(--color-brand-fresa-light);
+}
+
+.strawberry-decoration {
+  mask-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 22C17.5228 22 21 17 21 12C21 7 17.5228 2 12 2C6.47715 2 3 7 3 12C3 17 6.47715 22 12 22Z' fill='black'/%3E%3Cpath d='M12 2L10 5H14L12 2Z' fill='white'/%3E%3C/svg%3E");
+  background-color: var(--color-brand-fresa);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #EEDDDA;
+  border-radius: 20px;
+  border: 2px solid var(--color-cream-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-fresa-light);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED ARTICLE DESIGN SYSTEM — .prose-editorial
+   All CMS/markdown content renders through this single class.
+   Consistent typography, spacing, and visual rhythm for every article.
+   ═══════════════════════════════════════════════════════════════ */
+
+.prose-editorial {
+  font-family: var(--font-sans);
+  line-height: 1.75;
+  color: #2D2D2D;
+  font-size: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 768px) {
+  .prose-editorial {
+    font-size: 1.0625rem; /* 17px — optimal reading size */
+    line-height: 1.8;
+  }
+}
+
+/* — Links — */
+.prose-editorial a, .editorial-link {
+  color: var(--color-brand-fresa) !important;
+  font-weight: 700 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(164, 19, 60, 0.4) !important;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  cursor: pointer !important;
+  display: inline;
+}
+
+.prose-editorial a:hover, .editorial-link:hover {
+  color: var(--color-brand-fresa-deep) !important;
+  text-decoration-color: var(--color-brand-fresa) !important;
+  transform: translateY(-1px);
+}
+
+/* — Paragraphs — */
+.prose-editorial p {
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .prose-editorial p {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* — Heading Hierarchy (unified sizing) —
+   h2: Major section dividers (e.g. "Ingredientes", "Preparación")
+   h3: Subsections within a section
+   h4: Labels, callout titles
+*/
+.prose-editorial h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-cream-dark);
+}
+
+@media (min-width: 768px) {
+  .prose-editorial h2 {
+    font-size: 1.875rem; /* 30px */
+    margin-top: 3rem;
+    margin-bottom: 1.25rem;
+  }
+}
+
+.prose-editorial h3 {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .prose-editorial h3 {
+    font-size: 1.5rem; /* 24px */
+  }
+}
+
+.prose-editorial h4 {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-brand-fresa-deep);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* — Blockquotes — */
+.prose-editorial blockquote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  border-left: 3px solid var(--color-brand-fresa);
+  padding: 1rem 0 1rem 1.5rem;
+  margin: 2rem 0;
+  color: var(--color-brand-fresa-deep);
+  background: linear-gradient(to right, rgba(164, 19, 60, 0.04), transparent);
+}
+
+@media (min-width: 768px) {
+  .prose-editorial blockquote {
+    font-size: 1.375rem;
+    padding: 1.5rem 0 1.5rem 2.5rem;
+    margin: 2.5rem 0;
+  }
+}
+
+/* — Lists — */
+.prose-editorial ul,
+.prose-editorial ol {
+  margin: 1.25rem 0;
+  padding-left: 0;
+}
+
+.prose-editorial ul {
+  list-style: none;
+}
+
+.prose-editorial ul li {
+  position: relative;
+  padding-left: 1.75rem;
+  margin-bottom: 0.625rem;
+}
+
+.prose-editorial ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-brand-fresa);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.prose-editorial ol {
+  list-style: none;
+  counter-reset: editorial-counter;
+}
+
+.prose-editorial ol li {
+  position: relative;
+  padding-left: 2.25rem;
+  margin-bottom: 0.75rem;
+  counter-increment: editorial-counter;
+}
+
+.prose-editorial ol li::before {
+  content: counter(editorial-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--color-brand-fresa);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* — Images — */
+.prose-editorial img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 1rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .prose-editorial img {
+    border-radius: 1.5rem;
+    margin: 2rem 0;
+  }
+}
+
+/* — Horizontal Rules — */
+.prose-editorial hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-cream-dark),
+    var(--color-brand-fresa-light),
+    var(--color-cream-dark),
+    transparent
+  );
+  margin: 2.5rem 0;
+}
+
+/* — Strong / Bold — */
+.prose-editorial strong {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+/* — Code — */
+.prose-editorial code {
+  font-size: 0.875em;
+  background: var(--color-cream-soft);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.prose-editorial pre {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.prose-editorial pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* — Tables — */
+.prose-editorial table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9375rem;
+}
+
+.prose-editorial th {
+  background: var(--color-cream-soft);
+  font-weight: 700;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--color-cream-dark);
+}
+
+.prose-editorial td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-cream-dark);
+}
+
+/* — Recipe CTA Button — */
+.recipe-btn-container {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.recipe-cta-btn {
+  display: inline-block !important;
+  background-color: var(--color-brand-fresa) !important;
+  color: white !important;
+  padding: 14px 32px !important;
+  border-radius: 99px !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-size: 0.8rem !important;
+  box-shadow: 0 10px 20px -5px rgba(164, 19, 60, 0.3) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  border: none !important;
+}
+
+.recipe-cta-btn:hover {
+  background-color: var(--color-brand-red) !important;
+  transform: translateY(-4px) scale(1.05) !important;
+  box-shadow: 0 15px 30px -5px rgba(164, 19, 60, 0.4) !important;
+}
+
+/* — Pull Quote — */
+.pull-quote {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-style: italic;
+  padding: 1.5rem 1rem;
+  border-top: 1px solid var(--color-cream-dark);
+  border-bottom: 1px solid var(--color-cream-dark);
+  margin: 2rem 0;
+  color: var(--color-brand-red);
+  text-align: center;
+  line-height: 1.3;
+}
+
+@media (min-width: 768px) {
+  .pull-quote {
+    font-size: 2.25rem;
+    padding: 4rem 0;
+    margin: 6rem 0;
+  }
+}
+
+/* — Brand Bullets — */
+.strawberry-bullet {
+  list-style: none;
+  position: relative;
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.strawberry-bullet::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 10px;
+  height: 12px;
+  background-color: var(--color-brand-fresa);
+  clip-path: polygon(50% 0%, 100% 35%, 85% 100%, 15% 100%, 0% 35%);
+  border-radius: 2px;
+  transform: rotate(-10deg);
+}
+
+/* — Image Hover Effects — */
+.img-editorial {
+  position: relative;
+  overflow: hidden;
+}
+
+.img-editorial::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(164, 19, 60, 0.05));
+  pointer-events: none;
+}
+

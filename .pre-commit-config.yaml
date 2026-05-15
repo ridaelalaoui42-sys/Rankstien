@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.3
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: |
+          (?x)^(
+            archive/.*|
+            scripts/oneoff/.*|
+            frontend/node_modules/.*|
+            data/.*|
+            \.venv/.*|
+            venv/.*
+          )$
+
+  - repo: local
+    hooks:
+      - id: workspace-hygiene
+        name: Enforce no-root-scratch + scripts/debug/ timestamp convention
+        entry: python scripts/dev/check_no_root_scratch.py
+        language: system
+        pass_filenames: true
+        # Match: any scratch-named .py at any depth, plus everything in
+        # scripts/debug/. The script itself sorts root vs debug-subdir
+        # cases and applies the right rule.
+        files: '^((temp_|test_|fix_|patch_|debug_).*\.py|scripts/debug/.*)$'

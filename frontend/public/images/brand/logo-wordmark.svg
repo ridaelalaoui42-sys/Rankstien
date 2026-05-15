@@ -1,0 +1,20 @@
+<svg width="920" height="260" viewBox="0 0 920 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">RecetaDolce wordmark</title>
+  <desc id="desc">RecetaDolce wordmark with strawberry pastry mark.</desc>
+  <rect width="920" height="260" rx="32" fill="#FFF8F2"/>
+  <g transform="translate(40 30) scale(.39)">
+    <rect width="512" height="512" rx="256" fill="#FFF8F2"/>
+    <circle cx="256" cy="256" r="232" fill="#FFF8F2" stroke="#8D102A" stroke-width="10"/>
+    <circle cx="256" cy="256" r="202" fill="#F6E7DA" stroke="#D9B99B" stroke-width="2"/>
+    <path d="M261 151C294 121 347 128 365 170C389 226 330 319 258 379C184 319 124 226 148 170C166 129 219 121 252 151L257 156L261 151Z" fill="#9F1431"/>
+    <path d="M256 133C260 102 284 83 315 80C315 111 292 136 261 141L256 133Z" fill="#5D7F38"/>
+    <path d="M251 132C236 105 207 93 178 104C191 133 222 147 251 138V132Z" fill="#779A45"/>
+    <path d="M257 139C250 116 253 93 266 70C286 93 288 121 263 146L257 139Z" fill="#6D8E42"/>
+    <path d="M229 198C209 217 197 249 200 281C203 319 224 344 256 344C289 344 310 319 313 281C316 249 304 217 284 198" stroke="#FFF8F2" stroke-width="17" stroke-linecap="round"/>
+    <path d="M227 202C248 186 267 186 287 202" stroke="#D9B99B" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <text x="270" y="122" fill="#26131A" font-family="Georgia, 'Times New Roman', serif" font-size="70" letter-spacing="-3">Receta</text>
+  <text x="505" y="122" fill="#8D102A" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-style="italic" letter-spacing="-4">Dolce</text>
+  <path d="M274 152H678" stroke="#D9B99B" stroke-width="3" stroke-linecap="round"/>
+  <text x="272" y="195" fill="#6F5A48" font-family="Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="8">COCINA REAL · SABOR EDITORIAL</text>
+</svg>

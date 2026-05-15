@@ -1,0 +1,29 @@
+{
+  "run_id": "20260514_093216",
+  "started_at": "2026-05-14T09:32:16.637003+00:00",
+  "accounts": [
+    {
+      "account": "rida",
+      "session": "pinterest_rida_v7",
+      "browser": "firefox",
+      "started_at": "2026-05-14T09:32:16.637013+00:00",
+      "drafts_before": 50,
+      "success": false,
+      "error": "Draft delete button not found after selecting drafts",
+      "screenshot": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\draft_clear_failed_rida_20260514_093216.png",
+      "finished_at": "2026-05-14T09:32:42.734370+00:00"
+    },
+    {
+      "account": "media",
+      "session": "turbo_m1",
+      "browser": "chromium",
+      "started_at": "2026-05-14T09:32:42.734393+00:00",
+      "drafts_before": 50,
+      "success": false,
+      "error": "Draft delete button not found after selecting drafts",
+      "screenshot": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\draft_clear_failed_media_20260514_093216.png",
+      "finished_at": "2026-05-14T09:33:07.983736+00:00"
+    }
+  ],
+  "finished_at": "2026-05-14T09:33:07.983752+00:00"
+}

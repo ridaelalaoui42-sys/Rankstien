@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Project specific
+.env
+.claude/
+.gemini/
+.ruff_cache/
+.playwright-mcp/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Data and logs (Recursive)
+**/data/logs/
+**/data/sessions/
+**/data/queue/
+**/data/healing_cache/
+**/data/media/
+**/data/remaster_final/
+**/data/state_store.db/
+*.log
+
+# State files
+data/circuit_state.json
+data/health_state.json
+circuit_state.json
+health_state.json
+
+# Large artifacts or temp files
+*.zip
+*.rar
+*.mp4
+*.mp3
+*.jpg
+*.jpeg
+*.png
+*.webp
+latest_article.json
+temp_article*.json
+article_*.json
+
+# Ignore session files specifically if not caught by directory ignore
+*.bin
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.jsonlz4
+*.marker
+*.final
+session-state.json
+prefs.js

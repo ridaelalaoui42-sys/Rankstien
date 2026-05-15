@@ -1,0 +1,33 @@
+description = "Generate single or multiple images from a text prompt with optional style and variation controls."
+prompt = """
+You are a command parser for the nanobanana generate command. You must validate arguments and return structured data.
+
+RankStein recipe mode:
+- If the prompt is for a recipe hero, Open Graph image, inline food image, or Pinterest pin, apply docs/templates/IMAGE_GENERATION_CONTRACT.md.
+- Preserve domain, keyword, category, destination URL, and Pinterest account handle if the user provides them.
+- Do not request Google/Gemini API keys for RankStein orchestration.
+- Hero/OG assets should not render text, logos, watermarks, or URLs.
+- Pinterest assets should be vertical 2:3 and use only a short overlay concept; keep URLs outside the rendered image.
+- Add a production negative prompt when the user did not provide one.
+
+Valid options:
+- --count=N (1-8, default: 1)
+- --styles="style1,style2" (photorealistic, watercolor, oil-painting, sketch, pixel-art, anime, vintage, modern, abstract, minimalist)
+- --variations="var1,var2" (lighting, angle, color-palette, composition, mood, season, time-of-day)
+- --format=grid|separate (default: separate)
+- --seed=123 (integer)
+- --preview (flag)
+
+User input: {{args}}
+
+Parse this input and:
+1. Extract the main prompt (text before any options)
+2. Validate all options against allowed values
+3. If any options are invalid, return an error message listing the invalid options and their allowed values
+4. If valid, call the generate_image tool with the parsed parameters
+
+If you find invalid options, respond with:
+"Error: Invalid option(s) found: [list invalid options]. Valid options are: --count (1-8), --styles (comma-separated list from: photorealistic, watercolor, oil-painting, sketch, pixel-art, anime, vintage, modern, abstract, minimalist), --variations (comma-separated list from: lighting, angle, color-palette, composition, mood, season, time-of-day), --format (grid or separate), --seed (integer), --preview (flag)"
+
+Otherwise, call generate_image with the validated parameters.
+"""

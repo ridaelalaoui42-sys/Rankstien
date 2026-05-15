@@ -1,0 +1,192 @@
+{
+  "seed": "recetas saludables virales 2026",
+  "timestamp": 33378.3527833,
+  "total_found": 12,
+  "data": [
+    {
+      "pin_id": "3729612269442052",
+      "url": "https://es.pinterest.com/pin/3729612269442052/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "",
+      "extracted_keywords": []
+    },
+    {
+      "pin_id": "474989091967339382",
+      "url": "https://es.pinterest.com/pin/474989091967339382/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a person holding up a piece of pizza with tomatoes on it",
+      "extracted_keywords": [
+        "holding",
+        "piece",
+        "person",
+        "contain",
+        "tomatoes",
+        "pizza"
+      ]
+    },
+    {
+      "pin_id": "1970393583816929",
+      "url": "https://es.pinterest.com/pin/1970393583816929/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a person is cooking vegetables in a skillet on the stove with an orange peel",
+      "extracted_keywords": [
+        "skillet",
+        "orange",
+        "person",
+        "contain",
+        "stove",
+        "cooking",
+        "vegetables"
+      ]
+    },
+    {
+      "pin_id": "844002786454569047",
+      "url": "https://es.pinterest.com/pin/844002786454569047/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Healthy Buffalo Chicken Cucumber Rolls 🥒",
+      "extracted_keywords": [
+        "chicken",
+        "healthy",
+        "cucumber",
+        "rolls",
+        "buffalo",
+        "contains"
+      ]
+    },
+    {
+      "pin_id": "9570217953834538",
+      "url": "https://es.pinterest.com/pin/9570217953834538/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "an image of different types of salads in bowls on a white tablecloth with the words, ensaladas salidables facibles facies",
+      "extracted_keywords": [
+        "words",
+        "types",
+        "different",
+        "ensaladas",
+        "salads",
+        "bowls",
+        "white",
+        "facies",
+        "facibles",
+        "image",
+        "salidables",
+        "tablecloth"
+      ]
+    },
+    {
+      "pin_id": "6473993212293393",
+      "url": "https://es.pinterest.com/pin/6473993212293393/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: an omelet with mushrooms and spinach on a black plate",
+      "extracted_keywords": [
+        "plate",
+        "spinach",
+        "mushrooms",
+        "contain",
+        "omelet",
+        "black"
+      ]
+    },
+    {
+      "pin_id": "4503668373814941",
+      "url": "https://es.pinterest.com/pin/4503668373814941/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: an egg in a skillet with tomatoes on the side",
+      "extracted_keywords": [
+        "contain",
+        "tomatoes",
+        "skillet"
+      ]
+    },
+    {
+      "pin_id": "769763761342672262",
+      "url": "https://es.pinterest.com/pin/769763761342672262/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "a salad in a glass bowl with two forks",
+      "extracted_keywords": [
+        "forks",
+        "glass",
+        "salad"
+      ]
+    },
+    {
+      "pin_id": "73465037667469311",
+      "url": "https://es.pinterest.com/pin/73465037667469311/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "four different bowls filled with fruit and yogurt, including kiwis, bananas, strawberries, blueberries, raspberries",
+      "extracted_keywords": [
+        "including",
+        "strawberries",
+        "yogurt",
+        "raspberries",
+        "fruit",
+        "different",
+        "kiwis",
+        "bowls",
+        "filled",
+        "blueberries",
+        "bananas"
+      ]
+    },
+    {
+      "pin_id": "590182726205810755",
+      "url": "https://es.pinterest.com/pin/590182726205810755/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Vegan burrito filled with beans, veggies, and avocado - a delicious and healthy meal option.",
+      "extracted_keywords": [
+        "option",
+        "avocado",
+        "beans",
+        "delicious",
+        "burrito",
+        "healthy",
+        "filled",
+        "vegan",
+        "veggies",
+        "contains"
+      ]
+    },
+    {
+      "pin_id": "4574037118454182",
+      "url": "https://es.pinterest.com/pin/4574037118454182/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: two quesadillas on a plate with corn and meat in the fillings",
+      "extracted_keywords": [
+        "contain",
+        "plate",
+        "quesadillas",
+        "fillings"
+      ]
+    },
+    {
+      "pin_id": "1618549865105993",
+      "url": "https://es.pinterest.com/pin/1618549865105993/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "six plates with different types of salads and meats on them, including eggs, tomatoes, cucumbers, lettuce, avocado",
+      "extracted_keywords": [
+        "cucumbers",
+        "including",
+        "avocado",
+        "plates",
+        "different",
+        "types",
+        "tomatoes",
+        "salads",
+        "meats",
+        "lettuce"
+      ]
+    }
+  ]
+}

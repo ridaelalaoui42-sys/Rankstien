@@ -1,0 +1,37 @@
+{
+  "runtime": "gemini_cli_subscription",
+  "updated": "2026-05-13",
+  "policy": "RankStein uses Gemini CLI subscription/OAuth. Prefer auto so Gemini CLI can choose the best available Gemini 3/3.1 route. Do not use Google/Gemini API keys for RankStein orchestration.",
+  "models": [
+    {
+      "name": "auto",
+      "displayName": "Gemini CLI Auto",
+      "description": "Preferred production setting. Lets Gemini CLI route through the authenticated subscription account.",
+      "recommended": true
+    },
+    {
+      "name": "gemini-3.1-pro-preview",
+      "displayName": "Gemini 3.1 Pro Preview",
+      "description": "High-reasoning fallback for complex agentic planning and repair.",
+      "recommended": true
+    },
+    {
+      "name": "gemini-3.1-flash",
+      "displayName": "Gemini 3.1 Flash",
+      "description": "Fast Gemini 3.1 variant for routine structured generation when available through CLI.",
+      "recommended": true
+    },
+    {
+      "name": "gemini-3-pro-image-preview",
+      "displayName": "Gemini 3 Pro Image Preview",
+      "description": "Image-focused model for NanoBanana/Nano Banana Pro workflows when available.",
+      "recommended": false
+    },
+    {
+      "name": "gemini-3.1-flash-image-preview",
+      "displayName": "Gemini 3.1 Flash Image Preview",
+      "description": "Default Nano Banana 2 image model for fast recipe visual generation.",
+      "recommended": true
+    }
+  ]
+}

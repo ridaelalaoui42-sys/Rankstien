@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">RecetaDolce mark</title>
+  <desc id="desc">A refined strawberry and pastry monogram mark for RecetaDolce.</desc>
+  <rect width="512" height="512" rx="256" fill="#FFF8F2"/>
+  <circle cx="256" cy="256" r="232" fill="#FFF8F2" stroke="#8D102A" stroke-width="10"/>
+  <circle cx="256" cy="256" r="202" fill="#F6E7DA" stroke="#D9B99B" stroke-width="2"/>
+  <path d="M261 151C294 121 347 128 365 170C389 226 330 319 258 379C184 319 124 226 148 170C166 129 219 121 252 151L257 156L261 151Z" fill="#9F1431"/>
+  <path d="M258 379C208 338 163 280 150 229C177 267 216 287 258 287C300 287 339 267 366 229C352 280 308 338 258 379Z" fill="#7D0D25" opacity=".32"/>
+  <path d="M256 133C260 102 284 83 315 80C315 111 292 136 261 141L256 133Z" fill="#5D7F38"/>
+  <path d="M251 132C236 105 207 93 178 104C191 133 222 147 251 138V132Z" fill="#779A45"/>
+  <path d="M257 139C250 116 253 93 266 70C286 93 288 121 263 146L257 139Z" fill="#6D8E42"/>
+  <path d="M229 198C209 217 197 249 200 281C203 319 224 344 256 344C289 344 310 319 313 281C316 249 304 217 284 198" stroke="#FFF8F2" stroke-width="17" stroke-linecap="round"/>
+  <path d="M227 202C248 186 267 186 287 202" stroke="#D9B99B" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="217" cy="213" r="7" fill="#F6D8A8"/>
+  <circle cx="296" cy="213" r="7" fill="#F6D8A8"/>
+  <circle cx="236" cy="246" r="7" fill="#F6D8A8"/>
+  <circle cx="278" cy="246" r="7" fill="#F6D8A8"/>
+  <circle cx="218" cy="285" r="7" fill="#F6D8A8"/>
+  <circle cx="298" cy="285" r="7" fill="#F6D8A8"/>
+  <path d="M151 389C190 410 219 421 256 421C293 421 322 410 361 389" stroke="#8D102A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M180 405C215 428 296 428 332 405" stroke="#D9B99B" stroke-width="4" stroke-linecap="round"/>
+</svg>

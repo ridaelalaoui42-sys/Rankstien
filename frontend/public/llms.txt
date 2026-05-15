@@ -1,0 +1,26 @@
+# RecetaDolce
+
+RecetaDolce is a professional culinary platform specializing in authentic Spanish recipes, editorial-grade food photography, and expert cooking techniques.
+
+## Core Values
+- **Authenticity**: Traditional recipes with a modern professional touch.
+- **Precision**: Detailed measurements and step-by-step instructions.
+- **Excellence**: High-quality content curated by professional chefs.
+
+## Key Sections
+- **Recipes**: Categorized by Aperitivos, Arroces, Carnes, Pescados, Ensaladas, and Postres.
+- **Techniques**: Professional cooking tips integrated into every recipe.
+- **Community**: Real user reviews and ratings.
+
+## Technical Stack
+- **Framework**: Next.js (App Router)
+- **Styling**: TailwindCSS with premium custom editorial design.
+- **Database**: Supabase
+- **Content**: Markdown-based articles with rich schema markup for SEO.
+
+## URL Structure
+- Home: /
+- Recipes: /[slug]
+- Categories: /categoria/[slug]
+- Contact: /contact
+- Sitemap: /sitemap.xml

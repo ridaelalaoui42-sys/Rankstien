@@ -1,0 +1,326 @@
+{
+  "seed": "alta pastelería",
+  "timestamp": 148511.0152519,
+  "total_found": 19,
+  "data": [
+    {
+      "pin_id": "23643966789447863",
+      "url": "https://es.pinterest.com/pin/23643966789447863/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many desserts on the table with strawberries in the bowl behind them",
+      "extracted_keywords": [
+        "desserts",
+        "strawberries",
+        "there",
+        "contain",
+        "table",
+        "behind"
+      ]
+    },
+    {
+      "pin_id": "5981412002113104",
+      "url": "https://es.pinterest.com/pin/5981412002113104/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: many different types of desserts are shown in this collage, including cakes and pies",
+      "extracted_keywords": [
+        "including",
+        "collage",
+        "desserts",
+        "types",
+        "different",
+        "contain",
+        "cakes",
+        "shown"
+      ]
+    },
+    {
+      "pin_id": "3870349673858586",
+      "url": "https://es.pinterest.com/pin/3870349673858586/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four desserts are arranged in the shape of boats",
+      "extracted_keywords": [
+        "boats",
+        "desserts",
+        "contain",
+        "arranged",
+        "shape"
+      ]
+    },
+    {
+      "pin_id": "27795722695756334",
+      "url": "https://es.pinterest.com/pin/27795722695756334/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many cakes with different toppings on the table",
+      "extracted_keywords": [
+        "toppings",
+        "cakes",
+        "there",
+        "contain",
+        "different",
+        "table"
+      ]
+    },
+    {
+      "pin_id": "5770305759895837",
+      "url": "https://es.pinterest.com/pin/5770305759895837/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: the dessert is topped with whipped cream and raspberries on it's top",
+      "extracted_keywords": [
+        "cream",
+        "topped",
+        "dessert",
+        "raspberries",
+        "contain",
+        "whipped"
+      ]
+    },
+    {
+      "pin_id": "1040331582699043720",
+      "url": "https://es.pinterest.com/pin/1040331582699043720/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a woman holding a piece of cake on a plate",
+      "extracted_keywords": [
+        "plate",
+        "holding",
+        "piece",
+        "contain",
+        "woman"
+      ]
+    },
+    {
+      "pin_id": "656258976996481142",
+      "url": "https://es.pinterest.com/pin/656258976996481142/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a piece of cake that is on top of a wooden platter with information about it",
+      "extracted_keywords": [
+        "about",
+        "information",
+        "piece",
+        "contain",
+        "platter",
+        "wooden"
+      ]
+    },
+    {
+      "pin_id": "40673202876012711",
+      "url": "https://es.pinterest.com/pin/40673202876012711/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Maravillas de la Reposteria Presenta 2 - Alta Reposteria con Chocolate - Formato Digital - ToukanMango",
+      "extracted_keywords": [
+        "reposteria",
+        "maravillas",
+        "contains",
+        "toukanmango",
+        "chocolate",
+        "presenta",
+        "formato",
+        "digital"
+      ]
+    },
+    {
+      "pin_id": "346003183880758671",
+      "url": "https://es.pinterest.com/pin/346003183880758671/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains:  Maravillas de la Reposteria Presenta 3 - Alta repostería con chocolate - Formato Digital - ToukanMango",
+      "extracted_keywords": [
+        "repostería",
+        "reposteria",
+        "maravillas",
+        "contains",
+        "toukanmango",
+        "chocolate",
+        "presenta",
+        "formato",
+        "digital"
+      ]
+    },
+    {
+      "pin_id": "1095219203151782916",
+      "url": "https://es.pinterest.com/pin/1095219203151782916/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: ¿Te apasiona la repostería pero tus postres no quedan como los de una bakery profesional? ✨ Descubre las técnicas maestras que transformarán tu cocina en una verdadera pastelería de autor.\n\nEn este curso de cocina online, te revelamos los secretos que no están en YouTube:\nDominio de texturas: desde la miga perfecta hasta el horneado ideal.\nTécnicas de decoración estética para postres de vitrina.\nManejo de costos e ingredientes para emprender con éxito.",
+      "extracted_keywords": [
+        "online",
+        "revelamos",
+        "estética",
+        "bakery",
+        "pastelería",
+        "están",
+        "perfecta",
+        "éxito",
+        "apasiona",
+        "decoración",
+        "youtube",
+        "maestras",
+        "verdadera",
+        "profesional",
+        "postres",
+        "texturas",
+        "dominio",
+        "ingredientes",
+        "horneado",
+        "quedan",
+        "ideal",
+        "cocina",
+        "técnicas",
+        "desde",
+        "hasta",
+        "secretos",
+        "repostería",
+        "emprender",
+        "autor",
+        "contains",
+        "vitrina",
+        "transformarán",
+        "manejo",
+        "costos",
+        "curso",
+        "descubre"
+      ]
+    },
+    {
+      "pin_id": "3448137210550959",
+      "url": "https://es.pinterest.com/pin/3448137210550959/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many small cakes on the table",
+      "extracted_keywords": [
+        "cakes",
+        "there",
+        "contain",
+        "table",
+        "small"
+      ]
+    },
+    {
+      "pin_id": "42010209018190227",
+      "url": "https://es.pinterest.com/pin/42010209018190227/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many different types of cakes on the shelf",
+      "extracted_keywords": [
+        "cakes",
+        "types",
+        "there",
+        "contain",
+        "different",
+        "shelf"
+      ]
+    },
+    {
+      "pin_id": "905012487600114113",
+      "url": "https://es.pinterest.com/pin/905012487600114113/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: two pieces of bread with cheese and black dots on them, one piece is cut in half",
+      "extracted_keywords": [
+        "cheese",
+        "black",
+        "bread",
+        "pieces",
+        "contain",
+        "piece"
+      ]
+    },
+    {
+      "pin_id": "1133288693717168424",
+      "url": "https://es.pinterest.com/pin/1133288693717168424/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a display case filled with lots of different types of cakes",
+      "extracted_keywords": [
+        "display",
+        "cakes",
+        "types",
+        "different",
+        "contain",
+        "filled"
+      ]
+    },
+    {
+      "pin_id": "408701734952775201",
+      "url": "https://es.pinterest.com/pin/408701734952775201/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: two cheesecakes with blueberries and lemon slices",
+      "extracted_keywords": [
+        "lemon",
+        "blueberries",
+        "contain",
+        "slices",
+        "cheesecakes"
+      ]
+    },
+    {
+      "pin_id": "6685099442373223",
+      "url": "https://es.pinterest.com/pin/6685099442373223/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four small yellow cakes sitting on top of gold plated trays with condiments",
+      "extracted_keywords": [
+        "trays",
+        "sitting",
+        "cakes",
+        "condiments",
+        "contain",
+        "yellow",
+        "plated",
+        "small"
+      ]
+    },
+    {
+      "pin_id": "55169164191622137",
+      "url": "https://es.pinterest.com/pin/55169164191622137/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there is a piece of cake on the plate",
+      "extracted_keywords": [
+        "piece",
+        "there",
+        "contain",
+        "plate"
+      ]
+    },
+    {
+      "pin_id": "3448137210640961",
+      "url": "https://es.pinterest.com/pin/3448137210640961/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many different types of cakes on the table with name tags in front of them",
+      "extracted_keywords": [
+        "front",
+        "cakes",
+        "types",
+        "there",
+        "contain",
+        "different",
+        "table"
+      ]
+    },
+    {
+      "pin_id": "89086898872461585",
+      "url": "https://es.pinterest.com/pin/89086898872461585/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four cookies with white frosting and yellow toppings",
+      "extracted_keywords": [
+        "toppings",
+        "contain",
+        "yellow",
+        "frosting",
+        "cookies",
+        "white"
+      ]
+    }
+  ]
+}

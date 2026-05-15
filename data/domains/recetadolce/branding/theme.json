@@ -1,0 +1,9 @@
+{
+  "primary": "#C67B3C",
+  "accent": "#7A8B5C",
+  "neutral_bg": "#FAFAF8",
+  "neutral_fg": "#1a1a1a",
+  "font_heading": "Georgia",
+  "font_body": "Arial",
+  "logo_path": "logo.png"
+}

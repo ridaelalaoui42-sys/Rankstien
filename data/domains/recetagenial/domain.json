@@ -1,0 +1,22 @@
+{
+  "handle": "recetagenial",
+  "domain": "recetagenial.com",
+  "display_name": "Receta Genial",
+  "language": "es",
+  "niche": "Recetas españolas tradicionales y saludables",
+  "vertical": "food",
+  "categories": [
+    "Aperitivos",
+    "Postres",
+    "Carnes",
+    "Pescados",
+    "Ensaladas"
+  ],
+  "supabase_url": "https://hokcljsrrnjxzgdhjice.supabase.co",
+  "supabase_key_env": "RECETAGENIAL_SUPABASE_KEY",
+  "branding_dir": "branding",
+  "keywords_file": "keywords.md",
+  "sessions_dir": "data/sessions",
+  "output_dir": "nanobanana-output",
+  "schema_version": 2
+}

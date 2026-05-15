@@ -1,0 +1,246 @@
+[project]
+name = "rankstein"
+version = "0.1.0"
+description = "Autonomous AI SEO content engine for recetadolce.com"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = [
+    "archive",
+    "scripts/oneoff",
+    "scratch",                      # transient debug helpers
+    "frontend/node_modules",
+    "frontend/.graphify_temp_corpus",
+    "frontend/graphify-out",
+    "frontend/output",
+    "frontend/nanobanana-output",
+    "frontend/scripts",
+    "frontend/*.py",
+    "Pinterest_Growth_Agent_core_repo",
+    "Pinterest_Growth_Agent_core_tmp",
+    "data",
+    "venv",
+    ".venv",
+    "rankstein/condescending-bohr-4d2c28",
+
+    # Root-level operational/debug scripts are local runbooks, not CI-owned
+    # package code. Keep real application code under rankstein/, backend/,
+    # pinterest_automation/, scripts/dev/, and tests/ linted.
+    "audit_*.py",
+    "check_*.py",
+    "cloudinary_upload.py",
+    "build_*.py",
+    "create_and_publish_article.py",
+    "create_article_*.py",
+    "debug_*.py",
+    "dedup_jobs.py",
+    "dump_*.py",
+    "enqueue_pin.py",
+    "expand_article.py",
+    "fetch_*.py",
+    "find_*.py",
+    "fix_*.py",
+    "force_publish.py",
+    "generate_pin.py",
+    "init_storage.py",
+    "list_all_slugs.py",
+    "isolate_*.py",
+    "log_*.py",
+    "manual_*.py",
+    "minify_*.py",
+    "orchestrate_*.py",
+    "prep_and_fix.py",
+    "publish_*.py",
+    "recover_social.py",
+    "remaster_backlog.py",
+    "rebrand_script.py",
+    "reset_jobs.py",
+    "revert_to_*.py",
+    "setup_*.py",
+    "show_*.py",
+    "switch_to_*.py",
+    "target_*.py",
+    "temp_upload.py",
+    "test_*.py",
+    "upload_*.py",
+    "rankstein_mcp_server_v2.py",
+    "scripts/debug",
+    "scripts/adsense_audit.py",
+    "scripts/adsense_repair.py",
+    "social_siphon_orchestrator.py",
+
+    # Legacy backend one-offs kept for manual operations.
+    "backend/scripts/dual_turbo.py",
+    "backend/scripts/fix_post.py",
+    "backend/scripts/turbo_articles.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",   # pycodestyle + pyflakes
+    "I",             # isort
+    "B",             # bugbear
+    "UP",            # pyupgrade
+    "S",             # bandit (security)
+    "ASYNC",         # async correctness
+    "RUF",           # ruff-specific
+]
+ignore = [
+    "E501",   # line too long (formatter handles)
+    "S101",   # assert (allowed in tests)
+    "S603",   # subprocess without shell=True (intentional)
+    "S607",   # partial executable path (we use system tools)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106", "S108"]   # assert + hardcoded passwords + tmp paths (test fixtures)
+"scripts/**/*.py" = ["S", "E402", "B007", "E722"]    # one-off scripts can be loose
+"publish_single.py" = ["E722"]                       # legacy single-file publisher
+"remaster_backlog.py" = ["ASYNC230"]                  # legacy root-level helper
+
+# Root-level operational helpers — short SQL-tooling scripts that touch
+# data/, queue, sessions. Same loose-rules treatment as scripts/.
+"check_*.py" = ["S", "E402", "B007", "E722", "F841", "W291", "W293"]
+"dedup_jobs.py" = ["S", "B007", "E722", "F841"]
+"prep_and_fix.py" = ["S", "B007", "E722", "S112"]
+"recover_social.py" = ["S", "E722", "S112", "W291", "RUF001"]
+"rescue_dlq.py" = ["S", "B007", "E722"]
+"reset_jobs.py" = ["S", "E722"]
+"fix_env.py" = ["S", "E722"]
+"test_browser_launch.py" = ["S", "E722"]
+"identify_accounts.py" = ["S", "E402", "E722"]
+"import_articles_to_keywords.py" = ["S", "E402", "E722", "W293"]
+"process_backlog_batch.py" = ["S", "E402", "E722"]
+"sync_backlog_supabase.py" = ["S", "E402", "F401", "E722"]
+"sync_keywords_supabase.py" = ["S", "E402", "F401", "E722"]
+"update_env_accounts.py" = ["S", "E402", "F401", "E722"]
+"force_publish.py" = ["S", "S113", "E722"]
+"generate_pin.py" = ["S", "E722"]
+"enqueue_pin.py" = ["S", "E722"]
+"test_layout_stress.py" = ["S", "F841", "E722"]
+"test_remaster_v4.py" = ["S", "E722", "F841"]
+
+# Pre-existing automation/agent code uses sync APIs inside async functions
+# (subprocess, requests, pathlib, file I/O), bare excepts, random for jitter,
+# and inline imports after .env load. Migrating to anyio/trio + strict
+# exception handling is a separate workstream — silenced here so CI is
+# meaningful for NEW code (rankstein/, tests/, anything added during the
+# multi-domain refactor).
+_PREEXISTING_IGNORES = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"pinterest_automation/**/*.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"backend/**/*.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B025", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"rankstein_mcp_server.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"run_autonomous.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"check_sessions_identities.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+]
+"cli-harness/**/*.py" = [
+    "ASYNC109", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC230", "ASYNC240",
+    "S104", "S108", "S110", "S112", "S113", "S311", "S314", "S602", "S603", "S607", "S608",
+    "B007", "B904", "E402", "E722", "E741",
+    "F841",
+    "RUF001", "RUF002", "RUF005", "RUF006", "RUF010", "RUF013", "RUF059",
+    "W291", "W293",
+    "I001",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+ignore_missing_imports = true
+exclude = [
+    "archive/",
+    "scripts/oneoff/",
+    "frontend/",
+    "Pinterest_Growth_Agent_core_.*",
+    "data/",
+    "venv/",
+    ".venv/",
+]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+markers = [
+    "unit: fast, no I/O, no network",
+    "integration: hits real Supabase / filesystem; slower",
+    "e2e: full pipeline; may hit Pinterest; off by default",
+]
+
+[tool.coverage.run]
+source = ["pinterest_automation", "backend"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "archive/*",
+    "scripts/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

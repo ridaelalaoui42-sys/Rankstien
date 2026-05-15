@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "account": "media",
+      "started_at": "2026-05-14T09:58:07.032478+00:00",
+      "logged_in": true,
+      "success": false,
+      "error": "Page.goto: Timeout 60000ms exceeded.\nCall log:\n  - navigating to \"https://www.pinterest.com/pin-creation-tool/\", waiting until \"commit\"\n",
+      "finished_at": "2026-05-14T09:59:45.424214+00:00"
+    },
+    {
+      "account": "rida",
+      "started_at": "2026-05-14T09:59:45.425735+00:00",
+      "logged_in": true,
+      "before": 2,
+      "selected_click": true,
+      "delete_button_count": 1,
+      "delete_click": true,
+      "confirm_click": true,
+      "after": null,
+      "success": true,
+      "finished_at": "2026-05-14T10:00:40.750212+00:00"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "run_id": "20260514_094538",
+  "started_at": "2026-05-14T09:45:38.155169+00:00",
+  "accounts": [
+    {
+      "account": "media",
+      "session": "turbo_m1",
+      "browser": "chromium",
+      "started_at": "2026-05-14T09:45:38.155180+00:00",
+      "drafts_before": 50,
+      "success": false,
+      "error": "Page.reload: Timeout 90000ms exceeded.\nCall log:\n  - waiting for navigation until \"domcontentloaded\"\n",
+      "finished_at": "2026-05-14T09:48:23.580519+00:00"
+    }
+  ],
+  "finished_at": "2026-05-14T09:48:23.580549+00:00"
+}

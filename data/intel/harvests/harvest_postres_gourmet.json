@@ -1,0 +1,323 @@
+{
+  "seed": "postres gourmet",
+  "timestamp": 148608.8473584,
+  "total_found": 20,
+  "data": [
+    {
+      "pin_id": "42010209018190227",
+      "url": "https://es.pinterest.com/pin/42010209018190227/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many different types of cakes on the shelf",
+      "extracted_keywords": [
+        "there",
+        "shelf",
+        "different",
+        "types",
+        "cakes",
+        "contain"
+      ]
+    },
+    {
+      "pin_id": "351912464697535",
+      "url": "https://es.pinterest.com/pin/351912464697535/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: chocolate dessert in a bowl on a white plate with gold foiled decorations around it",
+      "extracted_keywords": [
+        "plate",
+        "around",
+        "chocolate",
+        "decorations",
+        "contain",
+        "foiled",
+        "dessert",
+        "white"
+      ]
+    },
+    {
+      "pin_id": "18436679720184523",
+      "url": "https://es.pinterest.com/pin/18436679720184523/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains an image of: Tarta de Queso Selva Negra",
+      "extracted_keywords": [
+        "image",
+        "tarta",
+        "contains",
+        "negra",
+        "selva",
+        "queso"
+      ]
+    },
+    {
+      "pin_id": "4855512088186395",
+      "url": "https://es.pinterest.com/pin/4855512088186395/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a person is cutting into a dessert on a pink plate with a knife and fork",
+      "extracted_keywords": [
+        "person",
+        "plate",
+        "knife",
+        "contain",
+        "dessert",
+        "cutting"
+      ]
+    },
+    {
+      "pin_id": "7881368093994857",
+      "url": "https://es.pinterest.com/pin/7881368093994857/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a chocolate cake on a white plate with the words marquese above it that says chocolate negro & nueces",
+      "extracted_keywords": [
+        "marquese",
+        "negro",
+        "plate",
+        "above",
+        "words",
+        "contain",
+        "nueces",
+        "chocolate",
+        "white"
+      ]
+    },
+    {
+      "pin_id": "9288742976877873",
+      "url": "https://es.pinterest.com/pin/9288742976877873/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a dessert in a glass on top of a black table with a sign that says mousse de maraacuya",
+      "extracted_keywords": [
+        "glass",
+        "maraacuya",
+        "black",
+        "mousse",
+        "table",
+        "contain",
+        "dessert"
+      ]
+    },
+    {
+      "pin_id": "10062799163469770",
+      "url": "https://es.pinterest.com/pin/10062799163469770/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This contains: Mousse de arándanos, un postre cremoso y fresco, perfecto para un toque dulce en cualquier ocasión.",
+      "extracted_keywords": [
+        "ocasión",
+        "arándanos",
+        "dulce",
+        "postre",
+        "cremoso",
+        "perfecto",
+        "fresco",
+        "contains",
+        "mousse",
+        "cualquier",
+        "toque"
+      ]
+    },
+    {
+      "pin_id": "23643966789447863",
+      "url": "https://es.pinterest.com/pin/23643966789447863/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there are many desserts on the table with strawberries in the bowl behind them",
+      "extracted_keywords": [
+        "there",
+        "behind",
+        "desserts",
+        "strawberries",
+        "table",
+        "contain"
+      ]
+    },
+    {
+      "pin_id": "3870349674482678",
+      "url": "https://es.pinterest.com/pin/3870349674482678/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four small desserts with raspberries and flowers on a plate",
+      "extracted_keywords": [
+        "small",
+        "raspberries",
+        "desserts",
+        "flowers",
+        "plate",
+        "contain"
+      ]
+    },
+    {
+      "pin_id": "333477547432743291",
+      "url": "https://es.pinterest.com/pin/333477547432743291/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: two desserts on a plate topped with whipped cream and orange zest toppings",
+      "extracted_keywords": [
+        "desserts",
+        "whipped",
+        "cream",
+        "plate",
+        "topped",
+        "orange",
+        "contain",
+        "toppings"
+      ]
+    },
+    {
+      "pin_id": "2181499817008260",
+      "url": "https://es.pinterest.com/pin/2181499817008260/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four desserts are arranged on a table with raspberries",
+      "extracted_keywords": [
+        "arranged",
+        "raspberries",
+        "desserts",
+        "table",
+        "contain"
+      ]
+    },
+    {
+      "pin_id": "7248049396705108",
+      "url": "https://es.pinterest.com/pin/7248049396705108/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there is a lemon pie on the plate",
+      "extracted_keywords": [
+        "contain",
+        "plate",
+        "there",
+        "lemon"
+      ]
+    },
+    {
+      "pin_id": "140806234991557",
+      "url": "https://es.pinterest.com/pin/140806234991557/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: mini tartass de queso japoneas in spanish on a black plate",
+      "extracted_keywords": [
+        "tartass",
+        "japoneas",
+        "plate",
+        "black",
+        "contain",
+        "spanish",
+        "queso"
+      ]
+    },
+    {
+      "pin_id": "1196337405435585",
+      "url": "https://es.pinterest.com/pin/1196337405435585/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: there is a piece of cake with coconut on it",
+      "extracted_keywords": [
+        "contain",
+        "coconut",
+        "piece",
+        "there"
+      ]
+    },
+    {
+      "pin_id": "4011087181602809",
+      "url": "https://es.pinterest.com/pin/4011087181602809/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: four small yellow cakes with white frosting and fruit toppings on gold plated serving platters",
+      "extracted_keywords": [
+        "frosting",
+        "small",
+        "plated",
+        "serving",
+        "cakes",
+        "platters",
+        "contain",
+        "yellow",
+        "toppings",
+        "fruit",
+        "white"
+      ]
+    },
+    {
+      "pin_id": "372321094214754335",
+      "url": "https://es.pinterest.com/pin/372321094214754335/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: some desserts are sitting on a cutting board with mint sprigs in the middle",
+      "extracted_keywords": [
+        "sitting",
+        "middle",
+        "desserts",
+        "sprigs",
+        "contain",
+        "board",
+        "cutting"
+      ]
+    },
+    {
+      "pin_id": "5559199533646461",
+      "url": "https://es.pinterest.com/pin/5559199533646461/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: two cakes with chocolate frosting and nuts on top are sitting on a white plate",
+      "extracted_keywords": [
+        "frosting",
+        "sitting",
+        "cakes",
+        "plate",
+        "contain",
+        "chocolate",
+        "white"
+      ]
+    },
+    {
+      "pin_id": "140806234035390",
+      "url": "https://es.pinterest.com/pin/140806234035390/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: a cake with purple frosting and berries on it",
+      "extracted_keywords": [
+        "contain",
+        "frosting",
+        "purple",
+        "berries"
+      ]
+    },
+    {
+      "pin_id": "5136987071108152",
+      "url": "https://es.pinterest.com/pin/5136987071108152/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: chocolate cake with raspberries and cream on top",
+      "extracted_keywords": [
+        "contain",
+        "cream",
+        "raspberries",
+        "chocolate"
+      ]
+    },
+    {
+      "pin_id": "2251868558462819",
+      "url": "https://es.pinterest.com/pin/2251868558462819/",
+      "creator": "Unknown",
+      "creator_url": "",
+      "raw_description": "This may contain: three desserts with strawberries and granola in glasses on a wooden table, ready to be eaten",
+      "extracted_keywords": [
+        "glasses",
+        "ready",
+        "desserts",
+        "three",
+        "wooden",
+        "eaten",
+        "granola",
+        "strawberries",
+        "table",
+        "contain"
+      ]
+    }
+  ]
+}

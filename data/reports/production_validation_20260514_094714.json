@@ -1,0 +1,163 @@
+{
+  "run_id": "20260514_094714",
+  "started_at": "2026-05-14T08:47:15.212814+00:00",
+  "log_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\logs\\production_validation_20260514_094714.log",
+  "report_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\reports\\production_validation_20260514_094714.json",
+  "checks": {
+    "accounts": [
+      {
+        "name": "r1",
+        "session": "turbo_r1",
+        "browser": "chromium",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "r2",
+        "session": "turbo_r2",
+        "browser": "firefox",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "r3",
+        "session": "turbo_r3",
+        "browser": "chromium",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "r4",
+        "session": "turbo_r4",
+        "browser": "firefox",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "r5",
+        "session": "turbo_r5",
+        "browser": "chromium",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "r6",
+        "session": "turbo_r6",
+        "browser": "firefox",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "m1",
+        "session": "turbo_m1",
+        "browser": "chromium",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "m2",
+        "session": "turbo_m2",
+        "browser": "firefox",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "m3",
+        "session": "turbo_m3",
+        "browser": "chromium",
+        "email_set": true,
+        "password_set": true
+      },
+      {
+        "name": "m4",
+        "session": "turbo_m4",
+        "browser": "firefox",
+        "email_set": true,
+        "password_set": true
+      }
+    ]
+  },
+  "single": {
+    "case": "single",
+    "type": "pin_upload",
+    "account": "r1",
+    "board": "Postres y Dulces",
+    "slug": "milhojas-de-vainilla-bourbon-hojaldre-casero-receta",
+    "title": "Milhojas de Vainilla Bourbon: Crujiente y Cremoso",
+    "article_url": "https://recetadolce.com/milhojas-de-vainilla-bourbon-hojaldre-casero-receta",
+    "article_check": {
+      "ok": true,
+      "status_code": 200,
+      "final_url": "https://recetadolce.com/milhojas-de-vainilla-bourbon-hojaldre-casero-receta",
+      "bytes": 196045
+    },
+    "image_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\media\\remaster_final\\remastered_v4_luxury_milhojas-de-vainilla-bourbon-crujiente-y-cremoso_773282198556840840.jpg",
+    "started_at": "2026-05-14T08:47:18.813759+00:00",
+    "success": false,
+    "error": "Pinterest session not logged in for r1",
+    "duration_seconds": 59.3,
+    "finished_at": "2026-05-14T08:48:14.514488+00:00"
+  },
+  "batch": [
+    {
+      "case": "batch_1",
+      "type": "pin_upload",
+      "account": "r3",
+      "board": "Postres y Dulces",
+      "slug": "macarons-de-lavanda-y-miel-receta-perfecta",
+      "title": "Macarons de Lavanda y Miel: El Secreto del Macaronage Perfecto",
+      "article_url": "https://recetadolce.com/macarons-de-lavanda-y-miel-receta-perfecta",
+      "article_check": {
+        "ok": true,
+        "status_code": 200,
+        "final_url": "https://recetadolce.com/macarons-de-lavanda-y-miel-receta-perfecta",
+        "bytes": 195650
+      },
+      "image_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\media\\remaster_final\\remastered_v4_luxury_macarons-de-lavanda-y-miel-el-secreto-del-macaronage-perfecto_314970567707495800.jpg",
+      "started_at": "2026-05-14T08:48:18.350796+00:00",
+      "success": false,
+      "error": "Pinterest session not logged in for r3",
+      "duration_seconds": 63.0,
+      "finished_at": "2026-05-14T08:49:17.476916+00:00"
+    },
+    {
+      "case": "batch_2",
+      "type": "pin_upload",
+      "account": "m1",
+      "board": "Arroces y Paellas",
+      "slug": "paella-valenciana-receta-original",
+      "title": "Paella Valenciana Receta Original: El Dorado Perfecto",
+      "article_url": "https://recetadolce.com/paella-valenciana-receta-original",
+      "article_check": {
+        "ok": true,
+        "status_code": 200,
+        "final_url": "https://recetadolce.com/paella-valenciana-receta-original",
+        "bytes": 206679
+      },
+      "image_path": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\media\\remaster_final\\remastered_v4_luxury_paella-valenciana-receta-original-el-dorado-perfecto_8303580559580995.jpg",
+      "started_at": "2026-05-14T08:48:21.602000+00:00",
+      "success": true,
+      "pin_id": "1148488342507898315",
+      "pin_url": "https://www.pinterest.com/pin/1148488342507898315/",
+      "pin_check": {
+        "ok": true,
+        "status_code": 200,
+        "final_url": "https://www.pinterest.com/pin/1148488342507898315/",
+        "bytes": 1021707
+      },
+      "supabase_pin_update": {
+        "ok": true
+      },
+      "duration_seconds": 138.7,
+      "finished_at": "2026-05-14T08:50:38.127707+00:00"
+    }
+  ],
+  "syphon": null,
+  "finished_at": "2026-05-14T08:50:38.127753+00:00",
+  "summary": {
+    "single_success": false,
+    "batch_successes": 1,
+    "batch_total": 2,
+    "syphon_success": false
+  }
+}

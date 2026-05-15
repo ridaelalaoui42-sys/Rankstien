@@ -1,0 +1,15 @@
+{
+  "name": "RecetaDolce",
+  "short_name": "RecetaDolce",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#A4133C",
+  "background_color": "#FFFCF9",
+  "display": "standalone"
+}

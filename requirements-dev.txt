@@ -1,0 +1,24 @@
+# Development-only dependencies (not shipped in production image).
+# Install with: pip install -r requirements-dev.txt
+-r backend/requirements.txt
+
+# Test runner + coverage
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+
+# Lint / format / type
+# ruff 0.13.x is required for ASYNC240 + RUF059 selectors used in
+# pyproject.toml [tool.ruff.lint.per-file-ignores].
+ruff==0.13.3
+mypy==1.13.0
+
+# Pre-commit hook driver
+pre-commit==4.0.1
+
+# Secret scanning (catches .env-like patterns before commit)
+detect-secrets==1.5.0
+
+# HTTP fixture recording for news_scraper tests
+vcrpy==7.0.0

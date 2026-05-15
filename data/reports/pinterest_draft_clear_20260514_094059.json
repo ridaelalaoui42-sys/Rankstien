@@ -1,0 +1,26 @@
+{
+  "run_id": "20260514_094059",
+  "started_at": "2026-05-14T09:40:59.690448+00:00",
+  "accounts": [
+    {
+      "account": "rida",
+      "session": "pinterest_rida_v7",
+      "browser": "firefox",
+      "started_at": "2026-05-14T09:40:59.690470+00:00",
+      "drafts_before": 50,
+      "success": false,
+      "error": "Draft delete button not found after selecting drafts",
+      "finished_at": "2026-05-14T09:42:24.547128+00:00"
+    },
+    {
+      "account": "media",
+      "session": "turbo_m1",
+      "browser": "chromium",
+      "started_at": "2026-05-14T09:42:24.547159+00:00",
+      "success": false,
+      "error": "Page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"https://www.pinterest.com/pin-creation-tool/\", waiting until \"domcontentloaded\"\n",
+      "finished_at": "2026-05-14T09:44:43.676628+00:00"
+    }
+  ],
+  "finished_at": "2026-05-14T09:44:43.676646+00:00"
+}

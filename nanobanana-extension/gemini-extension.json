@@ -1,0 +1,21 @@
+{
+  "name": "nanobanana",
+  "version": "1.0.12",
+  "description": "Gemini CLI extension for Nano Banana models - generate and manipulate images with text prompts",
+  "mcpServers": {
+    "nanobanana": {
+      "command": "node",
+      "args": ["${extensionPath}/mcp-server/dist/index.js"],
+      "env": {}
+    }
+  },
+  "contextFileName": "GEMINI.md",
+  "settings": [
+    {
+      "name": "API Key",
+      "description": "Optional standalone NanoBanana API key. RankStein orchestration uses Gemini CLI subscription/OAuth and should not require GOOGLE_API_KEY or GEMINI_API_KEY.",
+      "envVar": "NANOBANANA_API_KEY",
+      "sensitive": true
+    }
+  ]
+}
