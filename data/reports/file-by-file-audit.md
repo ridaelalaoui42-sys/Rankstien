@@ -1,13 +1,13 @@
 # File-by-file Project Audit
 
-Generated: 2026-10-07T01:29:57.273989+00:00
+Generated: 2026-10-08T10:50:50.060198+00:00
 Root: `C:\Users\REDX420\Desktop\Rankstein`
 
 ## Summary
 
-- Files audited: 370
-- OK: 345
-- Review: 25
+- Files audited: 396
+- OK: 364
+- Review: 32
 - Fail: 0
 
 ## Scope
@@ -20,7 +20,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | Status | Kind | Lines | Bytes | File | Findings |
 |---|---|---:|---:|---|---|
 | ok | agent-config | 65 | 1824 | `.gemini/settings.json` |  |
-| ok | docs | 133 | 10378 | `README.md` |  |
+| ok | docs | 131 | 10823 | `README.md` |  |
 | ok | backend | 2 | 48 | `backend/__init__.py` |  |
 | ok | backend | 2 | 25 | `backend/agents/__init__.py` |  |
 | ok | backend | 72 | 3633 | `backend/agents/author.py` |  |
@@ -39,6 +39,8 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 37 | 2150 | `backend/agents/studio.py` |  |
 | ok | backend | 40 | 1609 | `backend/agents/validator.py` |  |
 | ok | backend | 2 | 29 | `backend/api/__init__.py` |  |
+| ok | backend | 34 | 1463 | `backend/api/operator_auth.py` |  |
+| ok | backend | 2230 | 81976 | `backend/api/operator_routes.py` |  |
 | ok | backend | 435 | 17098 | `backend/api/routes.py` |  |
 | ok | backend | 2 | 31 | `backend/core/__init__.py` |  |
 | ok | backend | 124 | 4836 | `backend/core/a2a_protocol.py` |  |
@@ -47,6 +49,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 239 | 8254 | `backend/core/engine.py` |  |
 | ok | backend | 63 | 2087 | `backend/core/security.py` |  |
 | ok | backend | 86 | 2824 | `backend/main.py` |  |
+| ok | backend | 67 | 2032 | `backend/operator.py` |  |
 | ok | backend | 23 | 432 | `backend/requirements.txt` |  |
 | ok | backend | 179 | 6471 | `backend/scripts/batch_upload_all_remastered.py` |  |
 | ok | backend | 695 | 24074 | `backend/scripts/batch_upload_remastered.py` |  |
@@ -61,43 +64,50 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 48 | 1405 | `backend/scripts/fix_post.py` |  |
 | ok | backend | 50 | 1799 | `backend/scripts/force_fix_visibility.py` |  |
 | ok | backend | 106 | 2872 | `backend/scripts/gemini_token_rotator.py` |  |
-| ok | backend | 591 | 18365 | `backend/scripts/hero_image_pipeline.py` |  |
+| ok | backend | 642 | 20136 | `backend/scripts/hero_image_pipeline.py` |  |
 | ok | backend | 1615 | 63458 | `backend/scripts/pinterest_batch_core.py` |  |
 | ok | backend | 656 | 25121 | `backend/scripts/pinterest_uploader_v4.py` |  |
 | ok | backend | 33 | 806 | `backend/scripts/trigger_funnel.py` |  |
-| ok | backend | 3699 | 148316 | `backend/scripts/turbo_articles.py` |  |
+| ok | backend | 3864 | 155864 | `backend/scripts/turbo_articles.py` |  |
 | ok | backend | 2 | 27 | `backend/services/__init__.py` |  |
 | ok | backend | 75 | 2665 | `backend/services/competitor_analyzer.py` |  |
 | ok | backend | 140 | 5324 | `backend/services/harvester.py` |  |
 | ok | backend | 109 | 3900 | `backend/services/keyword_mapper.py` |  |
-| ok | backend | 161 | 6215 | `backend/services/memory_service.py` |  |
+| ok | backend | 177 | 6911 | `backend/services/memory_service.py` |  |
 | ok | backend | 642 | 24384 | `backend/services/news_scraper.py` |  |
 | ok | backend | 89 | 3017 | `backend/services/nvidia_client.py` |  |
+| ok | backend | 1319 | 49954 | `backend/services/operator_pipeline.py` |  |
 | ok | backend | 2067 | 84093 | `backend/services/remasterer.py` |  |
 | ok | backend | 167 | 6802 | `backend/services/scraper.py` |  |
 | ok | backend | 147 | 4748 | `backend/services/seo_tools.py` |  |
 | ok | backend | 108 | 4271 | `backend/services/site_auditor.py` |  |
+| ok | backend | 16 | 880 | `backend/static/operator/LUCIDE_LICENSE.txt` |  |
+| ok | backend | 561 | 23312 | `backend/static/operator/index.html` |  |
+| ok | backend | 13 | 357796 | `backend/static/operator/lucide.min.js` |  |
+| ok | backend | 1287 | 22505 | `backend/static/operator/operator.css` |  |
+| ok | backend | 1634 | 64768 | `backend/static/operator/operator.js` |  |
 | ok | docs | 63 | 1825 | `cli-harness/README.md` |  |
 | ok | docs | 52 | 1558 | `cli-harness/SKILL.md` |  |
 | ok | docs | 69 | 2360 | `cli-harness/cli_anything_rankstein/HARNESS.md` |  |
 | ok | project | 4 | 104 | `cli-harness/cli_anything_rankstein/__init__.py` |  |
 | ok | project | 471 | 19685 | `cli-harness/cli_anything_rankstein/__main__.py` |  |
 | ok | project | 23 | 546 | `cli-harness/pyproject.toml` |  |
-| ok | domain-data | 243 | 11765 | `data/domains/recetadolce/daily_best_keywords.json` |  |
-| ok | docs | 17 | 1036 | `data/domains/recetadolce/daily_best_keywords.md` |  |
+| ok | domain-data | 311 | 13599 | `data/domains/recetadolce/daily_best_keywords.json` |  |
+| ok | docs | 21 | 1404 | `data/domains/recetadolce/daily_best_keywords.md` |  |
 | ok | domain-data | 36 | 1138 | `data/domains/recetadolce/domain.json` |  |
-| ok | docs | 733 | 84091 | `data/domains/recetadolce/keywords.md` |  |
-| ok | domain-data | 243 | 11690 | `data/domains/recetagenial/daily_best_keywords.json` |  |
-| ok | docs | 17 | 956 | `data/domains/recetagenial/daily_best_keywords.md` |  |
+| ok | docs | 743 | 85358 | `data/domains/recetadolce/keywords.md` |  |
+| ok | domain-data | 358 | 17360 | `data/domains/recetagenial/daily_best_keywords.json` |  |
+| ok | docs | 22 | 1361 | `data/domains/recetagenial/daily_best_keywords.md` |  |
 | ok | domain-data | 40 | 1174 | `data/domains/recetagenial/domain.json` |  |
-| ok | docs | 496 | 55865 | `data/domains/recetagenial/keywords.md` |  |
+| ok | docs | 511 | 57823 | `data/domains/recetagenial/keywords.md` |  |
 | ok | docs | 96 | 4883 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
-| ok | docs | 109 | 10589 | `docs/system/CAMPAIGN_PIPELINE.md` |  |
+| ok | docs | 111 | 11445 | `docs/system/CAMPAIGN_PIPELINE.md` |  |
 | ok | docs | 0 | 0 | `docs/system/HERMES_SOUL.md` |  |
+| ok | docs | 61 | 3010 | `docs/system/OPERATOR_DASHBOARD.md` |  |
 | ok | docs | 200 | 9578 | `docs/system/PRODUCTION_RUNTIME_PLAN.md` |  |
 | ok | docs | 70 | 2201 | `docs/system/PROJECT_HYGIENE.md` |  |
-| ok | docs | 73 | 4083 | `docs/system/PROJECT_MAP.md` |  |
-| ok | docs | 325 | 16048 | `docs/system/SYSTEM_ARCHITECTURE.md` |  |
+| ok | docs | 75 | 4329 | `docs/system/PROJECT_MAP.md` |  |
+| ok | docs | 325 | 16084 | `docs/system/SYSTEM_ARCHITECTURE.md` |  |
 | ok | docs | 398 | 12595 | `docs/templates/GENERIC_PINTEREST_PIN_TEMPLATE.md` |  |
 | ok | docs | 94 | 6682 | `docs/templates/IMAGE_GENERATION_CONTRACT.md` |  |
 | ok | docs | 104 | 3427 | `docs/templates/TRIGGER_RECIPE_BRAIN.md` |  |
@@ -250,7 +260,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 1269 | 51878 | `pinterest_automation/job_queue.py` |  |
 | ok | core | 282 | 11776 | `pinterest_automation/mcp_bridge.py` |  |
 | ok | core | 172 | 6217 | `pinterest_automation/mcp_client.py` |  |
-| ok | core | 343 | 12661 | `pinterest_automation/mcp_integration.py` |  |
+| ok | core | 343 | 12660 | `pinterest_automation/mcp_integration.py` |  |
 | ok | core | 1317 | 58562 | `pinterest_automation/pinterest_driver.py` |  |
 | ok | core | 289 | 12081 | `pinterest_automation/rate_limiter.py` |  |
 | ok | core | 53 | 1742 | `pinterest_automation/routing.py` |  |
@@ -265,29 +275,37 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 109 | 3506 | `rankstein/autonomous.py` |  |
 | ok | core | 266 | 10888 | `rankstein/branding.py` |  |
 | ok | core | 200 | 8188 | `rankstein/category_policy.py` |  |
-| ok | core | 811 | 34231 | `rankstein/cli.py` |  |
+| ok | core | 815 | 34316 | `rankstein/cli.py` |  |
 | ok | core | 214 | 9920 | `rankstein/config.py` |  |
 | ok | core | 313 | 13160 | `rankstein/domain.py` |  |
-| ok | core | 303 | 10561 | `rankstein/keyword_roadmap.py` |  |
-| ok | core | 681 | 23792 | `rankstein/launcher.py` |  |
+| ok | core | 285 | 11654 | `rankstein/ga4_connector.py` |  |
+| ok | core | 132 | 5366 | `rankstein/google_trends_connector.py` |  |
+| ok | core | 246 | 9690 | `rankstein/gsc_connector.py` |  |
+| ok | core | 294 | 9883 | `rankstein/keyword_roadmap.py` |  |
+| ok | core | 694 | 24260 | `rankstein/launcher.py` |  |
 | ok | core | 118 | 4515 | `rankstein/log_manager.py` |  |
 | ok | core | 455 | 20762 | `rankstein/niche_detector.py` |  |
+| ok | core | 111 | 4702 | `rankstein/pinterest_connector.py` |  |
 | ok | core | 230 | 6522 | `rankstein/pipeline_events.py` |  |
-| ok | core | 395 | 15366 | `rankstein/production_batch.py` |  |
-| ok | core | 566 | 20832 | `rankstein/production_reconcile.py` |  |
+| ok | core | 487 | 19304 | `rankstein/production_batch.py` |  |
+| ok | core | 569 | 21078 | `rankstein/production_reconcile.py` |  |
 | ok | core | 482 | 14818 | `rankstein/prompts.py` |  |
 | ok | core | 383 | 16413 | `rankstein/provisioner.py` |  |
 | ok | core | 817 | 27641 | `rankstein/recipe_pin_generator.py` |  |
-| ok | core | 822 | 28883 | `rankstein/remaster_variants.py` |  |
+| ok | core | 830 | 29178 | `rankstein/remaster_variants.py` |  |
 | ok | core | 36 | 1295 | `rankstein/runtime_env.py` |  |
+| ok | core | 784 | 36799 | `rankstein/seo_feedback_engine.py` |  |
 | ok | core | 697 | 24047 | `rankstein/site_factory.py` |  |
-| ok | core | 400 | 15004 | `rankstein/startup.py` |  |
+| ok | core | 401 | 15062 | `rankstein/startup.py` |  |
 | ok | core | 181 | 6033 | `rankstein/subscribers.py` |  |
-| ok | core | 570 | 21230 | `rankstein/suite_controller.py` |  |
+| ok | core | 611 | 22636 | `rankstein/suite_controller.py` |  |
 | ok | core | 1669 | 57746 | `rankstein/trend_intelligence.py` |  |
-| ok | project | 5325 | 224684 | `rankstein_mcp_server.py` |  |
-| ok | project | 192 | 4109 | `requirements.txt` |  |
+| ok | project | 5424 | 228479 | `rankstein_mcp_server.py` |  |
+| ok | project | 193 | 4121 | `requirements.txt` |  |
+| review | scripts | 324 | 19425 | `scripts/debug/audit_blog_admin.cjs` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 70 | 2835 | `scripts/debug/capture_operator_dashboard.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 45 | 1608 | `scripts/debug/check_articles.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 38 | 1533 | `scripts/debug/check_fresh_keywords.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 45 | 1677 | `scripts/debug/check_models.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 11 | 407 | `scripts/debug/check_nvidia_log.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 19 | 875 | `scripts/debug/check_proof.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -296,7 +314,11 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 39 | 1651 | `scripts/debug/fetch_urls.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 6 | 522 | `scripts/debug/find_recent.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 15 | 469 | `scripts/debug/find_tables.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 195 | 13475 | `scripts/debug/generate_ensalada_pasta.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 197 | 14668 | `scripts/debug/generate_tarta_tatin.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 70 | 2431 | `scripts/debug/inspect_pinterest_remaster_dom.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 26 | 1554 | `scripts/debug/operator_accessibility_audit.js` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 150 | 5353 | `scripts/debug/operator_browser_audit.js` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 23 | 721 | `scripts/debug/publish_test_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 28 | 1226 | `scripts/debug/test_article_slug.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 96 | 4006 | `scripts/debug/test_full_nemotron_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -313,13 +335,14 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 52 | 2453 | `scripts/debug/verify_live_sites.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 79 | 2829 | `scripts/debug/verify_nemotron_json.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | ok | scripts | 89 | 3165 | `scripts/dev/check_no_root_scratch.py` |  |
+| ok | scripts | 21 | 994 | `scripts/dev/disable_legacy_odysseus_task.ps1` |  |
 | ok | scripts | 162 | 5608 | `scripts/dev/live_article_quality_check.py` |  |
 | ok | scripts | 11 | 697 | `scripts/dev/live_logs.ps1` |  |
 | ok | scripts | 296 | 9256 | `scripts/dev/project_audit.py` |  |
 | ok | scripts | 520 | 20784 | `scripts/dev/repair_article_quality.py` |  |
 | ok | scripts | 323 | 11493 | `scripts/dev/run_production_validation.py` |  |
 | ok | scripts | 212 | 6028 | `scripts/dev/self_clean.py` |  |
-| ok | scripts | 130 | 4868 | `scripts/dev/start_agentmemory.ps1` |  |
+| ok | scripts | 146 | 5519 | `scripts/dev/start_agentmemory.ps1` |  |
 | ok | scripts | 105 | 4182 | `scripts/dev/start_all_mcp.ps1` |  |
 | ok | scripts | 222 | 7399 | `scripts/dev/validate_automation.py` |  |
 | ok | scripts | 134 | 4771 | `scripts/dev/validate_gemini_runtime.py` |  |
@@ -355,27 +378,30 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | tests | 98 | 3688 | `tests/unit/test_check_no_root_scratch.py` |  |
 | ok | tests | 80 | 3562 | `tests/unit/test_circuit_breaker.py` |  |
 | ok | tests | 247 | 11044 | `tests/unit/test_config.py` |  |
-| ok | tests | 249 | 9208 | `tests/unit/test_create_hero_image_pollinations.py` |  |
+| ok | tests | 343 | 13130 | `tests/unit/test_create_hero_image_pollinations.py` |  |
 | ok | tests | 86 | 2666 | `tests/unit/test_database_security.py` |  |
 | ok | tests | 110 | 3518 | `tests/unit/test_direct_upload_cross_save.py` |  |
 | ok | tests | 199 | 9163 | `tests/unit/test_domain.py` |  |
 | ok | tests | 110 | 4084 | `tests/unit/test_domain_isolation.py` |  |
 | ok | tests | 50 | 1652 | `tests/unit/test_health_monitor.py` |  |
 | ok | tests | 475 | 18123 | `tests/unit/test_job_queue_sqlite.py` |  |
-| ok | tests | 357 | 11976 | `tests/unit/test_keyword_roadmap.py` |  |
+| ok | tests | 360 | 12073 | `tests/unit/test_keyword_roadmap.py` |  |
 | ok | tests | 88 | 2858 | `tests/unit/test_legacy_article_entrypoints.py` |  |
 | ok | tests | 100 | 3028 | `tests/unit/test_log_manager.py` |  |
 | ok | tests | 187 | 6325 | `tests/unit/test_mcp_remaster_campaign.py` |  |
 | ok | tests | 60 | 2120 | `tests/unit/test_memory_service.py` |  |
 | ok | tests | 37 | 1210 | `tests/unit/test_news_scraper.py` |  |
 | ok | tests | 18 | 581 | `tests/unit/test_nvidia_fallback.py` |  |
-| ok | tests | 642 | 22362 | `tests/unit/test_pinterest_production_runtime.py` |  |
+| ok | tests | 121 | 5222 | `tests/unit/test_operator.py` |  |
+| ok | tests | 159 | 6074 | `tests/unit/test_operator_live_status.py` |  |
+| ok | tests | 1100 | 37718 | `tests/unit/test_operator_pipeline.py` |  |
+| ok | tests | 704 | 24612 | `tests/unit/test_pinterest_production_runtime.py` |  |
 | ok | tests | 77 | 2335 | `tests/unit/test_pinterest_public_verification.py` |  |
 | ok | tests | 78 | 2156 | `tests/unit/test_pipeline_events.py` |  |
-| ok | tests | 307 | 11233 | `tests/unit/test_production_batch.py` |  |
-| ok | tests | 454 | 15788 | `tests/unit/test_production_reconcile.py` |  |
+| ok | tests | 472 | 19242 | `tests/unit/test_production_batch.py` |  |
+| ok | tests | 478 | 16768 | `tests/unit/test_production_reconcile.py` |  |
 | ok | tests | 253 | 11022 | `tests/unit/test_provisioner.py` |  |
-| ok | tests | 209 | 6902 | `tests/unit/test_remaster_native_fallback.py` |  |
+| ok | tests | 295 | 9787 | `tests/unit/test_remaster_native_fallback.py` |  |
 | ok | tests | 131 | 4369 | `tests/unit/test_remaster_relevance.py` |  |
 | ok | tests | 281 | 10036 | `tests/unit/test_remaster_variants.py` |  |
 | ok | tests | 178 | 7363 | `tests/unit/test_save_image_from_base64.py` |  |
@@ -388,4 +414,4 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | tests | 32 | 768 | `tests/unit/test_supabase_headers.py` |  |
 | ok | tests | 174 | 6050 | `tests/unit/test_supabase_image_upload.py` |  |
 | ok | tests | 623 | 22324 | `tests/unit/test_trend_intelligence.py` |  |
-| ok | tests | 1185 | 37943 | `tests/unit/test_turbo_articles.py` |  |
+| ok | tests | 1769 | 62395 | `tests/unit/test_turbo_articles.py` |  |

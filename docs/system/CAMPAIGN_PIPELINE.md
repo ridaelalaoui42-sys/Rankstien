@@ -91,10 +91,12 @@ The scraper searches all generated query variants, deduplicates pin IDs, and sco
 
 ## Image Provider Default
 
-RankStein article heroes are Codex-only:
+RankStein article heroes follow a strict multi-tier fallback hierarchy:
 
-- Provider: `create_hero_image_codex` with `gpt-image-2` through Hermes/Codex OAuth.
-- Failure policy: no Pollinations, scraped, or programmatic placeholder image may be published as an article hero.
+- Primary (Tier 1): `create_hero_image_codex` with `gpt-image-2` through Hermes/Codex OAuth.
+- Fallback 1 (Tier 2): Scraped recipe/food images from allowlisted culinary sources (`scrape_hero_from_news`).
+- Fallback 2 (Tier 3): Pollinations AI image generation (`create_hero_image_pollinations` with flux model).
+- Failure policy: Fails closed only when all three providers fail; programmatic placeholders are never published as article heroes.
 - Quality: `RANKSTEIN_CODEX_IMAGE_QUALITY=medium` by default; accepted values are `low`, `medium`, and `high`.
 
 ## Article Provider Default

@@ -1901,18 +1901,21 @@ def create_hero_image(
     width: int = 1920,
     height: int = 1280,
     model: str = "flux",
+    keyword: str = "",
 ) -> dict:
     """
     Unified production hero generator.
 
-    Article heroes are generated only by Codex native image generation
-    (OpenAI gpt-image-2 via Hermes OAuth). The router fails closed on any Codex
-    error; scraped images, Pollinations images, and programmatic placeholders
-    are not valid publishable article heroes.
+    Fallback hierarchy:
+      1. Primary (Tier 1): Codex native image generation (OpenAI gpt-image-2 via Hermes OAuth)
+      2. Fallback (Tier 2): Scraped recipe/food images from allowlisted culinary sources
+      3. Fallback (Tier 3): Pollinations AI image generation (flux model)
 
-    Returns: {success, output_path, format, size_bytes, width, height, provider}
+    Fails closed if all providers fail; programmatic placeholders are never published.
+
+    Returns: {success, output_path, format, size_bytes, width, height, provider, source}
     """
-    logger.info("create_hero_image: requesting Codex-only hero for '%s'", slug)
+    logger.info("create_hero_image: requesting Tier 1 (Codex) hero for '%s'", slug)
     codex_result = create_hero_image_codex(
         prompt=prompt,
         slug=slug,
@@ -1922,15 +1925,73 @@ def create_hero_image(
     )
     if codex_result.get("success"):
         codex_result["provider"] = "codex"
+        codex_result["source"] = "codex"
         logger.info("create_hero_image: Codex succeeded for '%s'", slug)
         return codex_result
 
-    logger.error("create_hero_image: Codex failed closed for '%s': %s", slug, codex_result.get("error"))
+    logger.warning(
+        "create_hero_image: Codex failed for '%s' (%s). Falling back to Tier 2 (Scraped)...",
+        slug,
+        codex_result.get("error"),
+    )
+
+    # --- Tier 2: Scraped recipe/food image from allowlisted culinary sources ---
+    scraped_result: dict = {"success": False, "error": "not_attempted"}
+    try:
+        from backend.scripts.hero_image_pipeline import scrape_hero_from_news
+
+        search_kw = (keyword or slug.replace("-", " ")).strip()
+        scraped_result = scrape_hero_from_news(search_kw, slug)
+        if scraped_result.get("success"):
+            scraped_result["provider"] = "scraped"
+            scraped_result["source"] = "scraped"
+            logger.info("create_hero_image: Scraped fallback succeeded for '%s'", slug)
+            return scraped_result
+    except Exception as exc:
+        logger.warning("create_hero_image: Scraped fallback raised for '%s': %s", slug, exc)
+        scraped_result = {"success": False, "error": str(exc)}
+
+    logger.warning(
+        "create_hero_image: Scraped failed for '%s' (%s). Falling back to Tier 3 (Pollinations)...",
+        slug,
+        scraped_result.get("error"),
+    )
+
+    # --- Tier 3: Pollinations AI image generation ---
+    pollinations_result: dict = {"success": False, "error": "not_attempted"}
+    try:
+        pollinations_result = create_hero_image_pollinations(
+            prompt=prompt,
+            slug=slug,
+            suffix=suffix,
+            width=width,
+            height=height,
+            model=model,
+        )
+        if pollinations_result.get("success"):
+            pollinations_result["provider"] = "pollinations"
+            pollinations_result["source"] = "pollinations"
+            logger.info("create_hero_image: Pollinations fallback succeeded for '%s'", slug)
+            return pollinations_result
+    except Exception as exc:
+        logger.warning("create_hero_image: Pollinations fallback raised for '%s': %s", slug, exc)
+        pollinations_result = {"success": False, "error": str(exc)}
+
+    logger.error("create_hero_image: All image providers failed for '%s'", slug)
     return {
         "success": False,
-        "error": f"Codex-only hero generation failed: {codex_result.get('error', 'unknown')}",
-        "provider": "codex",
-        "provider_errors": {"codex": codex_result.get("error", "unknown")},
+        "error": (
+            f"All hero generation options failed (Codex: {codex_result.get('error', 'unknown')}, "
+            f"Scraped: {scraped_result.get('error', 'unknown')}, "
+            f"Pollinations: {pollinations_result.get('error', 'unknown')})"
+        ),
+        "provider": "failed",
+        "source": "failed",
+        "provider_errors": {
+            "codex": codex_result.get("error", "unknown"),
+            "scraped": scraped_result.get("error", "unknown"),
+            "pollinations": pollinations_result.get("error", "unknown"),
+        },
     }
 
 

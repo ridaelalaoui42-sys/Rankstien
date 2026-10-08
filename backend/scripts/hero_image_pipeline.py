@@ -1,12 +1,12 @@
 """
 Multi-layer hero image sourcing pipeline for RankStein.
 
-Provides production hero images through one strict provider:
-  1. Codex native image generation (OpenAI gpt-image-2)
+Provides production hero images through a strict three-tier fallback hierarchy:
+  1. Primary (Tier 1): Codex native image generation (OpenAI gpt-image-2 via Hermes gateway)
+  2. Fallback (Tier 2): Scraped recipe/food images from allowlisted culinary sources
+  3. Fallback (Tier 3): Pollinations AI image generation (flux model)
 
-Scraped source images remain available to explicit research/remaster workflows,
-but are not publishable article heroes. Pollinations and placeholder images are
-never returned from the production orchestrator.
+Fails closed if all providers fail; programmatic placeholders are never returned.
 """
 
 from __future__ import annotations
@@ -545,11 +545,13 @@ def get_hero_image(
             "success": False,
             "error": "Production hero generation requires a recipe-aware image prompt",
             "source": "none",
+            "provider": "none",
             "domain": domain_handle or "",
         }
 
     from rankstein_mcp_server import create_hero_image_codex
 
+    # --- Tier 1 (Primary): Codex native image generation ---
     codex = create_hero_image_codex(
         prompt=prompt,
         slug=slug,
@@ -563,16 +565,62 @@ def get_hero_image(
         result.setdefault("provider", "codex")
         result["domain"] = domain_handle or ""
         return result
-    logger.error(
-        "Codex-only hero generation failed for %s: %s",
+
+    logger.warning(
+        "Codex hero generation failed for %s: %s. Attempting Tier 2 (scraped recipe images)...",
         keyword,
         codex.get("error"),
     )
+
+    # --- Tier 2 (Fallback 1): Scraped recipe/food image from allowlisted culinary sources ---
+    scraped = scrape_hero_from_news(keyword, slug)
+    if scraped.get("success"):
+        result = dict(scraped)
+        result["source"] = "scraped"
+        result.setdefault("provider", "scraped")
+        result["domain"] = domain_handle or ""
+        logger.info(
+            "Scraped hero fallback succeeded for %s: %s",
+            keyword,
+            result.get("output_path"),
+        )
+        return result
+
+    logger.warning(
+        "Scraped hero fallback failed for %s: %s. Attempting Tier 3 (Pollinations AI)...",
+        keyword,
+        scraped.get("error"),
+    )
+
+    # --- Tier 3 (Fallback 2): Pollinations AI image generation ---
+    pollinations = create_hero_image_pollinations(
+        keyword=keyword,
+        domain=domain_handle,
+        prompt=prompt,
+        slug=slug,
+    )
+    if pollinations.get("success"):
+        result = dict(pollinations)
+        result["source"] = "pollinations"
+        result.setdefault("provider", "pollinations")
+        result["domain"] = domain_handle or ""
+        logger.info(
+            "Pollinations hero fallback succeeded for %s: %s",
+            keyword,
+            result.get("output_path"),
+        )
+        return result
+
+    logger.error("All hero generation providers failed for %s", keyword)
     return {
         "success": False,
-        "error": f"Codex-only hero generation failed: {codex.get('error', 'unknown error')}",
-        "source": "codex",
-        "provider": "codex",
+        "error": (
+            f"All hero generation options failed (Codex: {codex.get('error', 'unknown error')}, "
+            f"Scraped: {scraped.get('error', 'unknown error')}, "
+            f"Pollinations: {pollinations.get('error', 'unknown error')})"
+        ),
+        "source": "failed",
+        "provider": "failed",
         "domain": domain_handle or "",
     }
 

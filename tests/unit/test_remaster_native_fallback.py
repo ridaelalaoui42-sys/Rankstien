@@ -72,21 +72,35 @@ def test_native_retry_budget_cannot_reintroduce_a_source_cap(
 
 
 @pytest.mark.unit
-def test_codex_hero_failure_does_not_use_pollinations_or_scraped_images(
+def test_hero_image_fallback_order_scraped_before_pollinations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import rankstein_mcp_server
 
-    def forbidden_fallback(*args, **kwargs) -> dict:
-        raise AssertionError("article heroes must fail closed when Codex is unavailable")
+    calls: list[str] = []
 
-    monkeypatch.setattr(
-        rankstein_mcp_server,
-        "create_hero_image_codex",
-        lambda **kwargs: {"success": False, "error": "Codex unavailable"},
-    )
-    monkeypatch.setattr(hero_image_pipeline, "create_hero_image_pollinations", forbidden_fallback)
-    monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", forbidden_fallback)
+    def mock_codex(**kwargs) -> dict:
+        calls.append("codex")
+        return {"success": False, "error": "Codex unavailable"}
+
+    def mock_scrape(keyword: str, slug: str) -> dict:
+        calls.append("scraped")
+        return {
+            "success": True,
+            "output_path": "C:/tmp/scraped-hero.jpg",
+            "format": "jpg",
+            "size_bytes": 50000,
+            "width": 1200,
+            "height": 800,
+        }
+
+    def forbidden_pollinations(*args, **kwargs) -> dict:
+        calls.append("pollinations")
+        raise AssertionError("Pollinations must not be called when scraped succeeds")
+
+    monkeypatch.setattr(rankstein_mcp_server, "create_hero_image_codex", mock_codex)
+    monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", mock_scrape)
+    monkeypatch.setattr(hero_image_pipeline, "create_hero_image_pollinations", forbidden_pollinations)
 
     result = hero_image_pipeline.get_hero_image(
         keyword="tarta de limón",
@@ -95,8 +109,52 @@ def test_codex_hero_failure_does_not_use_pollinations_or_scraped_images(
         image_prompt="Pastel de limón terminado, fotografía editorial.",
     )
 
-    assert result["success"] is False
-    assert result["source"] == "codex"
+    assert result["success"] is True
+    assert result["source"] == "scraped"
+    assert calls == ["codex", "scraped"]
+
+
+@pytest.mark.unit
+def test_hero_image_fallback_to_pollinations_when_scraped_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import rankstein_mcp_server
+
+    calls: list[str] = []
+
+    def mock_codex(**kwargs) -> dict:
+        calls.append("codex")
+        return {"success": False, "error": "Codex unavailable"}
+
+    def mock_scrape(keyword: str, slug: str) -> dict:
+        calls.append("scraped")
+        return {"success": False, "error": "no scraped sources"}
+
+    def mock_pollinations(*args, **kwargs) -> dict:
+        calls.append("pollinations")
+        return {
+            "success": True,
+            "output_path": "C:/tmp/pollinations-hero.jpg",
+            "format": "jpg",
+            "size_bytes": 60000,
+            "width": 1920,
+            "height": 1080,
+        }
+
+    monkeypatch.setattr(rankstein_mcp_server, "create_hero_image_codex", mock_codex)
+    monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", mock_scrape)
+    monkeypatch.setattr(hero_image_pipeline, "create_hero_image_pollinations", mock_pollinations)
+
+    result = hero_image_pipeline.get_hero_image(
+        keyword="tarta de limón",
+        slug="tarta-de-limon",
+        domain_handle="recetadolce",
+        image_prompt="Pastel de limón terminado, fotografía editorial.",
+    )
+
+    assert result["success"] is True
+    assert result["source"] == "pollinations"
+    assert calls == ["codex", "scraped", "pollinations"]
 
 
 @pytest.mark.unit

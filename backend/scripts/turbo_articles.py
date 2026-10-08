@@ -2355,15 +2355,15 @@ async def _publish_generated_article(
         ),
     )
 
-    # ——— 1. Hero image (Codex-only; publishing fails closed on error) ———
-    logger.info("Generating hero image for %s via Codex-only provider", keyword)
+    # ——— 1. Hero image (Codex primary -> Scraped -> Pollinations fallback) ———
+    logger.info("Generating/sourcing hero image for %s (Codex -> Scraped -> Pollinations)", keyword)
     _pipeline_event(
         pipeline_run_id,
         "hero_image",
         "running",
-        "Generating the finished-dish hero image",
-        provider="Codex gpt-image-2",
-        fallback_allowed=False,
+        "Generating the finished-dish hero image (Codex -> Scraped -> Pollinations)",
+        provider="codex",
+        fallback_allowed=True,
     )
     image_prompt = article.get("hero_image_prompt") or build_recipe_image_prompt(
         keyword,
@@ -2378,33 +2378,34 @@ async def _publish_generated_article(
         image_prompt=image_prompt,
     )
     if not hero or not hero.get("success"):
-        logger.error("Codex-only hero image generation failed for %s", keyword)
+        logger.error("Hero image generation failed across all providers for %s", keyword)
         _pipeline_event(
             pipeline_run_id,
             "hero_image",
             "failed",
-            "Codex hero image generation failed; publishing stopped",
-            provider="Codex gpt-image-2",
-            fallback_allowed=False,
+            "Hero image generation failed across all providers; publishing stopped",
+            provider=str(hero.get("provider") or hero.get("source") or "hero_pipeline"),
+            fallback_allowed=True,
         )
         _pipeline_status(pipeline_run_id, "failed")
         return "Failed"
-    if str(hero.get("source") or "").strip().casefold() != "codex":
-        logger.error("Rejecting non-Codex hero source %r for %s", hero.get("source"), keyword)
+    hero_source = str(hero.get("source") or hero.get("provider") or "").strip().casefold()
+    if hero_source not in {"codex", "scraped", "pollinations", "pillow"}:
+        logger.error("Rejecting unapproved hero source %r for %s", hero.get("source"), keyword)
         _pipeline_event(
             pipeline_run_id,
             "hero_image",
             "failed",
-            "Hero source did not attest Codex image generation; publishing stopped",
+            f"Hero source {hero_source!r} is not an approved provider; publishing stopped",
             provider=str(hero.get("provider") or hero.get("source") or "unknown"),
-            fallback_allowed=False,
+            fallback_allowed=True,
         )
         _pipeline_status(pipeline_run_id, "failed")
         return "Failed"
     hero_path = hero["output_path"]
     logger.info(
         "Hero image sourced via %s for %s: %s",
-        hero.get("source", "unknown"),
+        hero_source,
         keyword,
         hero_path,
     )
@@ -2412,8 +2413,9 @@ async def _publish_generated_article(
         pipeline_run_id,
         "hero_image",
         "complete",
-        "Hero created with Codex gpt-image-2",
-        source=hero.get("source", "unknown"),
+        f"Hero image created via {hero_source}",
+        source=hero_source,
+        provider=str(hero.get("provider") or hero_source),
         output_path=hero_path,
     )
 

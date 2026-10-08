@@ -148,7 +148,7 @@ async def test_refresh_ranks_new_longtails_after_excluding_attempted_and_publish
 
     async def collect(_domain, region, limit):
         assert _domain is domain and limit == 240
-        return old_terms + ["tarta de coco publicada", "tarta de coco fallida", fresh_phrase]
+        return [*old_terms, "tarta de coco publicada", "tarta de coco fallida", fresh_phrase]
 
     async def google_only(*args):
         raise AssertionError("Google discovery must not supply production candidates")
@@ -202,7 +202,11 @@ async def test_production_refresh_exclusions_are_domain_local(tmp_path, monkeypa
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "keyword",
-    ["croquetas caseras para gato", "mousse de chocolate saudável", "mousse de chocolate para recheio de bolo"],
+    [
+        "croquetas caseras para gato",
+        "mousse de chocolate saudável",
+        "mousse de chocolate para recheio de bolo",
+    ],
 )
 def test_production_discovery_rejects_pet_and_foreign_language_noise(keyword) -> None:
     assert not turbo._production_discovery_keyword_allowed(keyword, _domain(("Postres",)))
@@ -230,7 +234,7 @@ async def test_production_refresh_deadline_cancels_and_cleans_up_collector(monke
         finally:
             cleaned_up.append(True)
 
-    async def short_deadline(task, *, timeout):
+    async def short_deadline(task, *, timeout):  # noqa: ASYNC109
         assert timeout == 300
         return await real_wait_for(task, timeout=0.001)
 
@@ -652,6 +656,7 @@ async def test_codex_hero_failure_fails_closed_before_publish(monkeypatch) -> No
         "title": "Tarta de chocolate",
         "slug": "tarta-de-chocolate",
         "category": "Postres",
+        "excerpt": "Una deliciosa tarta de chocolate casera.",
         "content": "Contenido culinario completo.",
         "recipe_schema": {
             "recipeIngredient": ["200 g de chocolate"],
@@ -689,19 +694,20 @@ async def test_codex_hero_failure_fails_closed_before_publish(monkeypatch) -> No
 
     assert status == "Failed"
     assert any(
-        stage == "hero_image" and state == "failed" and details["fallback_allowed"] is False
+        stage == "hero_image" and state == "failed" and details["fallback_allowed"] is True
         for stage, state, details in events
     )
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_non_codex_hero_source_is_rejected_before_upload(monkeypatch) -> None:
+async def test_unapproved_hero_source_is_rejected_before_upload(monkeypatch) -> None:
     domain = _domain(("Postres",))
     article = {
         "title": "Tarta de chocolate",
         "slug": "tarta-de-chocolate",
         "category": "Postres",
+        "excerpt": "Una deliciosa tarta de chocolate casera.",
         "content": "Contenido culinario completo.",
         "recipe_schema": {
             "recipeIngredient": ["200 g de chocolate"],
@@ -712,7 +718,7 @@ async def test_non_codex_hero_source_is_rejected_before_upload(monkeypatch) -> N
     import rankstein_mcp_server as mcp
 
     def forbidden_upload(*args, **kwargs):
-        raise AssertionError("unattested hero sources must not be uploaded")
+        raise AssertionError("unapproved hero sources must not be uploaded")
 
     monkeypatch.setattr(
         turbo,
@@ -720,7 +726,7 @@ async def test_non_codex_hero_source_is_rejected_before_upload(monkeypatch) -> N
         lambda **kwargs: {
             "success": True,
             "output_path": "unapproved-hero.jpg",
-            "source": "pollinations",
+            "source": "unapproved_vendor",
         },
     )
     monkeypatch.setattr(mcp, "upload_image_to_supabase", forbidden_upload)
@@ -736,6 +742,132 @@ async def test_non_codex_hero_source_is_rejected_before_upload(monkeypatch) -> N
     )
 
     assert status == "Failed"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_scraped_hero_source_is_accepted_for_upload(monkeypatch) -> None:
+    domain = _domain(("Postres",))
+    article = {
+        "title": "Tarta de chocolate",
+        "slug": "tarta-de-chocolate",
+        "category": "Postres",
+        "excerpt": "Una deliciosa tarta de chocolate casera.",
+        "content": "Contenido culinario completo.",
+        "recipe_schema": {
+            "recipeIngredient": ["200 g de chocolate"],
+            "recipeInstructions": [{"text": "Mezcla y hornea."}],
+        },
+    }
+
+    import rankstein_mcp_server as mcp
+
+    uploaded = []
+
+    monkeypatch.setattr(
+        turbo,
+        "get_hero_image",
+        lambda **kwargs: {
+            "success": True,
+            "output_path": "scraped-hero.jpg",
+            "source": "scraped",
+            "provider": "scraped_source",
+        },
+    )
+    monkeypatch.setattr(
+        mcp,
+        "upload_image_to_supabase",
+        lambda path, storage, handle: uploaded.append(path)
+        or {"success": True, "public_url": "https://img.test/hero.jpg"},
+    )
+    monkeypatch.setattr(mcp, "validate_article_quality", lambda *args: {"success": True, "score": 100})
+    monkeypatch.setattr(
+        mcp,
+        "build_supabase_content",
+        lambda *args: {"success": True, "payload": __import__("json").dumps(article)},
+    )
+    monkeypatch.setattr(
+        mcp,
+        "publish_article_to_supabase",
+        lambda **kwargs: {"success": True, "url": "https://test.example/tarta-de-chocolate"},
+    )
+    monkeypatch.setattr(mcp, "create_article_pin", lambda **kwargs: {"success": False, "error": "no pin"})
+    monkeypatch.setattr(turbo, "_pipeline_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(turbo, "_pipeline_status", lambda *args, **kwargs: None)
+
+    status = await turbo._publish_generated_article(
+        article,
+        "tarta de chocolate",
+        "Postres",
+        domain,
+        pipeline_run_id="run-scraped-hero",
+    )
+
+    assert uploaded == ["scraped-hero.jpg"]
+    assert status == "Needs Verification"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_pollinations_hero_source_is_accepted_for_upload(monkeypatch) -> None:
+    domain = _domain(("Postres",))
+    article = {
+        "title": "Tarta de chocolate",
+        "slug": "tarta-de-chocolate",
+        "category": "Postres",
+        "excerpt": "Una deliciosa tarta de chocolate casera.",
+        "content": "Contenido culinario completo.",
+        "recipe_schema": {
+            "recipeIngredient": ["200 g de chocolate"],
+            "recipeInstructions": [{"text": "Mezcla y hornea."}],
+        },
+    }
+
+    import rankstein_mcp_server as mcp
+
+    uploaded = []
+
+    monkeypatch.setattr(
+        turbo,
+        "get_hero_image",
+        lambda **kwargs: {
+            "success": True,
+            "output_path": "pollinations-hero.jpg",
+            "source": "pollinations",
+            "provider": "pollinations",
+        },
+    )
+    monkeypatch.setattr(
+        mcp,
+        "upload_image_to_supabase",
+        lambda path, storage, handle: uploaded.append(path)
+        or {"success": True, "public_url": "https://img.test/hero.jpg"},
+    )
+    monkeypatch.setattr(mcp, "validate_article_quality", lambda *args: {"success": True, "score": 100})
+    monkeypatch.setattr(
+        mcp,
+        "build_supabase_content",
+        lambda *args: {"success": True, "payload": __import__("json").dumps(article)},
+    )
+    monkeypatch.setattr(
+        mcp,
+        "publish_article_to_supabase",
+        lambda **kwargs: {"success": True, "url": "https://test.example/tarta-de-chocolate"},
+    )
+    monkeypatch.setattr(mcp, "create_article_pin", lambda **kwargs: {"success": False, "error": "no pin"})
+    monkeypatch.setattr(turbo, "_pipeline_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(turbo, "_pipeline_status", lambda *args, **kwargs: None)
+
+    status = await turbo._publish_generated_article(
+        article,
+        "tarta de chocolate",
+        "Postres",
+        domain,
+        pipeline_run_id="run-pollinations-hero",
+    )
+
+    assert uploaded == ["pollinations-hero.jpg"]
+    assert status == "Needs Verification"
 
 
 @pytest.mark.unit

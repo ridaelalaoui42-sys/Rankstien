@@ -173,7 +173,7 @@ class TestPollinationsFallback:
 
 @pytest.mark.unit
 class TestUnifiedHeroProviderRouting:
-    def test_codex_success_short_circuits_pollinations(
+    def test_codex_success_short_circuits_scraped_and_pollinations(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -183,12 +183,19 @@ class TestUnifiedHeroProviderRouting:
             calls.append("codex")
             return {"success": True, "provider": "codex", "output_path": "hero.png"}
 
+        def scrape(*args, **kwargs):
+            calls.append("scraped")
+            return {"success": True, "provider": "scraped", "output_path": "scraped.jpg"}
+
         def pollinations(**kwargs):
             calls.append("pollinations")
             return {"success": True, "provider": "pollinations", "output_path": "hero.jpg"}
 
         monkeypatch.setattr(rms, "create_hero_image_codex", codex)
         monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+        from backend.scripts import hero_image_pipeline
+
+        monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", scrape)
 
         result = rms.create_hero_image("finished paella", "paella")
 
@@ -196,7 +203,7 @@ class TestUnifiedHeroProviderRouting:
         assert result["provider"] == "codex"
         assert calls == ["codex"]
 
-    def test_codex_failure_fails_closed_without_pollinations(
+    def test_codex_failure_falls_back_to_scraped_before_pollinations(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -206,19 +213,87 @@ class TestUnifiedHeroProviderRouting:
             calls.append("codex")
             return {"success": False, "provider": "codex", "error": "quota exhausted"}
 
+        def scrape(*args, **kwargs):
+            calls.append("scraped")
+            return {"success": True, "provider": "scraped", "output_path": "scraped.jpg"}
+
         def pollinations(**kwargs):
             calls.append("pollinations")
             return {"success": True, "provider": "pollinations", "output_path": "hero.jpg"}
 
         monkeypatch.setattr(rms, "create_hero_image_codex", codex)
         monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+        from backend.scripts import hero_image_pipeline
+
+        monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", scrape)
+
+        result = rms.create_hero_image("finished paella", "paella")
+
+        assert result["success"] is True
+        assert result["provider"] == "scraped"
+        assert result["source"] == "scraped"
+        assert calls == ["codex", "scraped"]
+
+    def test_codex_and_scraped_failure_falls_back_to_pollinations(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def codex(**kwargs):
+            calls.append("codex")
+            return {"success": False, "provider": "codex", "error": "quota exhausted"}
+
+        def scrape(*args, **kwargs):
+            calls.append("scraped")
+            return {"success": False, "provider": "scraped", "error": "no images found"}
+
+        def pollinations(**kwargs):
+            calls.append("pollinations")
+            return {"success": True, "provider": "pollinations", "output_path": "hero.jpg"}
+
+        monkeypatch.setattr(rms, "create_hero_image_codex", codex)
+        monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+        from backend.scripts import hero_image_pipeline
+
+        monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", scrape)
+
+        result = rms.create_hero_image("finished paella", "paella")
+
+        assert result["success"] is True
+        assert result["provider"] == "pollinations"
+        assert calls == ["codex", "scraped", "pollinations"]
+
+    def test_all_providers_failure_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def codex(**kwargs):
+            calls.append("codex")
+            return {"success": False, "provider": "codex", "error": "quota exhausted"}
+
+        def scrape(*args, **kwargs):
+            calls.append("scraped")
+            return {"success": False, "provider": "scraped", "error": "no images found"}
+
+        def pollinations(**kwargs):
+            calls.append("pollinations")
+            return {"success": False, "provider": "pollinations", "error": "rate limited"}
+
+        monkeypatch.setattr(rms, "create_hero_image_codex", codex)
+        monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+        from backend.scripts import hero_image_pipeline
+
+        monkeypatch.setattr(hero_image_pipeline, "scrape_hero_from_news", scrape)
 
         result = rms.create_hero_image("finished paella", "paella")
 
         assert result["success"] is False
-        assert result["provider"] == "codex"
+        assert result["provider"] == "failed"
         assert "quota exhausted" in result["error"]
-        assert calls == ["codex"]
+        assert calls == ["codex", "scraped", "pollinations"]
 
 
 @pytest.mark.unit

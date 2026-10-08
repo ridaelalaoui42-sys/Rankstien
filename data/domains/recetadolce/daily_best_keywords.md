@@ -1,6 +1,6 @@
 # Daily Best Keywords - Receta Dolce
 
-Generated: 2026-10-08T10:23:39.385037+00:00
+Generated: 2026-10-08T10:45:05.086414+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|
@@ -9,7 +9,7 @@ Generated: 2026-10-08T10:23:39.385037+00:00
 | helado de pistacho vegano | fresas-y-nata | Medium | 119.00 | 4.0 | 10.0 | 5 |
 | bizcocho de chocolate para hombre | fresas-y-nata | Medium | 114.00 | 3.0 | 2.0 | 5 |
 | bizcocho de chocolate con dulce de leche | fresas-y-nata | Medium | 114.00 | 4.0 | 8.0 | 5 |
-| bizcocho de chocolate en taza | fresas-y-nata | Medium | 112.00 | 4.0 | 18.0 | 5 |
+| bizcocho de chocolate en taza | fresas-y-nata | Medium | 114.00 | 4.0 | 20.0 | 5 |
 | mousse de chocolate saudável | fresas-y-nata | Medium | 109.00 | 4.0 | 20.0 | 0 |
 | pastel de zanahoria con cheesecake | fresas-y-nata | Medium | 108.00 | 3.0 | 10.0 | 5 |
 | helado de pistacho con fresa | fresas-y-nata | Medium | 105.00 | 4.0 | 2.0 | 5 |
