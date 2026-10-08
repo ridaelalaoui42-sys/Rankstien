@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T09:50:10.792722+00:00",
+  "generated_at": "2026-10-08T10:05:08.711861+00:00",
   "domain": "recetagenial",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -60,7 +60,7 @@
       "domain": "recetagenial",
       "cluster": "Postres",
       "priority": "High",
-      "score": 137.0,
+      "score": 139.0,
       "pinterest_score": 70.0,
       "google_news_hits": 5,
       "google_news_titles": [
@@ -72,8 +72,8 @@
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
-      "search_volume_score": 18.0,
-      "search_demand_score": 18.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -251,36 +251,13 @@
         "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos",
         "Cómo convertir unos garbanzos de bote en un plato gourmet en tres minutos, según José Andrés",
         "Chef José Andrés: “El mejor aliño para los garbanzos de bote necesita ladolemono y cilantro”",
-        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”",
-        "La cena saludable que recomiendan los mejores nutricionistas: con garbanzos de bote y lista en 10 minutos"
+        "La cena saludable que recomiendan los mejores nutricionistas: con garbanzos de bote y lista en 10 minutos",
+        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
       "search_volume_score": 12.0,
       "search_demand_score": 12.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "tarta de queso saludable",
-      "domain": "recetagenial",
-      "cluster": "Postres",
-      "priority": "High",
-      "score": 127.0,
-      "pinterest_score": 58.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "La tarta de queso más deliciosa del mundo es también la versión más saludable: queda súper cremosa",
-        "Así es la receta fácil de pastel de plátanos y arándanos del chef Roberto Bosquet: \"Tendrás un cheesecake saludable\"",
-        "Helado de cheesecake del chef Bosquet (saludable y sin azúcar)",
-        "Confirmado: Aldi tiene la mejor selección de postres proteicos para hacer una deliciosa tarta de queso y ca...",
-        "Menú semanal del 16 al 22 de febrero"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 4.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -318,15 +295,38 @@
       "google_news_hits": 5,
       "google_news_titles": [
         "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
+        "12 restaurantes en Valencia para comer paella auténtica",
         "Dosier de arroces",
         "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
-        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri",
-        "Las 31 mejores recetas con langostinos de Directo al Paladar: cocina fácil y casera para todo el año"
+        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
       "search_volume_score": 10.0,
       "search_demand_score": 10.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "tarta de queso saludable",
+      "domain": "recetagenial",
+      "cluster": "Postres",
+      "priority": "High",
+      "score": 125.0,
+      "pinterest_score": 58.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La tarta de queso más deliciosa del mundo es también la versión más saludable: queda súper cremosa",
+        "Así es la receta fácil de pastel de plátanos y arándanos del chef Roberto Bosquet: \"Tendrás un cheesecake saludable\"",
+        "Helado de cheesecake del chef Bosquet (saludable y sin azúcar)",
+        "Confirmado: Aldi tiene la mejor selección de postres proteicos para hacer una deliciosa tarta de queso y ca...",
+        "Menú semanal del 16 al 22 de febrero"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 18.0,
+      "search_demand_score": 18.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true

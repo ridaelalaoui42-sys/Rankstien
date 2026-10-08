@@ -80,6 +80,33 @@ class GA4Connector:
             logger.error("Failed to generate GA4 bearer token: %s", exc)
             return None
 
+    def list_accessible_properties(self) -> list[dict[str, Any]]:
+        """List GA4 properties accessible to this service account via Admin API."""
+        token = self.get_access_token()
+        if not token:
+            return []
+        try:
+            resp = requests.get(
+                "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=12,
+            )
+            if not resp.ok:
+                return []
+            summaries = resp.json().get("accountSummaries", [])
+            props: list[dict[str, Any]] = []
+            for acct in summaries:
+                for prop in acct.get("propertySummaries", []):
+                    prop_id = prop.get("property", "").replace("properties/", "")
+                    props.append({
+                        "property_id": prop_id,
+                        "display_name": prop.get("displayName", ""),
+                        "property_type": prop.get("propertyType", ""),
+                    })
+            return props
+        except Exception:
+            return []
+
     def check_connection(self) -> dict[str, Any]:
         """Diagnose GA4 connection, API enablement, and property access."""
         if not self.is_configured:
@@ -106,7 +133,21 @@ class GA4Connector:
                 "action_needed": "Verify key validity and permissions.",
             }
 
-        # Test querying Analytics Data API with test property ID or property list
+        # Check if we can auto-discover accessible properties via Admin API
+        discovered = self.list_accessible_properties()
+        if discovered:
+            return {
+                "status": "CONNECTED",
+                "ok": True,
+                "email": email,
+                "project_id": project_id,
+                "owner_account": "ridaelalaoui@gmail.com",
+                "properties": discovered,
+                "message": f"Successfully connected! Verified access to {len(discovered)} GA4 property(ies).",
+                "action_needed": None,
+            }
+
+        # Test querying Analytics Data API with test property ID or configured IDs
         test_property = self.dolce_prop_id or self.genial_prop_id or "123456789"
         clean_prop = test_property.replace("properties/", "")
 
@@ -142,7 +183,7 @@ class GA4Connector:
                     "project_id": project_id,
                     "owner_account": "ridaelalaoui@gmail.com",
                     "message": "Service account lacks access to GA4 properties.",
-                    "action_needed": f"In Google Analytics under ridaelalaoui@gmail.com, go to Admin -> Property Access Management and add {email} as Viewer.",
+                    "action_needed": f"In Google Analytics (analytics.google.com) under ridaelalaoui@gmail.com, go to Admin -> Property Access Management and add {email} as Viewer. Also consider enabling Analytics Admin API at https://console.developers.google.com/apis/api/analyticsadmin.googleapis.com/overview?project={project_id} for auto-discovery.",
                 }
 
             if resp.ok:

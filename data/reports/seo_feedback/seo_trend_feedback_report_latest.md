@@ -1,5 +1,5 @@
 # 🎯 RankStein Cross-Channel SEO & Trend Feedback Report
-**Audit Timestamp:** `2026-10-08T04:21:30.766078+00:00` | **Report Date:** October 08, 2026
+**Audit Timestamp:** `2026-10-08T10:07:14.914708+00:00` | **Report Date:** October 08, 2026
 **Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)
 
 ---
@@ -78,16 +78,6 @@
 
 | Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **mercadona tarta 3 chocolates** | `recetagenial` | 7 | 14.29% | #4.1 | Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin. |
-| **aperitivos gourmet para fiestas** | `recetagenial` | 5 | 0.0% | #46.8 | Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin. |
-| **aperitivos recetas** | `recetagenial` | 5 | 0.0% | #53.2 | Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin. |
-| **aperitivos gourmet recetas** | `recetagenial` | 2 | 0.0% | #70.5 | Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin. |
-| **receta lentejas con chorizo y panceta** | `recetagenial` | 1 | 100.0% | #62.0 | Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin. |
-| **"preparar postres faciles"** | `recetagenial` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |
-| **aecosan** | `recetagenial` | 1 | 0.0% | #52.0 | Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin. |
-| **aesan** | `recetagenial` | 1 | 0.0% | #28.0 | Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin. |
-| **aperitivos originales** | `recetagenial` | 1 | 0.0% | #91.0 | Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin. |
-| **aperitivos para fiestas economicos** | `recetagenial` | 1 | 0.0% | #33.0 | Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin. |
 | **dulce chocolate** | `recetadolce` | 8 | 0.0% | #51.8 | Live GSC Query: Position #51.8, CTR 0.0%. Optimize title and visual pin. |
 | **dulce de chocolate** | `recetadolce` | 7 | 0.0% | #43.9 | Live GSC Query: Position #43.9, CTR 0.0%. Optimize title and visual pin. |
 | **arepa dominicana** | `recetadolce` | 4 | 0.0% | #37.0 | Live GSC Query: Position #37.0, CTR 0.0%. Optimize title and visual pin. |
@@ -108,6 +98,16 @@
 | **dulce choco** | `recetadolce` | 1 | 0.0% | #31.0 | Live GSC Query: Position #31.0, CTR 0.0%. Optimize title and visual pin. |
 | **dulce cocina** | `recetadolce` | 1 | 0.0% | #42.0 | Live GSC Query: Position #42.0, CTR 0.0%. Optimize title and visual pin. |
 | **dulce de arroz con leche** | `recetadolce` | 1 | 0.0% | #74.0 | Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin. |
+| **mercadona tarta 3 chocolates** | `recetagenial` | 7 | 14.29% | #4.1 | Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin. |
+| **aperitivos gourmet para fiestas** | `recetagenial` | 5 | 0.0% | #46.8 | Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos recetas** | `recetagenial` | 5 | 0.0% | #53.2 | Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos gourmet recetas** | `recetagenial` | 2 | 0.0% | #70.5 | Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin. |
+| **receta lentejas con chorizo y panceta** | `recetagenial` | 1 | 100.0% | #62.0 | Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin. |
+| **"preparar postres faciles"** | `recetagenial` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |
+| **aecosan** | `recetagenial` | 1 | 0.0% | #52.0 | Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin. |
+| **aesan** | `recetagenial` | 1 | 0.0% | #28.0 | Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos originales** | `recetagenial` | 1 | 0.0% | #91.0 | Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos para fiestas economicos** | `recetagenial` | 1 | 0.0% | #33.0 | Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin. |
 
 ---
 
@@ -116,11 +116,11 @@
 ### Google Search Signals (Spain - ES)
 | Search Term | Source | Velocity | Seasonality | Intent Type |
 | :--- | :--- | :---: | :--- | :--- |
-| tarta de manzana con hojaldre rapida | Google Trends RSS | **+120.0%** | Peak Autumn/Winter | Quick Pastry / Family |
-| crema de calabaza asada y jengibre | Google Trends RSS | **+120.0%** | Peak Autumn/Winter | Healthy Comfort Soup |
-| bizcocho de avena y platano sin azucar | Google Trends RSS | **-30.0%** | Evergreen | Sugar-free Breakfast |
-| garbanzos con espinacas y bacalao | Google Trends RSS | **+80.0%** | Rising Breakout | Traditional Spanish Stew |
-| galletas de mantequilla faciles con 3 ingredientes | Google Trends RSS | **+80.0%** | Rising Breakout | Minimal Ingredient Pastry |
+| tarta de manzana con hojaldre rapida | Google Trends (Live pytrends) | **+84.1%** | Peak Autumn/Winter | Quick Pastry / Family |
+| crema de calabaza asada y jengibre | Google Trends (Live pytrends) | **+437.0%** | Peak Autumn/Winter | Healthy Comfort Soup |
+| bizcocho de avena y platano sin azucar | Google Trends (Live pytrends) | **0.0%** | Evergreen | Sugar-free Breakfast |
+| garbanzos con espinacas y bacalao | Google Trends (Live pytrends) | **0.0%** | Rising Breakout | Traditional Spanish Stew |
+| galletas de mantequilla faciles con 3 ingredientes | Google Trends (Live pytrends) | **+141.7%** | Rising Breakout | Minimal Ingredient Pastry |
 | ensaladilla rusa clasica con mayonesa casera | Google Trends RSS | **-30.0%** | Fading (Summer Trough) | Cold Tapas |
 | gazpacho andaluz tradicional | Google Trends RSS | **-30.0%** | Fading (Summer Trough) | Cold Soup |
 
