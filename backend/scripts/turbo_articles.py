@@ -359,13 +359,106 @@ def _hermes_free_article_timeout_seconds() -> int:
 
 
 def _hermes_codex_article_timeout_seconds() -> int:
-    """Return a bounded read timeout for long-form Codex article generation."""
+    """Return the total Codex HTTP deadline, constrained to 30–900 seconds."""
 
     try:
         configured = int(os.environ.get("RANKSTEIN_HERMES_CODEX_TIMEOUT", "600"))
     except ValueError:
         configured = 600
     return max(30, min(configured, 900))
+
+
+_HERMES_ARTICLE_HTTP_WORKER = """
+import json
+import sys
+from http.client import HTTPException
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+request = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+try:
+    post = Request(
+        request["url"],
+        data=json.dumps(request["payload"], ensure_ascii=False).encode("utf-8"),
+        headers=request["headers"],
+        method="POST",
+    )
+    try:
+        response = urlopen(post, timeout=request["timeout"])
+    except HTTPError as error:
+        response = error
+    with response:
+        body = response.read().decode(response.headers.get_content_charset() or "utf-8", errors="replace")
+        result = {"status_code": response.status, "body": body}
+except TimeoutError:
+    result = {"error": "timeout"}
+except URLError as error:
+    result = {"error": "timeout" if isinstance(error.reason, TimeoutError) else "connection"}
+except (HTTPException, OSError):
+    result = {"error": "transport"}
+sys.stdout.buffer.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+"""
+
+
+@dataclass(frozen=True)
+class _HermesHttpResponse:
+    status_code: int
+    text: str
+
+    def json(self) -> dict:
+        return json.loads(self.text)
+
+
+async def _bounded_hermes_article_http(
+    url: str,
+    *,
+    headers: dict[str, str],
+    payload: dict,
+    timeout: float,
+) -> _HermesHttpResponse:
+    """One POST in an owned process: trickling bytes cannot extend its deadline.
+
+    Credentials and prompts travel over stdin, never command-line arguments.
+    Cleanup is completed before propagating cancellation or a deadline failure;
+    no executor thread remains blocked in network I/O after the coroutine exits.
+    """
+
+    process = None
+    started_at = asyncio.get_running_loop().time()
+    request = json.dumps(
+        {"url": url, "headers": headers, "payload": payload, "timeout": timeout},
+        ensure_ascii=False,
+    ).encode("utf-8")
+    try:
+        process = await _create_owned_subprocess(
+            sys.executable,
+            "-I",
+            "-u",
+            "-c",
+            _HERMES_ARTICLE_HTTP_WORKER,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=clean_python_env(),
+        )
+        remaining = max(0.001, timeout - (asyncio.get_running_loop().time() - started_at))
+        try:
+            stdout, _stderr = await asyncio.wait_for(process.communicate(request), timeout=remaining)
+        except TimeoutError as exc:
+            raise requests.exceptions.Timeout("Hermes article total HTTP deadline exceeded") from exc
+        if process.returncode != 0:
+            raise RuntimeError("Hermes article HTTP worker failed")
+        result = json.loads(stdout)
+        error = result.get("error")
+        if error == "timeout":
+            raise requests.exceptions.Timeout("Hermes article HTTP socket timed out")
+        if error == "connection":
+            raise requests.exceptions.ConnectionError("Hermes article HTTP connection failed")
+        if error == "transport":
+            raise requests.exceptions.RequestException("Hermes article HTTP transport failed")
+        return _HermesHttpResponse(int(result["status_code"]), result["body"])
+    finally:
+        await _cleanup_owned_process(process)
 
 
 def _hermes_status_is_availability_failure(status_code: int) -> bool:
@@ -557,9 +650,10 @@ async def _call_codex_cli_for_article(keyword: str, domain: Domain, source_mater
     env.pop("MCP_GEMINI_API_KEY", None)
     env.pop("MCP_GOOGLE_API_KEY", None)
 
+    process = None
     try:
         logger.info("Invoking Codex CLI model=%s for %s", model, keyword)
-        process = await asyncio.create_subprocess_exec(
+        process = await _create_owned_subprocess(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -594,6 +688,8 @@ async def _call_codex_cli_for_article(keyword: str, domain: Domain, source_mater
     except Exception as exc:
         logger.warning("Codex CLI exception for %s: %s", keyword, exc)
         return None
+    finally:
+        await _cleanup_owned_process(process)
 
 
 async def _call_hermes_codex_for_article_result(
@@ -638,8 +734,6 @@ async def _call_hermes_codex_for_article_result(
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, mention Hermes, or include markdown fences."
     )
-    session = _get_session()
-
     try:
         logger.info(
             "Invoking attested Hermes OpenAI Codex primary_model=%s api_alias=%s for %s",
@@ -647,28 +741,25 @@ async def _call_hermes_codex_for_article_result(
             api_model_alias,
             keyword,
         )
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: session.post(
-                f"{base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": api_model_alias,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": generation_prompt},
-                    ],
-                    "temperature": 0.65,
-                    "max_tokens": 16384,
-                    "stream": False,
-                    "tools": [],
-                    "tool_choice": "none",
-                },
-                timeout=(5, _hermes_codex_article_timeout_seconds()),
-            ),
+        resp = await _bounded_hermes_article_http(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            payload={
+                "model": api_model_alias,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": generation_prompt},
+                ],
+                "temperature": 0.65,
+                "max_tokens": 16384,
+                "stream": False,
+                "tools": [],
+                "tool_choice": "none",
+            },
+            timeout=_hermes_codex_article_timeout_seconds(),
         )
     except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
         logger.warning("Hermes Codex gateway unavailable for %s: %s", keyword, type(exc).__name__)
@@ -775,6 +866,7 @@ async def _call_hermes_free_for_article(
     subprocess_env = os.environ.copy()
     subprocess_env["HERMES_HOME"] = str(hermes_home)
 
+    process = None
     try:
         logger.info(
             "Hermes Codex first with free-provider fallback is invoking %s/%s for %s",
@@ -782,7 +874,7 @@ async def _call_hermes_free_for_article(
             model,
             keyword,
         )
-        process = await asyncio.create_subprocess_exec(
+        process = await _create_owned_subprocess(
             *command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -793,13 +885,13 @@ async def _call_hermes_free_for_article(
             timeout=_hermes_free_article_timeout_seconds(),
         )
     except TimeoutError:
-        if "process" in locals():
-            await _terminate_process_tree(process)
         logger.warning("Hermes free article writer timed out for %s", keyword)
         return None
     except Exception as exc:
         logger.warning("Hermes free article writer failed for %s: %s", keyword, exc)
         return None
+    finally:
+        await _cleanup_owned_process(process)
 
     if process.returncode != 0:
         stderr_text = stderr.decode(errors="replace")
@@ -1984,6 +2076,18 @@ def _validate_article_remaster_report(
             return False, "remaster asset is missing its pair identity or variant"
         if str(asset.get("source") or "").strip().casefold() != "pinterest":
             return False, "remaster asset is not proven to come from Pinterest"
+        quality = asset.get("source_quality")
+        source_hash = str(asset.get("source_hash") or "")
+        if (
+            not isinstance(quality, dict)
+            or quality.get("accepted") is not True
+            or quality.get("policy") != "text_free_pinterest_source"
+            or quality.get("version") != 1
+            or not str(asset.get("source_path") or "").strip()
+            or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+            or quality.get("source_hash") != source_hash
+        ):
+            return False, "remaster asset has no accepted, hash-bound source text review"
         source_identity = str(asset.get("original_pin_id") or asset.get("original_url") or "").strip()
         if not source_identity:
             return False, "remaster asset is missing its Pinterest source identity"
@@ -2013,6 +2117,8 @@ def _validate_article_remaster_report(
         return False, "remaster enqueue result does not prove all 30 queue jobs"
     if len({str(item.get("job_id")) for item in details}) != target_count:
         return False, "remaster enqueue result contains duplicate queue job IDs"
+    if any(str(item.get("state") or "").casefold() in {"held", "dead", "failed"} for item in details):
+        return False, "remaster enqueue result contains held or failed queue jobs"
     return True, ""
 
 
@@ -2147,10 +2253,11 @@ async def _launch_article_remaster_campaign(
     started_at = time.time()
     stdout_handle = None
     stderr_handle = None
+    proc = None
     try:
         stdout_handle = (log_dir / "remasterer.log").open("a", encoding="utf-8")
         stderr_handle = (log_dir / "remasterer_err.log").open("a", encoding="utf-8")
-        proc = await asyncio.create_subprocess_exec(
+        proc = await _create_owned_subprocess(
             *cmd,
             cwd=str(PROJECT_ROOT),
             stdout=stdout_handle,
@@ -2184,7 +2291,6 @@ async def _launch_article_remaster_campaign(
         try:
             returncode = await asyncio.wait_for(proc.wait(), timeout=timeout_seconds)
         except TimeoutError:
-            await _terminate_process_tree(proc)
             return {
                 "success": False,
                 "pid": proc.pid,
@@ -2274,10 +2380,13 @@ async def _launch_article_remaster_campaign(
         logger.warning("Article remaster campaign failed for %s: %s", slug, exc)
         return {"success": False, "error": str(exc)}
     finally:
-        if stdout_handle is not None:
-            stdout_handle.close()
-        if stderr_handle is not None:
-            stderr_handle.close()
+        try:
+            await _cleanup_owned_process(proc)
+        finally:
+            if stdout_handle is not None:
+                stdout_handle.close()
+            if stderr_handle is not None:
+                stderr_handle.close()
 
 
 async def _publish_generated_article(
@@ -2377,7 +2486,9 @@ async def _publish_generated_article(
         domain_handle=domain.handle,
         image_prompt=image_prompt,
     )
-    if not hero or not hero.get("success"):
+    if not isinstance(hero, dict):
+        hero = {"success": False, "error": "Hero pipeline returned an invalid result"}
+    if not hero.get("success"):
         logger.error("Hero image generation failed across all providers for %s", keyword)
         _pipeline_event(
             pipeline_run_id,
@@ -2385,12 +2496,13 @@ async def _publish_generated_article(
             "failed",
             "Hero image generation failed across all providers; publishing stopped",
             provider=str(hero.get("provider") or hero.get("source") or "hero_pipeline"),
+            error=str(hero.get("error") or "")[:240],
             fallback_allowed=True,
         )
         _pipeline_status(pipeline_run_id, "failed")
         return "Failed"
     hero_source = str(hero.get("source") or hero.get("provider") or "").strip().casefold()
-    if hero_source not in {"codex", "scraped", "pollinations", "pillow"}:
+    if hero_source not in {"codex", "scraped", "pollinations"}:
         logger.error("Rejecting unapproved hero source %r for %s", hero.get("source"), keyword)
         _pipeline_event(
             pipeline_run_id,
@@ -2402,7 +2514,19 @@ async def _publish_generated_article(
         )
         _pipeline_status(pipeline_run_id, "failed")
         return "Failed"
-    hero_path = hero["output_path"]
+    hero_path = hero.get("output_path")
+    if not isinstance(hero_path, (str, Path)) or not str(hero_path).strip():
+        _pipeline_event(
+            pipeline_run_id,
+            "hero_image",
+            "failed",
+            "Hero provider returned no usable image path; publishing stopped",
+            source=hero_source,
+            fallback_allowed=True,
+        )
+        _pipeline_status(pipeline_run_id, "failed")
+        return "Failed"
+    hero_path = str(hero_path)
     logger.info(
         "Hero image sourced via %s for %s: %s",
         hero_source,
@@ -2784,7 +2908,8 @@ async def _publish_generated_article(
 
 
 # Compatibility alias for callers and focused tests that predate the
-# provider-neutral publication name. Article generation itself is Codex-only.
+# provider-neutral publication name. Articles remain Codex-first with only the
+# explicitly approved availability-only free model route through Hermes.
 _publish_openrouter_article = _publish_generated_article
 
 
@@ -2798,24 +2923,75 @@ async def _deterministic_publication(keyword: str, cluster: str, domain: Domain)
     return "Failed"
 
 
+async def _create_owned_subprocess(*args, **kwargs) -> asyncio.subprocess.Process:
+    """Capture a spawned child even if cancellation arrives during OS startup."""
+
+    spawning = asyncio.create_task(asyncio.create_subprocess_exec(*args, **kwargs))
+    try:
+        return await asyncio.shield(spawning)
+    except asyncio.CancelledError:
+        # Shield creation so cancellation cannot lose the handle of a child
+        # that the OS already started. Repeated cancellation must not skip reaping.
+        while not spawning.done():
+            try:
+                await asyncio.shield(spawning)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        try:
+            process = spawning.result()
+        except Exception:
+            pass
+        else:
+            await _cleanup_owned_process(process)
+        raise
+
+
+async def _cleanup_owned_process(process: asyncio.subprocess.Process | None) -> None:
+    """Finish exact-child cleanup before allowing cancellation to propagate."""
+
+    if process is None or process.returncode is not None:
+        return
+    cleanup = asyncio.create_task(_terminate_process_tree(process))
+    cancelled = False
+    while not cleanup.done():
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError:
+            cancelled = True
+    cleanup.result()
+    if cancelled:
+        raise asyncio.CancelledError
+
+
 async def _terminate_process_tree(process: asyncio.subprocess.Process) -> None:
     if process.returncode is not None:
         return
     try:
         if os.name == "nt":
-            killer = await asyncio.create_subprocess_exec(
-                "taskkill",
-                "/PID",
-                str(process.pid),
-                "/T",
-                "/F",
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            with contextlib.suppress(asyncio.TimeoutError):
+            killer = None
+            try:
+                killer = await asyncio.create_subprocess_exec(
+                    "taskkill",
+                    "/PID",
+                    str(process.pid),
+                    "/T",
+                    "/F",
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
                 await asyncio.wait_for(killer.wait(), timeout=10)
-            if process.returncode is None:
-                process.kill()
+            except (OSError, TimeoutError):
+                logger.warning("Tree termination command failed for owned PID %s", process.pid)
+            finally:
+                if killer is not None and killer.returncode is None:
+                    with contextlib.suppress(ProcessLookupError):
+                        killer.kill()
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(killer.wait(), timeout=2)
+                if process.returncode is None:
+                    process.kill()
         else:
             process.terminate()
             with contextlib.suppress(asyncio.TimeoutError):
@@ -3459,6 +3635,11 @@ def _production_discovery_keyword_allowed(keyword: str, domain: Domain) -> bool:
         folded,
     ):
         return False
+    # This legacy guide label carries no ingredient/style identity. Keep the
+    # maintained specificity policy (including legitimate homemade searches)
+    # intact while rejecting this known noisy Pending phrase.
+    if re.fullmatch(r"croquetas?(?:\s+caser[oa]s?)?\s+recetas?\s+para\s+hacer", folded):
+        return False
     if not is_recipe_aware_keyword(keyword, domain=domain) or _keyword_specificity_score(keyword) <= 0:
         return False
     try:
@@ -3545,7 +3726,10 @@ async def _reconcile_awaiting_articles(domain: Domain) -> None:
     if tracker is None or not PIPELINE_DB.exists():
         return
     articles = list(tracker.data["domains"][domain.handle].get("articles", []))
-    queue = get_job_queue(domain_handle=domain.handle)
+    # Primary uploads and the singleton supervisor use the shared queue. Domain
+    # identity is validated by the exact-job reconciler, not by opening a
+    # different database that never receives these jobs.
+    queue = get_job_queue()
     for article in articles:
         state = str(article.get("state") or "").replace("_", " ").casefold()
         run_id = article.get("pipeline_run_id")
@@ -3638,6 +3822,9 @@ async def _run_domain(
 
         eligible_keywords, research_reason = _load_pinterest_qualified_keyword_keys(domain)
         eligible_keywords -= attempted_keywords
+        eligible_keywords = {
+            keyword for keyword in eligible_keywords if _production_discovery_keyword_allowed(keyword, domain)
+        }
         pending = reserve_pending_keywords(
             domain.keywords_file,
             roadmap_title,
@@ -3665,6 +3852,11 @@ async def _run_domain(
             added = await _auto_refresh_keywords(domain, excluded_keywords=attempted_keywords)
             refreshed_eligible, refreshed_reason = _load_pinterest_qualified_keyword_keys(domain)
             refreshed_eligible -= attempted_keywords
+            refreshed_eligible = {
+                keyword
+                for keyword in refreshed_eligible
+                if _production_discovery_keyword_allowed(keyword, domain)
+            }
             fresh_pending = any(
                 row.status.casefold() == "pending" and row.keyword.strip().casefold() in refreshed_eligible
                 for row in read_keyword_rows(domain.keywords_file)
@@ -3697,10 +3889,7 @@ async def _run_domain(
         accepted = []
         for item in pending:
             attempted_keywords.add(item.keyword.strip().casefold())
-            if (
-                is_recipe_aware_keyword(item.keyword, domain=domain)
-                and _keyword_specificity_score(item.keyword) > 0
-            ):
+            if _production_discovery_keyword_allowed(item.keyword, domain):
                 accepted.append(item)
                 if _PRODUCTION_BATCH_TRACKER is not None:
                     _PRODUCTION_BATCH_TRACKER.start_keyword(

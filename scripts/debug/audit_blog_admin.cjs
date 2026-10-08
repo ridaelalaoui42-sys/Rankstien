@@ -9,15 +9,18 @@ const { chromium } = require('C:/Users/REDX420/Desktop/recetagenial/node_modules
 const live = process.argv.includes('--live');
 const preview = process.argv.includes('--preview');
 const readOnly = live || preview || process.argv.includes('--read-only');
+const sharedOnly = process.argv.includes('--shared-only');
 const execFileAsync = promisify(execFile);
 const reportDirectory = join(__dirname, '../../data/reports/design_audit/redesign-2026/admin');
+const option = (name, fallback) => process.argv.find((argument) => argument.startsWith('--' + name + '='))?.split('=').slice(1).join('=') || fallback;
 const sites = [
-  { name: 'RecetaGenial', root: 'C:/Users/REDX420/Desktop/recetagenial', origin: live ? 'https://recetagenial.com' : preview ? 'https://recetagenial-z2ve-git-codex-18659d-ridaelalaoui42-sys-projects.vercel.app' : 'http://127.0.0.1:3010', cookie: 'rg_admin_session', categories: 6, allowedCategories: ['Aperitivos', 'Arroces', 'Carnes', 'Pescados', 'Ensaladas', 'Postres'] },
-  { name: 'RecetaDolce', root: 'C:/Users/REDX420/Desktop/recetadolce', origin: live ? 'https://recetadolce.com' : preview ? 'https://recetadolce-com-git-codex-vi-b11d64-ridaelalaoui42-sys-projects.vercel.app' : 'http://127.0.0.1:3011', cookie: 'rd_admin_session', categories: 4, allowedCategories: ['Fresas y Nata', 'Tartas y Pasteles', 'Chocolates', 'Dulces Saludables'] },
+  { name: 'RecetaGenial', root: join(__dirname, '../../data/worktrees/recetagenial-admin'), vercelRoot: 'C:/Users/REDX420/Desktop/recetagenial', origin: live ? 'https://recetagenial.com' : preview ? option('recetagenial-origin', 'https://recetagenial-z2ve-git-codex-18659d-ridaelalaoui42-sys-projects.vercel.app') : option('recetagenial-origin', 'http://127.0.0.1:3012'), cookie: 'rg_admin_session', categories: 6 },
+  { name: 'RecetaDolce', root: join(__dirname, '../../data/worktrees/recetadolce-admin'), vercelRoot: 'C:/Users/REDX420/Desktop/recetadolce', origin: live ? 'https://recetadolce.com' : preview ? option('recetadolce-origin', 'https://recetadolce-com-git-codex-vi-b11d64-ridaelalaoui42-sys-projects.vercel.app') : option('recetadolce-origin', 'http://127.0.0.1:3013'), cookie: 'rd_admin_session', categories: 4 },
 ].filter((site) => !process.argv.some((argument) => argument.startsWith('--site=')) || process.argv.includes('--site=' + site.name.toLowerCase()));
 
 async function login(page, site, password) {
   await page.waitForLoadState('load');
+  await page.locator('form[aria-busy="false"]').waitFor();
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   const [authentication] = await Promise.all([
     page.waitForResponse((response) => response.url().endsWith('/api/admin/auth') && response.request().method() === 'POST', { timeout: 60000 }),
@@ -33,12 +36,24 @@ async function read(page, path) {
   }, path);
 }
 
+async function waitForServer(context, site) {
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await context.request.get(site.origin + '/admin/login', { timeout: 5000 });
+      if (response.status() === 200) return;
+    } catch { /* Startup may still be binding the isolated port. */ }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error(site.name + ': server did not become ready within two minutes');
+}
+
 async function previewCookies(site) {
   const { stdout } = await execFileAsync(process.execPath, [
     'C:/Users/REDX420/AppData/Roaming/npm/node_modules/vercel/dist/vc.js',
     'curl', '/admin/login', '--deployment', site.origin,
     '--', '-sS', '--max-time', '60', '-H', 'x-vercel-set-bypass-cookie:true', '-D', '-', '-o', 'NUL',
-  ], { cwd: site.root, timeout: 120000 });
+  ], { cwd: site.vercelRoot, timeout: 120000 });
   const cookies = stdout.split(/\r?\n/).filter((line) => /^set-cookie:/i.test(line)).map((line) => {
     const pair = line.slice(line.indexOf(':') + 1).trim().split(';')[0];
     const equal = pair.indexOf('=');
@@ -65,6 +80,7 @@ async function auditSite(browser, site) {
     console.log(site.name + ': checking authentication');
     const bypassCookies = preview ? await previewCookies(site) : [];
     if (bypassCookies.length) await context.addCookies(bypassCookies);
+    await waitForServer(context, site);
     for (const path of ['/api/admin/settings', '/api/admin/posts', '/api/admin/newsletter/send', '/api/admin/seo/audit']) {
       const response = await context.request.get(site.origin + path);
       assert.equal(response.status(), 401, site.name + ': anonymous private API must reject access');
@@ -80,6 +96,7 @@ async function auditSite(browser, site) {
     result.checks.forgedCookie = true;
 
     await page.goto(site.origin + '/admin/settings', { waitUntil: 'domcontentloaded' });
+    await page.waitForURL((url) => url.pathname === '/admin/login');
     assert.equal(new URL(page.url()).pathname, '/admin/login');
     if (!readOnly) {
       const badLogin = await login(page, site, 'invalid-admin-audit-' + Date.now());
@@ -260,13 +277,14 @@ async function auditSite(browser, site) {
     await page.getByRole('button', { name: 'Cerrar Sesión', exact: true }).click();
     await page.waitForURL((url) => url.pathname === '/');
     await page.goto(site.origin + '/admin/new');
+    await page.waitForURL((url) => url.pathname === '/admin/login');
     assert.equal(new URL(page.url()).pathname, '/admin/login');
     result.checks.logout = true;
     assert.equal(errors.length, 0, site.name + ': browser runtime error');
     result.passed = true;
     return result;
   } catch (error) {
-    result.failure = error.message;
+    result.failure = error.message.replace(/^.*(?:cookie|authorization|password).*$/gim, '[sensitive request detail omitted]');
     result.failurePath = new URL(page.url()).pathname;
     result.pageTitle = await page.title();
     result.headings = await page.locator('h1').allTextContents();
@@ -275,8 +293,17 @@ async function auditSite(browser, site) {
     return result;
   } finally {
     if (draftId) {
-      const response = await page.evaluate(async (id) => (await fetch('/api/admin/posts/' + id, { method: 'DELETE' })).status, draftId);
-      result.draftCleanupStatus = response;
+      try {
+        const response = await context.request.delete(site.origin + '/api/admin/posts/' + draftId);
+        result.draftCleanupStatus = response.status();
+        if (response.status() !== 200) {
+          result.draftRequiringCleanup = draftId;
+          result.passed = false;
+        }
+      } catch {
+        result.draftRequiringCleanup = draftId;
+        result.passed = false;
+      }
     }
     await context.close();
   }
@@ -286,6 +313,7 @@ async function auditSharedSessions(browser) {
   const context = await browser.newContext();
   try {
     for (const site of sites) {
+      await waitForServer(context, site);
       const environment = parseEnv(readFileSync(join(site.root, '.env.local'), 'utf8'));
       const response = await context.request.post(site.origin + '/api/admin/auth', { data: { password: environment.ADMIN_PASSWORD } });
       assert.equal(response.status(), 200);
@@ -300,13 +328,16 @@ async function auditSharedSessions(browser) {
   }
 }
 
-(async () => {
+module.exports = { sites, previewCookies, reportDirectory };
+
+if (require.main === module) (async () => {
+  assert(!sharedOnly || (!live && !preview && sites.length === 2), 'Session isolation requires both local sites');
   mkdirSync(reportDirectory, { recursive: true });
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const results = [];
   let sharedSessions;
   try {
-    for (const site of sites) {
+    for (const site of sharedOnly ? [] : sites) {
       const result = await auditSite(browser, site);
       results.push(result);
       console.log(JSON.stringify(result));
@@ -315,7 +346,7 @@ async function auditSharedSessions(browser) {
   } finally {
     await browser.close();
   }
-  const mode = live ? 'live' : preview ? 'preview' : 'local';
+  const mode = sharedOnly ? 'session-isolation' : live ? 'live' : preview ? 'preview' : 'local';
   const suffix = sites.length === 1 ? '-' + sites[0].name.toLowerCase() : '';
   const file = join(reportDirectory, 'admin-audit-' + mode + suffix + '.json');
   writeFileSync(file, JSON.stringify({ timestamp: new Date().toISOString(), readOnly, results, sharedSessions }, null, 2));

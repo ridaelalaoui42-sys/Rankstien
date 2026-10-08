@@ -8,7 +8,6 @@ Google Autocomplete APIs.
 from __future__ import annotations
 
 import logging
-import urllib.parse
 from dataclasses import dataclass
 from typing import Any
 
@@ -58,17 +57,23 @@ class GoogleTrendsConnector:
                     pub_date = item.find("pubDate")
 
                     title = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
-                    traffic = approx_traffic.text.strip() if approx_traffic is not None and approx_traffic.text else "N/A"
+                    traffic = (
+                        approx_traffic.text.strip()
+                        if approx_traffic is not None and approx_traffic.text
+                        else "N/A"
+                    )
                     date = pub_date.text.strip() if pub_date is not None and pub_date.text else ""
 
                     if title:
-                        items.append({
-                            "query": title,
-                            "approx_traffic": traffic,
-                            "published_at": date,
-                            "region": self.region,
-                            "source": "Google Trends RSS",
-                        })
+                        items.append(
+                            {
+                                "query": title,
+                                "approx_traffic": traffic,
+                                "published_at": date,
+                                "region": self.region,
+                                "source": "Google Trends RSS",
+                            }
+                        )
                         if len(items) >= limit:
                             break
         except Exception as exc:
@@ -98,13 +103,19 @@ class GoogleTrendsConnector:
                             series = df[kw].tolist()
                             recent_avg = sum(series[-4:]) / max(1, len(series[-4:]))
                             earlier_avg = sum(series[:4]) / max(1, len(series[:4]))
-                            velocity_pct = round(((recent_avg - earlier_avg) / max(1, earlier_avg)) * 100, 1) if earlier_avg > 0 else 0.0
+                            velocity_pct = (
+                                round(((recent_avg - earlier_avg) / max(1, earlier_avg)) * 100, 1)
+                                if earlier_avg > 0
+                                else 0.0
+                            )
 
                             results[kw] = {
                                 "current_interest": int(series[-1]) if series else 0,
                                 "peak_interest": int(max(series)) if series else 0,
                                 "recent_avg_interest": round(recent_avg, 1),
-                                "growth_velocity_pct": f"+{velocity_pct}%" if velocity_pct >= 0 else f"{velocity_pct}%",
+                                "growth_velocity_pct": f"+{velocity_pct}%"
+                                if velocity_pct >= 0
+                                else f"{velocity_pct}%",
                                 "timeline_points": len(series),
                                 "data_source": "pytrends (Google Trends)",
                             }

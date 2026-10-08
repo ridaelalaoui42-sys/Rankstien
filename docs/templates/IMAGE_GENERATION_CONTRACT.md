@@ -6,8 +6,8 @@ Use this contract for every hero image, Open Graph image, inline recipe visual, 
 
 ## Runtime Rules
 
-- Publishable article heroes use Codex native image generation only (`gpt-image-2` through Hermes/Codex OAuth).
-- If Codex fails, fail the article image stage. Never publish a Pollinations image, scraped hero, or Pillow placeholder.
+- Publishable article heroes use Codex native image generation first (`gpt-image-2` through Hermes/Codex OAuth), then a matching allowlisted culinary-source photo, then Pollinations.
+- A valid approved hero fallback may publish with its actual provider recorded. Fail the image stage when no option returns a usable image; never publish a Pillow/programmatic placeholder.
 - Do not require `OPENAI_API_KEY`, `GOOGLE_API_KEY`, or `GEMINI_API_KEY` for the default image path.
 - Preserve domain identity: `domain_handle`, public domain, brand name, niche, category, board map, and Pinterest account handle must travel with every image/pin brief.
 - Never include secrets, browser session paths, service role keys, cookies, or raw credentials in image prompts or metadata.

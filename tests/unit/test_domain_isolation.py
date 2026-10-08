@@ -61,6 +61,7 @@ class TestDomainIsolation:
 
         # Monkeypatch get_registry to return our test-specific registry
         monkeypatch.setattr("rankstein.domain.get_registry", lambda: self.registry)
+        monkeypatch.setattr("pinterest_automation.rate_limiter._RL_DB_FILE", tmp_path / "rate-limit.db")
 
         # Reset singletons before and after test
         _reset_job_queue_singleton()

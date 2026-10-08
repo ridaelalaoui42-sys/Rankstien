@@ -97,3 +97,44 @@ def test_check_disk_space(temp_logs, monkeypatch: pytest.MonkeyPatch):
     res = log_manager.check_disk_space()
     assert res["ok"]
     assert res["error"] is None
+
+
+def test_disk_measurement_failure_blocks_work(temp_logs, monkeypatch):
+    def fail(_path):
+        raise OSError("unavailable")
+
+    monkeypatch.setattr(shutil, "disk_usage", fail)
+    assert log_manager.check_disk_space()["ok"] is False
+
+
+def test_nested_rotated_logs_follow_retention(temp_logs):
+    nested = temp_logs["logs"] / "operator"
+    nested.mkdir()
+    old = nested / "production.20200101.log"
+    old.write_text("old diagnostic", encoding="utf-8")
+    os.utime(old, (time.time() - 90 * 86400,) * 2)
+    active = nested / "production.log"
+    active.write_text("current", encoding="utf-8")
+    log_manager.cleanup_retained_files()
+    assert not old.exists()
+    assert active.exists()
+
+
+def test_memory_pressure_blocks_production(temp_logs, monkeypatch):
+    from types import SimpleNamespace
+
+    import psutil
+
+    monkeypatch.setattr(log_manager, "RANKSTEIN_MIN_DISK_GB", 0)
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(percent=97, available=2**30))
+    assert not log_manager.check_resource_budget()["ok"]
+
+
+def test_resources_allow_safe_work(temp_logs, monkeypatch):
+    from types import SimpleNamespace
+
+    import psutil
+
+    monkeypatch.setattr(log_manager, "RANKSTEIN_MIN_DISK_GB", 0)
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(percent=70, available=4 * 2**30))
+    assert log_manager.check_resource_budget()["ok"]

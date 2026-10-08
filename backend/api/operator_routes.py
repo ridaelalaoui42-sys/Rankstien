@@ -47,6 +47,7 @@ ACTION_LABELS = {
     "production": "Production Batch",
     "full": "Start Publishing",
     "audit": "Audit",
+    "trends": "Trend Discovery",
     "mcp": "MCP Check",
     "supervisor": "Supervisor",
     "remaster": "Remaster",
@@ -411,20 +412,24 @@ def setup_rankstein_routes() -> APIRouter:
 
             result = request_supervisor_stop()
             return {"ok": result.get("success", False), **result}
-        processes = _load_processes()
-        info = processes.get(mode)
-        if not info:
-            return {"ok": True, "mode": mode, "stopped": False, "reason": "not_running"}
-        pid = int(info.get("pid", 0) or 0)
-        stopped = False
-        if pid and _pid_alive(pid, info.get("command"), info.get("started_at")):
-            stopped = _kill_pid_tree(pid)
-        info["stop_requested"] = True
-        info["finished_at"] = int(time.time())
-        info["returncode"] = None
-        processes[mode] = info
-        _save_processes(processes)
-        return {"ok": True, "mode": mode, "pid": pid, "stopped": stopped}
+        if mode not in ACTION_LABELS:
+            raise HTTPException(404, "Unsupported tracked process")
+        with PROCESS_LOCK:
+            processes = _load_processes()
+            info = dict(processes.get(mode) or {})
+            pid = int(info.get("pid", 0) or 0)
+            if not pid or not _pid_alive(pid, info.get("command"), info.get("started_at")):
+                return {"ok": True, "mode": mode, "stopped": False, "reason": "not_running"}
+            if not _kill_pid_tree(pid):
+                raise HTTPException(
+                    503, "The owned process could not be stopped; no stopped state was recorded"
+                )
+            info["stop_requested"] = True
+            info["finished_at"] = int(time.time())
+            info["returncode"] = None
+            processes[mode] = info
+            _save_processes(processes)
+            return {"ok": True, "mode": mode, "pid": pid, "stopped": True}
 
     @router.get("/control/agentmemory/status")
     def control_agentmemory_status(request: Request) -> dict[str, Any]:
@@ -964,6 +969,7 @@ def _live_runtime_status(payload: dict[str, Any]) -> dict[str, Any]:
                 or (batch and item.get("batch_id") == batch.get("batch_id"))
             )
             and not int((item.get("queue") or {}).get("active") or 0)
+            and not int((item.get("queue") or {}).get("held") or 0)
         ]
         pipeline["ongoing_campaigns"] = [item for item in ongoing if item not in removed]
         pipeline["ongoing_total"] = max(0, int(pipeline.get("ongoing_total") or 0) - len(removed))
@@ -2016,11 +2022,13 @@ def _opencode_status() -> dict[str, Any]:
 
 
 def _get_seo_feedback_report() -> dict[str, Any]:
-    from dataclasses import asdict
-    import sys
     import importlib
+    import sys
+    from dataclasses import asdict
+
     sys.path.insert(0, str(RANKSTEIN_ROOT))
     import rankstein.seo_feedback_engine
+
     importlib.reload(rankstein.seo_feedback_engine)
     from rankstein.seo_feedback_engine import SEOFeedbackEngine
 
@@ -2033,11 +2041,13 @@ def _get_seo_feedback_report() -> dict[str, Any]:
 
 
 def _run_seo_feedback_refresh() -> dict[str, Any]:
-    from dataclasses import asdict
-    import sys
     import importlib
+    import sys
+    from dataclasses import asdict
+
     sys.path.insert(0, str(RANKSTEIN_ROOT))
     import rankstein.seo_feedback_engine
+
     importlib.reload(rankstein.seo_feedback_engine)
     from rankstein.seo_feedback_engine import SEOFeedbackEngine
 
@@ -2096,15 +2106,10 @@ def _add_recommendation_to_roadmap(body: dict[str, Any]) -> dict[str, Any]:
 
 
 def _download_seo_report() -> Any:
-    report_file = (
-        RANKSTEIN_ROOT
-        / "data"
-        / "reports"
-        / "seo_feedback"
-        / "seo_trend_feedback_report_latest.md"
-    )
+    report_file = RANKSTEIN_ROOT / "data" / "reports" / "seo_feedback" / "seo_trend_feedback_report_latest.md"
     if not report_file.exists():
         import sys
+
         sys.path.insert(0, str(RANKSTEIN_ROOT))
         from rankstein.seo_feedback_engine import SEOFeedbackEngine
 
@@ -2226,4 +2231,3 @@ def _launch_seo_single_turbo(body: dict[str, Any]) -> dict[str, Any]:
         "message": f"Targeted article worker launched for {domain}: '{keyword or 'Next Pending'}' (PID: {proc.pid}).",
         "pid": proc.pid,
     }
-

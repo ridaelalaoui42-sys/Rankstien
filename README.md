@@ -12,9 +12,9 @@ Updated: 2026-08-24
 - Long-term memory: AgentMemory MCP plus local REST worker on `http://127.0.0.1:3111/agentmemory/health`.
 - Browser automation: Chromium is the unattended production browser; shared Playwright helpers retain Firefox support for interactive diagnostics.
 - Trend intelligence: an empty qualified queue triggers domain-aware discovery from Pinterest Trends/Search, Google News, Google Trends RSS, and Google Suggestions. RankStein preserves source provenance, rejects vague phrases, requires specificity plus independent demand evidence, and isolates individual provider failures.
-- Image generation: article heroes use Codex `gpt-image-2` only and fail closed on any provider error; all prompts follow `docs/templates/IMAGE_GENERATION_CONTRACT.md`.
+- Hero images: try Codex `gpt-image-2` first, then a matching recipe/food image from an allowlisted culinary source, then Pollinations. A valid approved fallback may publish; fail closed if all three options fail or return no usable image. Programmatic placeholders are never article heroes.
 - Pinterest automation: queue execution validates configured account handles, runs bounded Playwright pin jobs, recovers stale leases, and retries transient failures with capped backoff.
-- Fresh campaign contract: every article run includes multi-source keyword discovery, source article scraping, Codex article creation, a Codex hero, a verified primary hero-based pin, and exactly 15 unique scraped Pinterest sources transformed into `viral_visual` + `recipe_card` pairs (30 queued pins). See `docs/system/CAMPAIGN_PIPELINE.md`.
+- Fresh campaign contract: every article run includes Pinterest-origin keyword discovery with exact external validation, source article scraping, Codex-first article creation, an approved hero image, a verified primary hero-based pin, and exactly 15 unique scraped Pinterest sources transformed into `viral_visual` + `recipe_card` pairs (30 queued pins). See `docs/system/CAMPAIGN_PIPELINE.md`.
 - Subscriber administration: CLI-only through `python rankstein.py subscribers ...`.
 - Project hygiene: this workspace is local-only; generated payloads, browser profiles, debug scripts, local sessions, and old duplicated context docs stay outside the maintained source path.
 

@@ -453,11 +453,19 @@ def build_recipe_image_scrape_brief(
     else:
         search_identity = keyword_text
 
+    # Cooking constraints are part of the dish identity, not incidental title
+    # noise. Keep them in every generated query, before it reaches the scraper.
+    dish_modifier = "sin horno" if re.search(r"\bsin\s+horno\b", keyword_text) else ""
+    if dish_modifier and dish_modifier not in search_identity:
+        search_identity = f"{search_identity} {dish_modifier}".strip()
+
     terms = list(identity_terms)
     if category:
         terms.extend(term for term in _scrape_tokens(category) if term not in IMAGE_SCRAPE_NOISE_TERMS)
     display = _domain_value(domain, "display_name", "")
     compact_terms = " ".join(part for part in (dish_term, *focus_terms) if part)
+    if dish_modifier and dish_modifier not in compact_terms:
+        compact_terms = f"{compact_terms} {dish_modifier}".strip()
     query_variants = [
         search_identity,
         compact_terms,

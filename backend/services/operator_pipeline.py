@@ -223,7 +223,7 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
         campaigns.values(),
         key=lambda item: (
             0 if item.get("in_current_batch") else 1,
-            {"active": 0, "attention": 1, "complete": 2, "recent": 3}.get(
+            {"active": 0, "waiting": 1, "attention": 2, "complete": 3, "recent": 4}.get(
                 item["overall_state"],
                 4,
             ),
@@ -249,11 +249,13 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
         "summary": {
             "ongoing": len(ongoing),
             "active": sum(item["overall_state"] == "active" for item in ongoing),
+            "waiting": sum(item["overall_state"] == "waiting" for item in ongoing),
             "attention": sum(item["overall_state"] == "attention" for item in ordered),
             "complete": sum(item["overall_state"] == "complete" for item in ordered),
             "pins_pending": sum(item["queue"].get("active", 0) for item in ordered),
             "pins_published": sum(item["queue"].get("completed", 0) for item in ordered),
             "pins_dead": sum(item["queue"].get("dead", 0) for item in ordered),
+            "pins_held": sum(item["queue"].get("held", 0) for item in ordered),
         },
         "updated_at": int(now),
     }
@@ -305,6 +307,7 @@ def _new_campaign(
             "completed": 0,
             "dead": 0,
             "failed": 0,
+            "held": 0,
         },
         "remaster": {},
         "verification_contract": {
@@ -576,6 +579,18 @@ def _sync_contract_verification(campaign: dict[str, Any], updated_at: float | No
     verification = _stage(campaign, "verification")
     if verification is None:
         return
+    held = int((campaign.get("queue") or {}).get("held") or 0)
+    if held:
+        detail = (
+            f"Quality hold: {held} quarantined campaign jobs; replacement source/creative proof is required"
+        )
+        contract.update(
+            {"quality_hold": True, "held_jobs": held, "campaign_report_complete": False, "detail": detail}
+        )
+        _set_stage(
+            campaign, "verification", "warning", detail, updated_at, {"held_jobs": held, "quality_hold": True}
+        )
+        return
 
     if primary and campaign_complete:
         _set_stage(
@@ -664,6 +679,7 @@ def _apply_queue_evidence(campaign: dict[str, Any], queue: dict[str, Any]) -> No
         completed = sum(item.get("status") == "completed" for item in tracked_jobs)
         dead = sum(item.get("status") == "dead" for item in tracked_jobs)
         failed = sum(item.get("status") == "failed" for item in tracked_jobs)
+        held = sum(item.get("status") == "held" for item in tracked_jobs)
         total = len(tracked_ids)
         unknown = total - len(tracked_jobs)
         latest_job = max(
@@ -701,9 +717,21 @@ def _apply_queue_evidence(campaign: dict[str, Any], queue: dict[str, Any]) -> No
         completed = int(queue.get("completed", 0))
         dead = int(queue.get("dead", 0))
         failed = int(queue.get("failed", 0))
-        total = active + completed + dead + failed
+        held = int(queue.get("held", 0))
+        total = active + completed + dead + failed + held
         unknown = 0
         campaign["latest_campaign_pin_url"] = str(queue.get("latest_campaign_pin_url") or "")
+    metric_jobs = tracked_jobs if tracked_ids else list(job_evidence.values())
+    pending, processing, retry = (
+        sum(item.get("status") == status for item in metric_jobs)
+        if job_evidence
+        else int(queue.get(status, 0))
+        for status in ("pending", "processing", "retry")
+    )
+    waiting_jobs = [item for item in metric_jobs if item.get("status") in {"pending", "retry"}]
+    now = time.time()
+    scheduled = sum(float(item.get("next_retry_at") or 0) > now for item in waiting_jobs)
+    due_times = [float(item["next_retry_at"]) for item in waiting_jobs if item.get("next_retry_at")]
     campaign["updated_at"] = max(campaign["updated_at"], float(queue.get("updated_at") or 0))
     campaign["queue"] = {
         "total": total,
@@ -712,8 +740,17 @@ def _apply_queue_evidence(campaign: dict[str, Any], queue: dict[str, Any]) -> No
         "dead": dead,
         "failed": failed,
         "unknown": unknown,
+        "held": held,
+        # Legacy ``active`` means unfinished; only ``processing`` means executing.
+        "pending": pending,
+        "processing": processing,
+        "retry": retry,
+        "waiting": pending + retry,
+        "scheduled": scheduled,
+        "next_due_at": min(due_times) if due_times else None,
     }
     campaign["article_url"] = queue.get("link") or campaign["article_url"]
+    campaign["quality_hold"] = held > 0
 
     if total:
         queue_label = "current campaign jobs" if tracked_ids else "Pinterest jobs"
@@ -725,9 +762,29 @@ def _apply_queue_evidence(campaign: dict[str, Any], queue: dict[str, Any]) -> No
             queue.get("updated_at"),
             {"total": total, "unknown": unknown},
         )
-    if active:
-        state = "running"
-        detail = f"{completed} published · {active} waiting"
+    primary = _stage(campaign, "primary_pin_publish")
+    primary_metrics = primary.get("metrics") or {}
+    primary_job_id = str(primary_metrics.get("job_id") or primary_metrics.get("primary_job_id") or "")
+    primary_job = job_evidence.get(primary_job_id) or {}
+    if primary_job.get("status") in ACTIVE_QUEUE_STATES:
+        _set_stage(
+            campaign,
+            "primary_pin_publish",
+            "running" if primary_job["status"] == "processing" else "waiting",
+            "Primary pin upload processing"
+            if primary_job["status"] == "processing"
+            else "Primary pin queued; waiting for a worker",
+            primary_job.get("updated_at"),
+            primary_metrics,
+        )
+    if held:
+        state = "warning"
+        detail = f"Quality hold: {held} quarantined · {completed} published · {processing} processing · {pending + retry} waiting"
+    elif active:
+        state = "running" if processing else "waiting"
+        detail = f"{completed} published · {processing} processing · {pending + retry} waiting"
+        if scheduled:
+            detail += f" · {scheduled} scheduled"
         if dead:
             detail += f" · {dead} in DLQ"
     elif dead or failed or unknown:
@@ -755,6 +812,7 @@ def _queue_state_counts(items: list[dict[str, Any]]) -> dict[str, int]:
         "completed": sum(item.get("status") == "completed" for item in items),
         "dead": sum(item.get("status") == "dead" for item in items),
         "failed": sum(item.get("status") == "failed" for item in items),
+        "held": sum(item.get("status") == "held" for item in items),
     }
 
 
@@ -796,13 +854,20 @@ def _finalize_campaign(campaign: dict[str, Any], *, now: float) -> None:
                 )
     running = [stage for stage in stages if stage["state"] == "running"]
     attention = [stage for stage in stages if stage["state"] in {"failed", "warning", "waiting"}]
+    waiting = [stage for stage in stages if stage["state"] in {"waiting", "queued", "retry", "retrying"}]
     completed = sum(stage["state"] == "complete" for stage in stages)
-    if running:
+    if campaign["queue"].get("held"):
+        overall_state = "attention"
+        current = _stage(campaign, "verification")
+    elif running:
         overall_state = "active"
         current = running[-1]
-    elif attention:
+    elif any(stage["state"] in {"failed", "warning"} for stage in attention):
         overall_state = "attention"
         current = attention[-1]
+    elif waiting:
+        overall_state = "waiting"
+        current = _stage(campaign, "distribution") if campaign["queue"].get("waiting") else waiting[-1]
     elif completed == len(stages):
         overall_state = "complete"
         current = stages[-1]
@@ -821,20 +886,20 @@ def _finalize_campaign(campaign: dict[str, Any], *, now: float) -> None:
 def _campaign_is_ongoing(campaign: dict[str, Any]) -> bool:
     """Return whether a lane has current work rather than historical evidence.
 
-    Queue activity is authoritative even after an article is marked Live because
-    its campaign pins can still be publishing. Otherwise terminal run/batch/
-    roadmap states win, and stale checkpoints are kept only in history.
+    Executing queue leases are live regardless of article age. Deferred older
+    campaigns belong in history/backlog; current-batch waits remain visible.
     """
 
-    # A queue-only fallback row represents one Pinterest asset, not an article
-    # workflow.  Showing hundreds of these as 16-step keyword lanes obscures the
-    # real article runs.  Their counts remain available in the queue summary and
-    # they will naturally merge into a real lane when pipeline/article identity
-    # is present.
+    queue = campaign.get("queue") or {}
+    if int(queue.get("processing") or 0) > 0:
+        return True
+    if not campaign.get("in_current_batch"):
+        return False
     if str(campaign.get("id") or "").startswith("queue:"):
         return False
+    if int(queue.get("held") or 0) > 0:
+        return True
 
-    queue = campaign.get("queue") or {}
     if int(queue.get("active") or 0) > 0:
         return True
 
@@ -880,6 +945,10 @@ def _expire_stale_running_stages(campaign: dict[str, Any], *, now: float) -> Non
     interrupted = False
     for stage in campaign["stages"]:
         if stage["state"] != "running":
+            continue
+        if stage["key"] in {"distribution", "primary_pin_publish"} and int(
+            (campaign.get("queue") or {}).get("processing") or 0
+        ):
             continue
         try:
             updated_at = float(stage.get("updated_at") or campaign["updated_at"])
@@ -1039,6 +1108,7 @@ def _read_queue_groups(root: Path) -> dict[tuple[str, str], dict[str, Any]]:
             "completed": 0,
             "dead": 0,
             "failed": 0,
+            "held": 0,
             "updated_at": 0.0,
             "title": "",
             "link": "",
@@ -1050,8 +1120,11 @@ def _read_queue_groups(root: Path) -> dict[tuple[str, str], dict[str, Any]]:
         }
     )
     try:
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(jobs)")}
+        retry_column = "next_retry_at" if "next_retry_at" in columns else "NULL AS next_retry_at"
         for row in connection.execute(
-            "SELECT id, payload_json, status, created_at, started_at, completed_at, result_json FROM jobs"
+            "SELECT id, payload_json, status, created_at, started_at, completed_at, result_json, "
+            f"{retry_column} FROM jobs"
         ):
             payload = _json_object(row["payload_json"])
             result = _json_object(row["result_json"])
@@ -1066,6 +1139,7 @@ def _read_queue_groups(root: Path) -> dict[tuple[str, str], dict[str, Any]]:
                     float(row["completed_at"] or 0),
                 ),
                 job_id=str(row["id"] or ""),
+                next_retry_at=row["next_retry_at"],
             )
         for row in connection.execute("SELECT job_json, completed_at FROM completed_log"):
             job = _json_object(row["job_json"])
@@ -1102,6 +1176,7 @@ def _accumulate_queue_row(
     updated_at: float,
     *,
     job_id: str = "",
+    next_retry_at: float | None = None,
 ) -> None:
     extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
     domain = _domain_handle(payload.get("domain_handle") or extra.get("domain_handle") or "")
@@ -1128,6 +1203,7 @@ def _accumulate_queue_row(
             "pin_url": pin_url,
             "updated_at": updated_at,
             "campaign_type": str(extra.get("campaign_type") or ""),
+            "next_retry_at": next_retry_at,
         }
     group["pipeline_run_id"] = extra.get("pipeline_run_id") or group["pipeline_run_id"]
 

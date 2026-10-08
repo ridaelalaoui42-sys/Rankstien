@@ -26,6 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 from defusedxml import ElementTree as ET
 
+from rankstein.category_policy import CategoryPolicyError
 from rankstein.domain import Domain
 from rankstein.keyword_roadmap import (
     KeywordRow,
@@ -338,11 +339,163 @@ _AUDIENCE_TOKENS = {
 }
 
 
+# Imported dish names are culinary vocabulary, not foreign-language noise.
+_NAMED_IMPORTED_DISHES = {
+    "panna cotta",
+    "arroz con leche",
+    "tres leches",
+    "carrot cake",
+    "red velvet",
+    "new york cheesecake",
+    "creme brulee",
+    "crema catalana",
+    "pasta carbonara",
+}
+_PET_TOKENS = {
+    "gato",
+    "gatos",
+    "perro",
+    "perros",
+    "mascota",
+    "mascotas",
+    "cachorro",
+    "cachorros",
+    "felino",
+    "felinos",
+    "canino",
+    "caninos",
+    "cat",
+    "cats",
+    "dog",
+    "dogs",
+    "pet",
+    "pets",
+}
+_FOREIGN_RECIPE_TOKENS = {
+    "fazer",
+    "receita",
+    "receitas",
+    "bolo",
+    "bolos",
+    "caseiro",
+    "caseira",
+    "caseiros",
+    "caseiras",
+    "saudavel",
+    "saudaveis",
+    "recheio",
+    "frango",
+    "morango",
+    "forno",
+    "gostoso",
+    "gostosa",
+    "recipe",
+    "recipes",
+    "how",
+    "make",
+    "homemade",
+    "easy",
+    "with",
+    "without",
+    "chicken",
+    "creamy",
+    "fluffy",
+    "best",
+    "recette",
+    "recettes",
+    "gateau",
+    "avec",
+    "pour",
+    "facile",
+    "ricetta",
+    "ricette",
+    "fatto",
+}
+_NON_RECIPE_TOKENS = {
+    "decoracion",
+    "decoraciones",
+    "decorado",
+    "decorada",
+    "decorados",
+    "decoradas",
+    "dibujo",
+    "dibujos",
+    "imagen",
+    "imagenes",
+    "foto",
+    "fotos",
+    "plantilla",
+    "plantillas",
+    "invitacion",
+    "invitaciones",
+    "aesthetic",
+    "disfraz",
+    "tatuaje",
+    "wallpaper",
+}
+# Only recognized culinary qualifiers count. Plurals of dish nouns and random
+# guide fragments must not masquerade as ingredient/style evidence.
+_CONCRETE_QUALIFIERS = set(
+    "queso chocolate cacao cafe vainilla limon naranja mandarina manzana pera platano banana "
+    "zanahoria coco almendra almendras avellana avellanas nuez nueces pistacho pistachos "
+    "fresa fresas frambuesa frambuesas arandano arandanos mora moras cereza cerezas "
+    "melocoton mango maracuya nata leche yogur yogurt mantequilla huevo huevos miel "
+    "avena harina maiz trigo arroz garbanzo garbanzos lenteja lentejas patata patatas "
+    "calabaza calabacin berenjena espinacas tomate tomates cebolla ajo ajillo puerro "
+    "brocoli champinon champinones setas guisantes verduras pimiento pimientos jamon "
+    "pollo ternera cerdo cordero atun salmon merluza bacalao gambas langostinos marisco "
+    "sepia calamar calamares chorizo bacon tofu canela jengibre curry azafran romero "
+    "albahaca pesto bechamel hojaldre masa fermentacion integral vegano vegana veganos "
+    "veganas proteico proteica proteicos proteicas saludable saludables azucar gluten "
+    "lactosa casero casera caseros caseras tradicional tradicionales clasico clasica "
+    "clasicos clasicas vasco vasca vasco vasca valenciano valenciana asturiano asturiana "
+    "gallega gallego andaluz andaluza catalana catalan italiana italiano mexicano mexicana "
+    "horno vapor parrilla brasa frito frita fritos fritas asado asada asados asadas "
+    "guisado guisada relleno rellena rellenos rellenas gratinado gratinada freidora "
+    "air fryer frio fria frios frias cremosa cremoso cremosas cremosos crujiente crujientes "
+    "esponjoso esponjosa esponjosos esponjosas philadelphia lotus nutella oreo opera "
+    "navidad cumpleanos pascua navideno navidena navidenos navidenas pascua cuaresma".split()
+)
+_DISH_PATTERN = re.compile(
+    r"\b(?:"
+    + "|".join(
+        re.escape(_folded) + (r"(?:s|es)?" if " " not in _folded else "")
+        for dish in sorted(_DISH_SUBSTRINGS, key=len, reverse=True)
+        if (
+            _folded := __import__("unicodedata")
+            .normalize("NFKD", dish.strip())
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+    )
+    + r")\b"
+)
+
+
 def _fold(text: str) -> str:
     import unicodedata
 
     normalized = unicodedata.normalize("NFKD", text or "")
     return normalized.encode("ascii", "ignore").decode("ascii").lower()
+
+
+def _has_spanish_human_recipe_intent(keyword: str) -> bool:
+    folded = _fold(keyword).strip()
+    if not folded or len(folded.split()) > 8 or _is_pinterest_ui_noise(keyword):
+        return False
+    if any(char.isalpha() and not _fold(char) for char in keyword):
+        return False
+    tokens = set(re.findall(r"[a-z]+", folded))
+    if tokens & (_PET_TOKENS | _NON_RECIPE_TOKENS):
+        return False
+    if re.search(r"\bpara\s+(?:(?:un|una|el|la)\s+)?(?:hombres?|mujeres?)\b", folded):
+        return False
+    if re.search(r"\b(?:para hacer|paso a paso)$", folded):
+        return False
+    language_text = folded
+    for dish in _NAMED_IMPORTED_DISHES:
+        language_text = re.sub(r"\b" + re.escape(dish) + r"\b", "", language_text)
+    return not (set(re.findall(r"[a-z]+", language_text)) & _FOREIGN_RECIPE_TOKENS)
 
 
 def _keyword_specificity_score(keyword: str) -> float:
@@ -358,25 +511,39 @@ def _keyword_specificity_score(keyword: str) -> float:
     Returns 2.0 + min(3, concrete_qualifiers) for accepted keywords, else 0.
     """
     folded = _fold(keyword).strip()
-    if not folded:
+    if not _has_spanish_human_recipe_intent(keyword):
         return 0.0
-    if folded in _MULTIWORD_DISHES:
+    if any(
+        re.search(r"\b" + re.escape(dish) + r"\b", folded)
+        for dish in _MULTIWORD_DISHES | _NAMED_IMPORTED_DISHES
+    ):
         return 3.0
-    has_dish = any(dish in folded for dish in _DISH_SUBSTRINGS)
-    if not has_dish:
+    if not _DISH_PATTERN.search(folded):
         return 0.0
-    tokens = {tok for tok in re.findall(r"[a-z]{3,}", folded)}
-    concrete = tokens - _GENERIC_MODIFIER_TOKENS - _CATEGORY_ONLY_TOKENS
-    # Single-word dish nouns themselves are not qualifiers
-    single_dish_tokens = {dish for dish in _DISH_SUBSTRINGS if " " not in dish and len(dish) >= 4}
-    concrete = {tok for tok in concrete if tok not in single_dish_tokens}
-    if not concrete:
+    dish = _DISH_PATTERN.search(folded)
+    # Keep ingredient names after the first dish noun (croquetas de pollo),
+    # but never count that noun itself (pollo facil, croquetas recetas).
+    remaining = folded[: dish.start()] + " " + folded[dish.end() :]
+    qualifiers = set(re.findall(r"[a-z]+", remaining)) & _CONCRETE_QUALIFIERS
+    if not qualifiers:
         return 0.0
-    # Audience-only qualifiers ("pasteles para mujer") are still vague.
-    non_audience = concrete - _AUDIENCE_TOKENS
-    if not non_audience:
-        return 0.0
-    return 2.0 + min(3.0, float(len(non_audience)))
+    return 2.0 + min(3.0, float(len(qualifiers)))
+
+
+def qualify_recipe_keyword(domain: Domain, keyword: str) -> tuple[float, str]:
+    """Apply today's recipe intent, specificity and category policy without I/O.
+
+    An empty cluster means rejected. Stored ``qualified`` flags and specificity
+    scores cannot bypass this gate at discovery, evidence loading or reservation.
+    """
+    specificity = _keyword_specificity_score(keyword)
+    if specificity <= 0 or _is_generic_domain_seed(domain, keyword):
+        return 0.0, ""
+    try:
+        cluster = _cluster_for_keyword(domain, keyword)
+    except CategoryPolicyError:
+        return 0.0, ""
+    return specificity, cluster
 
 
 def _search_volume_proxy(keyword: str, language: str, region: str) -> float:

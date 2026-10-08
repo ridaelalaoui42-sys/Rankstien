@@ -11,4 +11,8 @@ Adding the package alone does not change runtime behaviour; existing imports
 keep working until callers migrate to ``rankstein.config``.
 """
 
+from .windows_compat import disable_optional_wmi_queries
+
+disable_optional_wmi_queries()
+
 __version__ = "0.1.0"

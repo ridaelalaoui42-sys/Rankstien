@@ -6,7 +6,7 @@ import logging
 import os
 import shutil
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,7 @@ from .config import PROJECT_ROOT
 DATA_DIR = PROJECT_ROOT / "data"
 LOGS_DIR = DATA_DIR / "logs"
 REPORTS_DIR = DATA_DIR / "reports"
-REPORT_LAUNCH_DIR = REPORTS_DIR / "launch"
+REPORT_LAUNCH_DIR = REPORTS_DIR / "launcher"
 
 RANKSTEIN_LOG_RETENTION_DAYS = int(os.environ.get("RANKSTEIN_LOG_RETENTION_DAYS", "7"))
 RANKSTEIN_REPORT_RETENTION_DAYS = int(os.environ.get("RANKSTEIN_REPORT_RETENTION_DAYS", "30"))
@@ -43,24 +43,44 @@ def check_disk_space() -> dict[str, Any]:
             "required_gb": RANKSTEIN_MIN_DISK_GB,
             "error": f"Insufficient disk space. Free: {free_gb:.2f}GB, Required: {RANKSTEIN_MIN_DISK_GB}GB" if not ok else None
         }
-    except Exception as e:
-        logger.warning(f"Failed to check disk space: {e}")
-        return {"ok": True, "free_gb": 0.0, "required_gb": RANKSTEIN_MIN_DISK_GB, "error": None}
+    except OSError:
+        logger.warning("Disk space could not be measured")
+        return {"ok": False, "free_gb": None, "required_gb": RANKSTEIN_MIN_DISK_GB, "error": "Disk space unavailable"}
+
+
+def check_resource_budget() -> dict[str, Any]:
+    """Fail closed before expensive work; CPU load alone does not block delivery."""
+    disk = check_disk_space()
+    issues = [disk["error"]] if not disk["ok"] else []
+    try:
+        import psutil
+
+        memory = psutil.virtual_memory()
+        available_gb = round(memory.available / (1024 ** 3), 2)
+        max_percent = float(os.environ.get("RANKSTEIN_MAX_MEMORY_PERCENT", "95"))
+        min_available_gb = float(os.environ.get("RANKSTEIN_MIN_MEMORY_GB", "1"))
+        if memory.percent >= max_percent or available_gb < min_available_gb:
+            issues.append("Memory pressure: production waits for available capacity")
+        memory_status = {"percent": memory.percent, "available_gb": available_gb}
+    except (ImportError, OSError, ValueError):
+        memory_status = {"percent": None, "available_gb": None}
+        issues.append("Memory availability could not be measured")
+    return {"ok": not issues, "disk": disk, "memory": memory_status, "issues": issues}
 
 
 def rotate_logs() -> None:
     """Rotate active service logs that belong to a previous day."""
     ensure_directories()
-    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    today_str = datetime.now(UTC).strftime("%Y%m%d")
     
-    for log_file in LOGS_DIR.glob("*.log"):
+    for log_file in LOGS_DIR.rglob("*.log"):
         # Only rotate plain .log files (e.g., service.log), not already rotated ones (service.20230101.log)
         if len(log_file.suffixes) > 1:
             continue
             
         try:
             mtime = os.path.getmtime(log_file)
-            file_date = datetime.fromtimestamp(mtime, timezone.utc).strftime("%Y%m%d")
+            file_date = datetime.fromtimestamp(mtime, UTC).strftime("%Y%m%d")
             
             if file_date != today_str:
                 rotated_name = f"{log_file.stem}.{file_date}{log_file.suffix}"
@@ -90,7 +110,7 @@ def cleanup_retained_files() -> None:
     
     # 1. Clean logs
     log_cutoff = now - (RANKSTEIN_LOG_RETENTION_DAYS * 86400)
-    for log_file in LOGS_DIR.glob("*.*.log"): # Matches rotated logs
+    for log_file in LOGS_DIR.rglob("*.*.log"): # Matches rotated logs
         try:
             if os.path.getmtime(log_file) < log_cutoff:
                 log_file.unlink()

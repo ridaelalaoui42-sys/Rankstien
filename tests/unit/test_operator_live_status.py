@@ -156,3 +156,84 @@ def test_live_status_replaces_cached_research_after_keyword_reservation(
         assert pipeline["total_campaigns"] == pipeline["summary"]["active"] == 1 + len(expected_research)
     assert cached["pipeline"]["research_lanes"] == lanes
     assert cached["pipeline"]["ongoing_total"] == cached["pipeline"]["summary"]["active"] == initial_count
+
+
+def test_batch_display_separates_latest_produced_keywords_from_failed_attempts():
+    import copy
+
+    batch = {
+        "failed_total": 5,
+        "domains": {
+            "recetadolce": {
+                "failed": 5,
+                "articles": [
+                    {"keyword": "tarta de coco", "state": "failed"},
+                    {"keyword": "tarta de coco", "state": "needs verification"},
+                    {"keyword": "tarta de limón", "state": "verified"},
+                    {"keyword": "tarta de limon", "state": "needs_verification"},
+                    {"keyword": "Tarta de coco", "state": "needs verification"},
+                    {"keyword": "galletas", "state": "needs verification"},
+                    {"keyword": "galletas", "state": "interrupted"},
+                ],
+            }
+        },
+    }
+    before = copy.deepcopy(batch)
+    displayed = routes._production_batch_presentation(batch)
+    assert displayed["presentation_counts"] == {
+        "produced": 4,
+        "awaiting_verification": 3,
+        "failed_attempts": 1,
+        "interrupted_attempts": 1,
+    }
+    assert displayed["domains"]["recetadolce"]["presentation_counts"] == displayed["presentation_counts"]
+    assert displayed["failed_total"] == 5
+    assert batch == before
+
+
+def test_waiting_research_lane_is_not_executing_and_counts_do_not_accumulate():
+    pipeline = {"ongoing_campaigns": [], "campaigns": [], "summary": {}, "ongoing_total": 0}
+    batch = {
+        "batch_id": "current",
+        "domains": {
+            "recetadolce": {
+                "target": 10,
+                "verified": 1,
+                "state": "waiting",
+                "running_keywords": [],
+                "detail": "No unattempted Pinterest keyword",
+            }
+        },
+    }
+    action = {"alive": True, "stage": "Validating Pinterest candidates"}
+    for _ in range(2):
+        routes._attach_live_research_lanes(pipeline, production_batch=batch, production_action=action)
+        lane = pipeline["ongoing_campaigns"][0]
+        assert lane["overall_state"] == "waiting"
+        assert lane["stages"][0]["state"] == "waiting"
+        assert lane["current_detail"] == "No unattempted Pinterest keyword"
+        assert pipeline["summary"]["active"] == 0
+        assert pipeline["summary"]["waiting"] == pipeline["ongoing_total"] == 1
+
+
+def test_stopped_worker_preserves_current_campaign_quality_hold(monkeypatch):
+    campaign = {
+        "id": "held-run",
+        "batch_id": "current",
+        "overall_state": "attention",
+        "quality_hold": True,
+        "queue": {"active": 0, "held": 30},
+    }
+    monkeypatch.setattr(routes, "_load_processes", lambda: {})
+    monkeypatch.setattr(routes, "_process_status", lambda _: {})
+    monkeypatch.setattr(
+        routes, "_action_snapshots", lambda _: {"production": {"alive": False, "state": "stopped"}}
+    )
+    monkeypatch.setattr(
+        routes, "_latest_production_batch", lambda: {"batch_id": "current", "state": "stopped", "domains": {}}
+    )
+    result = routes._live_runtime_status(
+        {"pipeline": {"ongoing_campaigns": [campaign], "ongoing_total": 1, "summary": {"active": 0}}}
+    )
+    assert result["pipeline"]["ongoing_campaigns"] == [campaign]
+    assert result["pipeline"]["ongoing_total"] == 1

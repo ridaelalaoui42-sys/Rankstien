@@ -40,12 +40,12 @@ async def local_access(request: Request, call_next):
 
 
 @app.get("/health")
-def health():
+async def health():
     return {"ok": True, "service": "rankstein-operator", "pid": os.getpid()}
 
 
 @app.get("/api/operator/session")
-def session():
+async def session():
     return {"csrf_token": CSRF_TOKEN}
 
 

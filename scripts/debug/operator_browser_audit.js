@@ -8,7 +8,12 @@ async (page) => {
     () => document.querySelector("#domain").options.length > 1,
   );
   await page.locator("#auto-refresh").uncheck();
-  const supervisorRunning = (await page.locator('#signals .signal-row').first().innerText()).includes('running');
+  if (await page.locator('#freshness').innerText() !== 'Live paused')
+    throw new Error('Paused telemetry was not labeled');
+  await page.route('**/api/rankstein/control/**', route => route.fulfill({
+    status:400,contentType:'application/json',body:JSON.stringify({detail:'UI test blocked this mutation'}),
+  }));
+  const supervisorRunning = (await page.locator('#signals .signal-row').filter({hasText:'Pinterest supervisor'}).first().innerText()).includes('running');
   if (await page.locator('#supervisor-toggle').getAttribute('data-command') !==
       (supervisorRunning ? 'stop-supervisor' : 'supervisor'))
     throw new Error('Supervisor control does not match runtime state');
@@ -51,6 +56,33 @@ async (page) => {
       await page.keyboard.press("Escape");
     }
   }
+  await page.locator('nav [data-view="pinterest"]').click();
+  await page.waitForFunction(() => document.querySelector('#pin-account').options.length > 1 &&
+    !document.querySelector('#pins').innerText.includes('Loading...'));
+  const globalPinTotal = await page.locator('#metrics .metric-value').first().innerText();
+  const filteredAccount = await page.locator('#pin-account option').nth(1).innerText();
+  await page.locator('#pin-account').selectOption(filteredAccount);
+  await page.waitForFunction(() => !document.querySelector('#pins').innerText.includes('Loading...'));
+  if (await page.locator('#metrics .metric-value').first().innerText() !== globalPinTotal)
+    throw new Error('Account filter overwrote the global pin total');
+  await page.locator('#pin-account').selectOption('');
+  let stopRequests = 0;
+  await page.route('**/api/rankstein/control/stop/production', route => {
+    stopRequests++;
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,stopped:true,pid:123456})});
+  });
+  if (await page.locator('#stop-batch').isEnabled()) {
+    await page.locator('#stop-batch').click();
+    await page.keyboard.press('Escape');
+    if (stopRequests) throw new Error('Cancelled stop sent a mutation');
+    await page.locator('#stop-batch').click();
+    await page.locator('#command-submit').click();
+    await page.locator('#command-dialog').waitFor({state:'hidden'});
+    if (stopRequests !== 1) throw new Error('Confirmed stop was not sent exactly once');
+    if (await page.locator('#log-mode').inputValue() !== 'production')
+      throw new Error('Stop action selected the wrong log mode');
+  }
+  await page.unroute('**/api/rankstein/control/stop/production');
   await page.locator('nav [data-view="overview"]').click();
   await page.locator("#domain").selectOption("recetagenial");
   if ((await page.locator("#domains .domain-item").count()) !== 1)
@@ -143,6 +175,7 @@ async (page) => {
       results,
       errors,
       confirmedMockRequests: requests,
+      confirmedStopMockRequests: stopRequests,
       liveMutations: 0,
     }),
   );

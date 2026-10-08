@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-08T10:50:50.060198+00:00",
+  "generated_at": "2026-10-08T18:32:59.837777+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 396,
+  "files_audited": 414,
   "status_counts": {
-    "ok": 364,
-    "review": 32,
+    "ok": 379,
+    "review": 35,
     "fail": 0
   },
   "kind_counts": {
     "agent-config": 1,
     "backend": 65,
-    "core": 47,
-    "docs": 28,
+    "core": 49,
+    "docs": 29,
     "domain-data": 4,
     "frontend": 130,
     "project": 8,
-    "scripts": 60,
-    "tests": 53
+    "scripts": 66,
+    "tests": 62
   },
   "files": [
     {
@@ -31,7 +31,7 @@
       "path": "README.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 10823,
+      "bytes": 10997,
       "lines": 131,
       "findings": []
     },
@@ -191,8 +191,8 @@
       "path": "backend/api/operator_routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 81976,
-      "lines": 2230,
+      "bytes": 82331,
+      "lines": 2234,
       "findings": []
     },
     {
@@ -263,7 +263,7 @@
       "path": "backend/operator.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 2032,
+      "bytes": 2044,
       "lines": 67,
       "findings": []
     },
@@ -415,8 +415,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 155864,
-      "lines": 3864,
+      "bytes": 163512,
+      "lines": 4053,
       "findings": []
     },
     {
@@ -479,16 +479,16 @@
       "path": "backend/services/operator_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 49954,
-      "lines": 1319,
+      "bytes": 53717,
+      "lines": 1395,
       "findings": []
     },
     {
       "path": "backend/services/remasterer.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 84093,
-      "lines": 2067,
+      "bytes": 102582,
+      "lines": 2477,
       "findings": []
     },
     {
@@ -527,8 +527,8 @@
       "path": "backend/static/operator/index.html",
       "kind": "backend",
       "status": "ok",
-      "bytes": 23312,
-      "lines": 561,
+      "bytes": 23486,
+      "lines": 564,
       "findings": []
     },
     {
@@ -543,16 +543,16 @@
       "path": "backend/static/operator/operator.css",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22505,
-      "lines": 1287,
+      "bytes": 22614,
+      "lines": 1291,
       "findings": []
     },
     {
       "path": "backend/static/operator/operator.js",
       "kind": "backend",
       "status": "ok",
-      "bytes": 64768,
-      "lines": 1634,
+      "bytes": 66614,
+      "lines": 1674,
       "findings": []
     },
     {
@@ -607,7 +607,7 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 13599,
+      "bytes": 13615,
       "lines": 311,
       "findings": []
     },
@@ -631,8 +631,8 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 85358,
-      "lines": 743,
+      "bytes": 85573,
+      "lines": 744,
       "findings": []
     },
     {
@@ -663,7 +663,7 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 57823,
+      "bytes": 57914,
       "lines": 511,
       "findings": []
     },
@@ -679,7 +679,7 @@
       "path": "docs/system/CAMPAIGN_PIPELINE.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 11445,
+      "bytes": 11732,
       "lines": 111,
       "findings": []
     },
@@ -695,8 +695,16 @@
       "path": "docs/system/OPERATOR_DASHBOARD.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 3010,
-      "lines": 61,
+      "bytes": 3542,
+      "lines": 70,
+      "findings": []
+    },
+    {
+      "path": "docs/system/PRODUCTION_COMPLETION.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 1999,
+      "lines": 40,
       "findings": []
     },
     {
@@ -743,7 +751,7 @@
       "path": "docs/templates/IMAGE_GENERATION_CONTRACT.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 6682,
+      "bytes": 6821,
       "lines": 94,
       "findings": []
     },
@@ -1879,8 +1887,8 @@
       "path": "pinterest_automation/__init__.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 1853,
-      "lines": 51,
+      "bytes": 1956,
+      "lines": 55,
       "findings": []
     },
     {
@@ -1895,8 +1903,8 @@
       "path": "pinterest_automation/campaign.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 30296,
-      "lines": 840,
+      "bytes": 31325,
+      "lines": 861,
       "findings": []
     },
     {
@@ -1927,8 +1935,8 @@
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 51878,
-      "lines": 1269,
+      "bytes": 55174,
+      "lines": 1331,
       "findings": []
     },
     {
@@ -1967,8 +1975,8 @@
       "path": "pinterest_automation/rate_limiter.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 12081,
-      "lines": 289,
+      "bytes": 13518,
+      "lines": 317,
       "findings": []
     },
     {
@@ -2007,8 +2015,8 @@
       "path": "pinterest_automation/supervisor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 38205,
-      "lines": 815,
+      "bytes": 38348,
+      "lines": 818,
       "findings": []
     },
     {
@@ -2039,8 +2047,8 @@
       "path": "rankstein/__init__.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 630,
-      "lines": 15,
+      "bytes": 724,
+      "lines": 19,
       "findings": []
     },
     {
@@ -2095,24 +2103,24 @@
       "path": "rankstein/ga4_connector.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 11654,
-      "lines": 285,
+      "bytes": 11629,
+      "lines": 283,
       "findings": []
     },
     {
       "path": "rankstein/google_trends_connector.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 5366,
-      "lines": 132,
+      "bytes": 5712,
+      "lines": 143,
       "findings": []
     },
     {
       "path": "rankstein/gsc_connector.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 9690,
-      "lines": 246,
+      "bytes": 9650,
+      "lines": 244,
       "findings": []
     },
     {
@@ -2135,8 +2143,8 @@
       "path": "rankstein/log_manager.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 4515,
-      "lines": 118,
+      "bytes": 5529,
+      "lines": 138,
       "findings": []
     },
     {
@@ -2151,8 +2159,8 @@
       "path": "rankstein/pinterest_connector.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 4702,
-      "lines": 111,
+      "bytes": 4946,
+      "lines": 130,
       "findings": []
     },
     {
@@ -2167,8 +2175,8 @@
       "path": "rankstein/production_batch.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 19304,
-      "lines": 487,
+      "bytes": 40072,
+      "lines": 882,
       "findings": []
     },
     {
@@ -2183,8 +2191,8 @@
       "path": "rankstein/prompts.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 14818,
-      "lines": 482,
+      "bytes": 15326,
+      "lines": 490,
       "findings": []
     },
     {
@@ -2223,8 +2231,8 @@
       "path": "rankstein/seo_feedback_engine.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 36799,
-      "lines": 784,
+      "bytes": 37614,
+      "lines": 829,
       "findings": []
     },
     {
@@ -2233,6 +2241,14 @@
       "status": "ok",
       "bytes": 24047,
       "lines": 697,
+      "findings": []
+    },
+    {
+      "path": "rankstein/source_image_quality.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 6386,
+      "lines": 166,
       "findings": []
     },
     {
@@ -2263,8 +2279,16 @@
       "path": "rankstein/trend_intelligence.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 57746,
-      "lines": 1669,
+      "bytes": 62916,
+      "lines": 1836,
+      "findings": []
+    },
+    {
+      "path": "rankstein/windows_compat.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 886,
+      "lines": 29,
       "findings": []
     },
     {
@@ -2287,8 +2311,18 @@
       "path": "scripts/debug/audit_blog_admin.cjs",
       "kind": "scripts",
       "status": "review",
-      "bytes": 19425,
-      "lines": 324,
+      "bytes": 21070,
+      "lines": 355,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/audit_blog_preview.cjs",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 7413,
+      "lines": 121,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2447,8 +2481,28 @@
       "path": "scripts/debug/operator_browser_audit.js",
       "kind": "scripts",
       "status": "review",
-      "bytes": 5353,
-      "lines": 150,
+      "bytes": 7483,
+      "lines": 183,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/operator_recovery_audit.js",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2546,
+      "lines": 49,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/probe_source_ocr.ps1",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1942,
+      "lines": 32,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2612,6 +2666,14 @@
       "findings": []
     },
     {
+      "path": "scripts/dev/continue_production_batch.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3698,
+      "lines": 97,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/disable_legacy_odysseus_task.ps1",
       "kind": "scripts",
       "status": "ok",
@@ -2644,6 +2706,14 @@
       "findings": []
     },
     {
+      "path": "scripts/dev/read_source_image_text.ps1",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 2399,
+      "lines": 43,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/repair_article_quality.py",
       "kind": "scripts",
       "status": "ok",
@@ -2657,6 +2727,14 @@
       "status": "ok",
       "bytes": 11493,
       "lines": 323,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/runtime_maintenance.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 5595,
+      "lines": 139,
       "findings": []
     },
     {
@@ -2895,8 +2973,8 @@
       "path": "tests/unit/test_article_remaster_queue.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9197,
-      "lines": 251,
+      "bytes": 10811,
+      "lines": 289,
       "findings": []
     },
     {
@@ -2921,6 +2999,14 @@
       "status": "ok",
       "bytes": 4795,
       "lines": 138,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_campaign_source_hold.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 3047,
+      "lines": 70,
       "findings": []
     },
     {
@@ -2991,8 +3077,8 @@
       "path": "tests/unit/test_domain_isolation.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 4084,
-      "lines": 110,
+      "bytes": 4211,
+      "lines": 111,
       "findings": []
     },
     {
@@ -3031,8 +3117,8 @@
       "path": "tests/unit/test_log_manager.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 3028,
-      "lines": 100,
+      "bytes": 4429,
+      "lines": 141,
       "findings": []
     },
     {
@@ -3071,24 +3157,32 @@
       "path": "tests/unit/test_operator.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 5222,
-      "lines": 121,
+      "bytes": 7489,
+      "lines": 162,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_operator_client.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 3093,
+      "lines": 70,
       "findings": []
     },
     {
       "path": "tests/unit/test_operator_live_status.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 6074,
-      "lines": 159,
+      "bytes": 9353,
+      "lines": 240,
       "findings": []
     },
     {
       "path": "tests/unit/test_operator_pipeline.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 37718,
-      "lines": 1100,
+      "bytes": 49137,
+      "lines": 1360,
       "findings": []
     },
     {
@@ -3124,11 +3218,19 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_production_batch_import.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 18351,
+      "lines": 395,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_production_reconcile.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 16768,
-      "lines": 478,
+      "bytes": 17131,
+      "lines": 486,
       "findings": []
     },
     {
@@ -3140,19 +3242,43 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_rate_limiter_persistence.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 6324,
+      "lines": 165,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_deadlines_recovery.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 14033,
+      "lines": 375,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_remaster_native_fallback.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9787,
-      "lines": 295,
+      "bytes": 10369,
+      "lines": 309,
       "findings": []
     },
     {
       "path": "tests/unit/test_remaster_relevance.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 4369,
-      "lines": 131,
+      "bytes": 4819,
+      "lines": 142,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_source_quality.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 7953,
+      "lines": 215,
       "findings": []
     },
     {
@@ -3161,6 +3287,14 @@
       "status": "ok",
       "bytes": 10036,
       "lines": 281,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_runtime_maintenance.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2546,
+      "lines": 64,
       "findings": []
     },
     {
@@ -3193,6 +3327,14 @@
       "status": "ok",
       "bytes": 6024,
       "lines": 161,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_source_image_quality.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 7265,
+      "lines": 199,
       "findings": []
     },
     {
@@ -3247,8 +3389,16 @@
       "path": "tests/unit/test_turbo_articles.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 62395,
-      "lines": 1769,
+      "bytes": 77933,
+      "lines": 2216,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_windows_compat.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 902,
+      "lines": 28,
       "findings": []
     }
   ]

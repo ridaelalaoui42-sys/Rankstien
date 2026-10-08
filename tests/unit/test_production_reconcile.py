@@ -52,6 +52,14 @@ def _complete_report(*, run_id: str, slug: str) -> dict:
                     "variant": variant,
                     "source": "pinterest",
                     "original_pin_id": f"source-{index:02d}",
+                    "source_path": f"source-{index:02d}.jpg",
+                    "source_hash": "a" * 64,
+                    "source_quality": {
+                        "accepted": True,
+                        "policy": "text_free_pinterest_source",
+                        "version": 1,
+                        "source_hash": "a" * 64,
+                    },
                 }
             )
             jobs.append({"job_id": f"job-{index:02d}-{variant}"})

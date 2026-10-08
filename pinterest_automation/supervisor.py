@@ -688,12 +688,15 @@ class AutonomousSupervisor:
                 snap = self.health.get_snapshot()
                 queue_stats = await self.queue.get_stats_async()
                 pool_stats = self.pool.get_stats()
-                rate_status = self.rate_limiter.get_status()
-
-                daily_pins = sum(
-                    count
-                    for operation, count in rate_status["daily_counts"].items()
-                    if operation.startswith("pin_upload")
+                daily_counts = self.rate_limiter.get_persisted_daily_counts()
+                daily_pins = (
+                    sum(
+                        count
+                        for operation, count in daily_counts.items()
+                        if operation.startswith("pin_upload")
+                    )
+                    if daily_counts is not None
+                    else "unknown"
                 )
                 status_line = (
                     f"[STATUS] health={'OK' if snap.all_ok else 'DEGRADED'} "

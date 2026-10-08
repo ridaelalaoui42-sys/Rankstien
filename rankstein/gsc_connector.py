@@ -40,7 +40,7 @@ class GSCConnector:
         if not self.is_configured or not self.key_path:
             return None
         try:
-            with open(self.key_path, "r", encoding="utf-8") as f:
+            with open(self.key_path, encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("client_email")
         except Exception:
@@ -50,7 +50,7 @@ class GSCConnector:
         if not self.is_configured or not self.key_path:
             return None
         try:
-            with open(self.key_path, "r", encoding="utf-8") as f:
+            with open(self.key_path, encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("project_id")
         except Exception:
@@ -65,9 +65,7 @@ class GSCConnector:
             from google.oauth2 import service_account
 
             scopes = ["https://www.googleapis.com/auth/webmasters.readonly"]
-            creds = service_account.Credentials.from_service_account_file(
-                str(self.key_path), scopes=scopes
-            )
+            creds = service_account.Credentials.from_service_account_file(str(self.key_path), scopes=scopes)
             creds.refresh(Request())
             return creds.token
         except Exception as exc:

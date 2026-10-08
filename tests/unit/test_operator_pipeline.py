@@ -45,6 +45,33 @@ def _create_event_db(root) -> sqlite3.Connection:
     return connection
 
 
+def _current_batch(root: Path, run_id: str, domain: str = "recetagenial") -> None:
+    report_dir = root / "data" / "reports" / "production_batches"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    (report_dir / "production-current.json").write_text(
+        json.dumps(
+            {
+                "batch_id": "production-current",
+                "state": "running",
+                "domains": {domain: {"articles": [{"pipeline_run_id": run_id, "state": "running"}]}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _execution_counts(pending: int = 0) -> dict:
+    return {
+        "held": 0,
+        "pending": pending,
+        "processing": 0,
+        "retry": 0,
+        "waiting": pending,
+        "scheduled": 0,
+        "next_due_at": None,
+    }
+
+
 def _create_queue_db(root) -> sqlite3.Connection:
     path = root / "data" / "queue" / "jobs.db"
     path.parent.mkdir(parents=True)
@@ -209,6 +236,8 @@ def test_pipeline_separates_ongoing_lanes_from_terminal_history(tmp_path) -> Non
 
     payload = build_pipeline_payload(tmp_path)
 
+    _current_batch(tmp_path, "active-run")
+    payload = build_pipeline_payload(tmp_path)
     assert {item["id"] for item in payload["campaigns"]} == {
         "active-run",
         "failed-run",
@@ -230,6 +259,7 @@ def test_ongoing_classifier_keeps_waiting_work_but_excludes_stale_interruptions(
         run_id="waiting-run",
     )
     waiting["run_status"] = "running"
+    waiting["in_current_batch"] = True
     _set_stage(waiting, "verification", "waiting", "Waiting for pin proof", now)
     _finalize_campaign(waiting, now=now)
 
@@ -252,7 +282,7 @@ def test_ongoing_classifier_keeps_waiting_work_but_excludes_stale_interruptions(
     _finalize_campaign(stale, now=now)
 
     assert _campaign_is_ongoing(waiting) is True
-    assert waiting["overall_state"] == "attention"
+    assert waiting["overall_state"] == "waiting"
     assert _campaign_is_ongoing(stale) is False
     assert stale["run_status"] == "interrupted"
 
@@ -518,7 +548,7 @@ def test_pipeline_payload_merges_remaster_report_and_queue_progress(tmp_path) ->
     campaign = payload["campaigns"][0]
     stages = {stage["key"]: stage for stage in campaign["stages"]}
 
-    assert campaign["overall_state"] == "active"
+    assert campaign["overall_state"] == "attention"
     assert campaign["queue"] == {
         "total": 2,
         "active": 1,
@@ -526,13 +556,15 @@ def test_pipeline_payload_merges_remaster_report_and_queue_progress(tmp_path) ->
         "dead": 0,
         "failed": 0,
         "unknown": 0,
+        **_execution_counts(pending=1),
     }
     assert campaign["pin_url"] == ""
     assert campaign["latest_campaign_pin_url"] == ("https://www.pinterest.com/pin/123456789012345/")
     assert stages["pinterest_siphon"]["state"] == "warning"
     assert campaign["verification_contract"]["campaign_report_complete"] is False
     assert stages["remaster"]["detail"] == "15 of 15 source pairs · 30 of 30 pin assets"
-    assert stages["distribution"]["detail"] == "1 published · 1 waiting"
+    assert stages["distribution"]["state"] == "waiting"
+    assert stages["distribution"]["detail"] == "1 published · 0 processing · 1 waiting"
     assert payload["summary"]["pins_pending"] == 1
 
 
@@ -594,6 +626,7 @@ def test_queue_campaign_pin_never_replaces_primary_pin_and_filters_old_jobs() ->
         "dead": 0,
         "failed": 0,
         "unknown": 0,
+        **_execution_counts(),
     }
     assert campaign["historical_queue"] == {
         "total": 1,
@@ -601,6 +634,7 @@ def test_queue_campaign_pin_never_replaces_primary_pin_and_filters_old_jobs() ->
         "completed": 0,
         "dead": 1,
         "failed": 0,
+        "held": 0,
     }
     assert campaign["other_jobs"] == {
         "total": 1,
@@ -608,6 +642,7 @@ def test_queue_campaign_pin_never_replaces_primary_pin_and_filters_old_jobs() ->
         "completed": 1,
         "dead": 0,
         "failed": 0,
+        "held": 0,
     }
 
 
@@ -1097,3 +1132,228 @@ def test_current_batch_run_is_included_prioritized_and_reconciles_exact_proof(
         "Primary pin plus 15 unique scraped sources and 30 queued pins verified"
     )
     assert not any(item["id"].startswith("report:") for item in payload["campaigns"])
+
+
+@pytest.mark.parametrize(
+    ("job_status", "current_batch", "is_live"),
+    [
+        ("pending", False, False),
+        ("retry", False, False),
+        ("pending", True, True),
+        ("retry", True, True),
+        ("processing", False, True),
+    ],
+)
+def test_live_distribution_requires_current_batch_or_processing(
+    tmp_path, job_status, current_batch, is_live
+) -> None:
+    now = time.time()
+    run_id = "distribution-run"
+    connection = _create_event_db(tmp_path)
+    connection.execute(
+        "INSERT INTO pipeline_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id,
+            "recetadolce",
+            "Tarta de limon",
+            "tarta-de-limon",
+            "Postres",
+            "Pinterest",
+            "complete",
+            now,
+            now,
+        ),
+    )
+    connection.execute(
+        "INSERT INTO pipeline_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (1, run_id, "primary_pin_publish", "running", "Primary queued", '{"job_id":"job-current"}', now),
+    )
+    connection.commit()
+    connection.close()
+    connection = _create_queue_db(tmp_path)
+    connection.execute("ALTER TABLE jobs ADD COLUMN next_retry_at REAL")
+    payload = _payload()["payload"]
+    payload["extra"]["pipeline_run_id"] = run_id
+    connection.execute(
+        "INSERT INTO jobs VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?)",
+        ("job-current", json.dumps(payload), job_status, now, now + 43200),
+    )
+    connection.commit()
+    connection.close()
+    if current_batch:
+        _current_batch(tmp_path, run_id, "recetadolce")
+    result = build_pipeline_payload(tmp_path)
+    collection = "ongoing_campaigns" if is_live else "history_campaigns"
+    campaign = next(item for item in result[collection] if item["id"] == run_id)
+    stages = {stage["key"]: stage for stage in campaign["stages"]}
+    executing = job_status == "processing"
+    assert campaign["overall_state"] == ("active" if executing else "waiting")
+    assert stages["distribution"]["state"] == ("running" if executing else "waiting")
+    assert stages["primary_pin_publish"]["state"] == ("running" if executing else "waiting")
+    assert campaign["queue"]["processing"] == int(executing)
+    assert campaign["queue"]["waiting"] == campaign["queue"]["scheduled"] == int(not executing)
+    assert result["summary"]["pins_pending"] == 1
+    assert result["summary"]["active"] == int(executing)
+    assert result["ongoing_total"] == int(is_live)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node binary not on PATH")
+def test_frontend_live_list_and_waiting_production_action() -> None:
+    source = (Path(__file__).parents[2] / "backend" / "static" / "operator" / "operator.js").read_text(
+        encoding="utf-8"
+    )
+    selectors = source[source.index("function campaigns(") : source.index("function indexCampaigns(")]
+    script = (
+        """
+      const state = {data: {
+        actions: {production: {alive: true, state: 'running', stage: 'Researching'}},
+        production_batch: {batch_id: 'current', domains: {recipe: {target: 10, verified: 1, state: 'waiting', running_keywords: []}}},
+        pipeline: {ongoing_campaigns: [
+          {id: 'current-wait', in_current_batch: true, batch_id: 'current', queue: {processing: 0}},
+          {id: 'old-wait', in_current_batch: false, queue: {active: 30, processing: 0}},
+          {id: 'old-processing', in_current_batch: false, queue: {processing: 1}}
+        ], history_campaigns: []}
+      }};
+      const domainScope = () => '';
+    """
+        + selectors
+        + """
+      console.log(JSON.stringify({live: campaigns('active').map(c => c.id), history: campaigns('history').map(c => c.id), activity: productionActivity()}));
+    """
+    )
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=20, check=False)
+    assert result.returncode == 0, result.stderr
+    actual = json.loads(result.stdout)
+    assert actual["live"] == ["current-wait", "old-processing"]
+    assert actual["history"] == ["old-wait"]
+    assert actual["activity"] == {"state": "waiting", "label": "Waiting for qualified Pinterest keywords"}
+
+
+@pytest.mark.parametrize("current_batch", [False, True])
+def test_held_remaster_jobs_are_quality_attention_not_pending_or_unknown(tmp_path, current_batch) -> None:
+    now = time.time()
+    run_id = "held-remaster-run"
+    connection = _create_event_db(tmp_path)
+    connection.execute(
+        "INSERT INTO pipeline_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, "recetadolce", "Tarta", "tarta-completa", "Postres", "Pinterest", "complete", now, now),
+    )
+    connection.execute(
+        "INSERT INTO pipeline_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            1,
+            run_id,
+            "primary_pin_publish",
+            "complete",
+            "Verified primary pin",
+            '{"pin_id":"123456789012345"}',
+            now,
+        ),
+    )
+    connection.commit()
+    connection.close()
+    report = _production_remaster_report()
+    for internal_key in ("_updated_at", "_path", "_root"):
+        report.pop(internal_key)
+    report["pipeline_run_id"] = run_id
+    report_dir = tmp_path / "data" / "reports" / "campaigns"
+    report_dir.mkdir(parents=True)
+    (report_dir / "tarta-completa_remaster_held.json").write_text(json.dumps(report), encoding="utf-8")
+    connection = _create_queue_db(tmp_path)
+    job_payload = _payload()["payload"]
+    job_payload.update({"link": "https://recetadolce.com/tarta-completa"})
+    job_payload["extra"].update(
+        {"slug": "tarta-completa", "pipeline_run_id": run_id, "campaign_type": "article_remaster_pairs"}
+    )
+    connection.executemany(
+        "INSERT INTO jobs VALUES (?, ?, 'held', ?, NULL, NULL, NULL)",
+        [(f"job-{index}", json.dumps(job_payload), now) for index in range(30)],
+    )
+    connection.commit()
+    connection.close()
+    if current_batch:
+        _current_batch(tmp_path, run_id, "recetadolce")
+    result = build_pipeline_payload(tmp_path)
+    collection = "ongoing_campaigns" if current_batch else "history_campaigns"
+    campaign = next(item for item in result[collection] if item["id"] == run_id)
+    assert campaign["queue"]["held"] == campaign["queue"]["total"] == 30
+    for status in ("unknown", "active", "pending", "processing", "retry", "waiting", "failed"):
+        assert campaign["queue"][status] == 0
+    assert campaign["quality_hold"] is True
+    assert campaign["overall_state"] == "attention"
+    assert campaign["current_stage"] == "verification"
+    assert "Quality hold: 30 quarantined" in campaign["current_detail"]
+    assert campaign["verification_contract"]["campaign_report_complete"] is False
+    assert campaign["verification_contract"]["quality_hold"] is True
+    assert campaign["verification_contract"]["primary_pin_proven"] is True
+    stages = {stage["key"]: stage for stage in campaign["stages"]}
+    assert stages["verification"]["state"] == stages["distribution"]["state"] == "warning"
+    assert result["summary"]["pins_held"] == 30
+    assert result["summary"]["pins_pending"] == result["summary"]["active"] == 0
+
+
+def test_old_held_jobs_do_not_invalidate_exact_current_campaign_proof() -> None:
+    now = time.time()
+    campaign = _new_campaign(
+        domain="recetadolce",
+        keyword="Tarta",
+        title="Tarta",
+        slug="tarta-completa",
+        updated_at=now,
+        run_id="current-run",
+    )
+    _apply_primary_proof(campaign, {"pin_id": "123456789012345", "updated_at": now})
+    _apply_remaster_report(campaign, _production_remaster_report())
+    jobs = {
+        f"job-{index}": {"status": "pending", "updated_at": now, "campaign_type": "article_remaster_pairs"}
+        for index in range(30)
+    }
+    jobs["old-held-job"] = {"status": "held", "updated_at": now, "campaign_type": "article_remaster_pairs"}
+    _apply_queue_evidence(campaign, {"jobs": jobs, "updated_at": now})
+    _finalize_campaign(campaign, now=now)
+    assert campaign["queue"]["held"] == 0
+    assert campaign["historical_queue"]["held"] == 1
+    assert campaign["quality_hold"] is False
+    assert campaign["verification_contract"]["campaign_report_complete"] is True
+    assert (
+        next(stage for stage in campaign["stages"] if stage["key"] == "verification")["state"] == "complete"
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node binary not on PATH")
+def test_frontend_labels_campaign_and_queue_quality_holds() -> None:
+    source = (Path(__file__).parents[2] / "backend" / "static" / "operator" / "operator.js").read_text(
+        encoding="utf-8"
+    )
+    card = source[source.index("function campaignMarkup(") : source.index("function renderOverview(")]
+    queue = source[source.index("function renderQueue(") : source.index("function renderRuntime(")]
+    script = (
+        """
+      const element = {innerHTML: ''};
+      const $ = () => element;
+      const state = {data: {queue: {by_status: {held: 30, pending: 0, processing: 0}}}};
+      const esc = value => String(value || '');
+      const icon = () => '';
+      const external = () => '';
+      const date = () => '';
+      const badge = value => value;
+      const number = value => value;
+      const metric = (label, value, detail) => `${label}:${value}:${detail}\\n`;
+    """
+        + card
+        + queue
+        + """
+      renderQueue();
+      const markup = campaignMarkup({id: 'held', quality_hold: true, overall_state: 'attention', current_detail: '30 quarantined', stages: []});
+      console.log(JSON.stringify({queue: element.innerHTML, card: markup}));
+    """
+    )
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=20, check=False)
+    assert result.returncode == 0, result.stderr
+    actual = json.loads(result.stdout)
+    assert "Quality holds:30:Quarantined" in actual["queue"]
+    assert "Pending:0:" in actual["queue"]
+    assert "Processing:0:" in actual["queue"]
+    assert "Quality hold" in actual["card"]
+    assert "30 quarantined" in actual["card"]
+    assert "Executing:" not in actual["card"]

@@ -150,7 +150,7 @@ async def test_refresh_ranks_new_longtails_after_excluding_attempted_and_publish
         assert _domain is domain and limit == 240
         return [*old_terms, "tarta de coco publicada", "tarta de coco fallida", fresh_phrase]
 
-    async def google_only(*args):
+    def google_only(*args):
         raise AssertionError("Google discovery must not supply production candidates")
 
     monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
@@ -206,6 +206,8 @@ async def test_production_refresh_exclusions_are_domain_local(tmp_path, monkeypa
         "croquetas caseras para gato",
         "mousse de chocolate saudável",
         "mousse de chocolate para recheio de bolo",
+        "mousse de chocolate como fazer",
+        "croquetas caseras recetas para hacer",
     ],
 )
 def test_production_discovery_rejects_pet_and_foreign_language_noise(keyword) -> None:
@@ -220,6 +222,45 @@ def test_production_discovery_respects_dolce_dessert_categories() -> None:
     )
     assert not turbo._production_discovery_keyword_allowed("croquetas caseras de jamon", domain)
     assert turbo._production_discovery_keyword_allowed("tarta de queso con pistacho", domain)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_worker_does_not_reserve_old_pending_foreign_generic_or_off_domain_phrases(
+    tmp_path, monkeypatch
+) -> None:
+    from rankstein.keyword_roadmap import EXPECTED_HEADER, read_keyword_rows
+
+    domain = replace(_domain(("Postres",)), root=tmp_path, keywords_file=tmp_path / "keywords.md")
+    rejected = [
+        "mousse de chocolate como fazer",
+        "croquetas caseras recetas para hacer",
+        "croquetas caseras para gato",
+    ]
+    domain.keywords_file.write_text(
+        f"# Test\n\n{EXPECTED_HEADER}\n|---|---|---|---|---|---|\n"
+        + "".join(
+            f"| {phrase} | Postres | Pinterest Trends | test | High | Pending |\n" for phrase in rejected
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", None)
+    monkeypatch.setattr(turbo, "_load_pinterest_qualified_keyword_keys", lambda _: (set(rejected), "ok"))
+    refreshes = []
+
+    async def refresh(*args, **kwargs):
+        refreshes.append(kwargs)
+        return 0
+
+    async def forbidden_article(*args, **kwargs):
+        raise AssertionError("existing noisy Pending phrase reached a writer")
+
+    monkeypatch.setattr(turbo, "_auto_refresh_keywords", refresh)
+    monkeypatch.setattr(turbo, "process_keyword", forbidden_article)
+    await turbo._run_domain(domain, workers=2, limit=2, once=True)
+
+    assert len(refreshes) == 1
+    assert all(row.status == "Pending" for row in read_keyword_rows(domain.keywords_file))
 
 
 @pytest.mark.unit
@@ -459,7 +500,13 @@ async def test_late_primary_pin_is_reconciled_with_the_shared_live_tracker(tmp_p
 
     monkeypatch.setattr(events, "PIPELINE_DB", db)
     monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", tracker)
-    monkeypatch.setattr(pinterest_automation, "get_job_queue", lambda **kwargs: Queue())
+
+    def shared_queue():
+        # The production upload bridge writes primary jobs into the shared queue.
+        # An accidental domain_handle argument must fail this regression test.
+        return Queue()
+
+    monkeypatch.setattr(pinterest_automation, "get_job_queue", shared_queue)
     monkeypatch.setattr(reconcile, "reconcile_production_article", finish)
     await turbo._reconcile_awaiting_articles(domain)
     assert calls[0]["batch_tracker"] is tracker
@@ -650,7 +697,18 @@ async def test_pin_upload_success_without_pin_identity_needs_verification(monkey
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_codex_hero_failure_fails_closed_before_publish(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "hero_result",
+    [
+        None,
+        "invalid result",
+        {},
+        {"success": False, "error": "All hero providers unavailable"},
+        {"success": True, "source": "scraped"},
+        {"success": True, "source": "pollinations", "output_path": "   "},
+    ],
+)
+async def test_failed_or_invalid_hero_result_fails_closed_before_publish(monkeypatch, hero_result) -> None:
     domain = _domain(("Postres",))
     article = {
         "title": "Tarta de chocolate",
@@ -668,12 +726,12 @@ async def test_codex_hero_failure_fails_closed_before_publish(monkeypatch) -> No
     import rankstein_mcp_server as mcp
 
     def forbidden_publish(*args, **kwargs):
-        raise AssertionError("publishing must stop when the Codex hero fails")
+        raise AssertionError("publishing must stop when no usable approved hero exists")
 
     monkeypatch.setattr(
         turbo,
         "get_hero_image",
-        lambda **kwargs: {"success": False, "error": "Codex image unavailable"},
+        lambda **kwargs: hero_result,
     )
     monkeypatch.setattr(mcp, "upload_image_to_supabase", forbidden_publish)
     monkeypatch.setattr(mcp, "publish_article_to_supabase", forbidden_publish)
@@ -701,7 +759,8 @@ async def test_codex_hero_failure_fails_closed_before_publish(monkeypatch) -> No
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_unapproved_hero_source_is_rejected_before_upload(monkeypatch) -> None:
+@pytest.mark.parametrize("source", ["unapproved_vendor", "pillow"])
+async def test_unapproved_hero_source_is_rejected_before_upload(monkeypatch, source) -> None:
     domain = _domain(("Postres",))
     article = {
         "title": "Tarta de chocolate",
@@ -726,7 +785,7 @@ async def test_unapproved_hero_source_is_rejected_before_upload(monkeypatch) -> 
         lambda **kwargs: {
             "success": True,
             "output_path": "unapproved-hero.jpg",
-            "source": "unapproved_vendor",
+            "source": source,
         },
     )
     monkeypatch.setattr(mcp, "upload_image_to_supabase", forbidden_upload)
@@ -763,6 +822,8 @@ async def test_scraped_hero_source_is_accepted_for_upload(monkeypatch) -> None:
     import rankstein_mcp_server as mcp
 
     uploaded = []
+    published = []
+    events = []
 
     monkeypatch.setattr(
         turbo,
@@ -789,10 +850,15 @@ async def test_scraped_hero_source_is_accepted_for_upload(monkeypatch) -> None:
     monkeypatch.setattr(
         mcp,
         "publish_article_to_supabase",
-        lambda **kwargs: {"success": True, "url": "https://test.example/tarta-de-chocolate"},
+        lambda **kwargs: published.append(kwargs)
+        or {"success": True, "url": "https://test.example/tarta-de-chocolate"},
     )
     monkeypatch.setattr(mcp, "create_article_pin", lambda **kwargs: {"success": False, "error": "no pin"})
-    monkeypatch.setattr(turbo, "_pipeline_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        turbo,
+        "_pipeline_event",
+        lambda _run, stage, state, _message, **details: events.append((stage, state, details)),
+    )
     monkeypatch.setattr(turbo, "_pipeline_status", lambda *args, **kwargs: None)
 
     status = await turbo._publish_generated_article(
@@ -804,6 +870,12 @@ async def test_scraped_hero_source_is_accepted_for_upload(monkeypatch) -> None:
     )
 
     assert uploaded == ["scraped-hero.jpg"]
+    assert len(published) == 1
+    assert published[0]["domain_handle"] == domain.handle
+    assert any(
+        stage == "hero_image" and state == "complete" and details.get("source") == "scraped"
+        for stage, state, details in events
+    )
     assert status == "Needs Verification"
 
 
@@ -826,6 +898,8 @@ async def test_pollinations_hero_source_is_accepted_for_upload(monkeypatch) -> N
     import rankstein_mcp_server as mcp
 
     uploaded = []
+    published = []
+    events = []
 
     monkeypatch.setattr(
         turbo,
@@ -852,10 +926,15 @@ async def test_pollinations_hero_source_is_accepted_for_upload(monkeypatch) -> N
     monkeypatch.setattr(
         mcp,
         "publish_article_to_supabase",
-        lambda **kwargs: {"success": True, "url": "https://test.example/tarta-de-chocolate"},
+        lambda **kwargs: published.append(kwargs)
+        or {"success": True, "url": "https://test.example/tarta-de-chocolate"},
     )
     monkeypatch.setattr(mcp, "create_article_pin", lambda **kwargs: {"success": False, "error": "no pin"})
-    monkeypatch.setattr(turbo, "_pipeline_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        turbo,
+        "_pipeline_event",
+        lambda _run, stage, state, _message, **details: events.append((stage, state, details)),
+    )
     monkeypatch.setattr(turbo, "_pipeline_status", lambda *args, **kwargs: None)
 
     status = await turbo._publish_generated_article(
@@ -867,6 +946,12 @@ async def test_pollinations_hero_source_is_accepted_for_upload(monkeypatch) -> N
     )
 
     assert uploaded == ["pollinations-hero.jpg"]
+    assert len(published) == 1
+    assert published[0]["domain_handle"] == domain.handle
+    assert any(
+        stage == "hero_image" and state == "complete" and details.get("source") == "pollinations"
+        for stage, state, details in events
+    )
     assert status == "Needs Verification"
 
 
@@ -1225,19 +1310,16 @@ fallback_providers:
         def json():
             return {"choices": [{"message": {"content": json.dumps(article)}}]}
 
-    class Session:
-        def __init__(self) -> None:
-            self.requests: list[dict] = []
+    requests = []
 
-        def post(self, url, **kwargs):
-            self.requests.append({"url": url, **kwargs})
-            return Response()
+    async def http_request(url, **kwargs):
+        requests.append({"url": url, **kwargs})
+        return Response()
 
-    session = Session()
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     monkeypatch.setenv("RANKSTEIN_ARTICLE_PROVIDER", "hermes-codex")
     monkeypatch.setenv("RANKSTEIN_HERMES_CODEX_API_KEY", "test-api-key")
-    monkeypatch.setattr(turbo, "_get_session", lambda: session)
+    monkeypatch.setattr(turbo, "_bounded_hermes_article_http", http_request)
 
     generated = await turbo._call_hermes_codex_for_article(
         "tarta de prueba",
@@ -1245,8 +1327,9 @@ fallback_providers:
     )
 
     assert generated == article
-    assert len(session.requests) == 1
-    assert "fallback_providers" not in session.requests[0]["json"]
+    assert len(requests) == 1
+    assert "fallback_providers" not in requests[0]["payload"]
+    assert requests[0]["timeout"] == turbo._hermes_codex_article_timeout_seconds()
 
 
 @pytest.mark.unit
@@ -1278,18 +1361,16 @@ fallback_providers:
         def json():
             return {"choices": []}
 
-    class Session:
-        calls = 0
+    calls = []
 
-        def post(self, *args, **kwargs):
-            self.calls += 1
-            return Response()
+    async def http_request(*args, **kwargs):
+        calls.append(kwargs)
+        return Response()
 
-    session = Session()
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     monkeypatch.setenv("RANKSTEIN_ARTICLE_PROVIDER", "hermes-codex")
     monkeypatch.setenv("RANKSTEIN_HERMES_CODEX_API_KEY", "test-api-key")
-    monkeypatch.setattr(turbo, "_get_session", lambda: session)
+    monkeypatch.setattr(turbo, "_bounded_hermes_article_http", http_request)
 
     assert (
         await turbo._call_hermes_codex_for_article(
@@ -1298,7 +1379,7 @@ fallback_providers:
         )
         is None
     )
-    assert session.calls == 1
+    assert len(calls) == 1
 
 
 @pytest.mark.unit
@@ -1353,12 +1434,321 @@ async def test_hermes_request_is_blocked_before_network_when_attestation_fails(
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     monkeypatch.setenv("RANKSTEIN_HERMES_CODEX_API_KEY", "test-key")
 
-    def forbidden_network():
+    async def forbidden_network(*args, **kwargs):
         raise AssertionError("Hermes network request must not be prepared")
 
-    monkeypatch.setattr(turbo, "_get_session", forbidden_network)
+    monkeypatch.setattr(turbo, "_bounded_hermes_article_http", forbidden_network)
 
     assert await turbo._call_hermes_codex_for_article("tarta", _domain(("Postres",))) is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_hermes_http_worker_passes_secrets_only_on_stdin_and_preserves_response(monkeypatch) -> None:
+    captured = {}
+
+    class Process:
+        returncode = None
+        pid = 41001
+
+        async def communicate(self, request):
+            captured["request"] = json.loads(request)
+            self.returncode = 0
+            return json.dumps({"status_code": 429, "body": '{"error":"quota"}'}).encode(), b""
+
+    async def spawn(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return Process()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    response = await turbo._bounded_hermes_article_http(
+        "http://127.0.0.1:1/v1/chat/completions",
+        headers={"Authorization": "Bearer test-secret-not-on-command-line"},
+        payload={"messages": [{"content": "private prompt"}]},
+        timeout=77,
+    )
+
+    assert response.status_code == 429
+    assert response.json() == {"error": "quota"}
+    assert captured["args"][1:4] == ("-I", "-u", "-c")
+    assert "test-secret-not-on-command-line" not in " ".join(captured["args"])
+    assert "private prompt" not in " ".join(captured["args"])
+    assert captured["request"]["headers"]["Authorization"].endswith("test-secret-not-on-command-line")
+    assert captured["request"]["timeout"] == 77
+    assert captured["kwargs"]["stdin"] == asyncio.subprocess.PIPE
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["deadline", "cancel", "exception"])
+async def test_hermes_http_worker_reaps_owned_child_before_failure_returns(monkeypatch, failure) -> None:
+    started = asyncio.Event()
+    terminated = []
+
+    class Process:
+        returncode = None
+        pid = 41002
+
+        async def communicate(self, request):
+            started.set()
+            if failure == "exception":
+                raise OSError("isolated pipe failure")
+            await asyncio.Future()
+
+    process = Process()
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    async def terminate(owned):
+        assert owned is process
+        terminated.append(owned.pid)
+        owned.returncode = -9
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    task = asyncio.create_task(
+        turbo._bounded_hermes_article_http("http://unused", headers={}, payload={}, timeout=0.01)
+    )
+    await started.wait()
+    if failure == "cancel":
+        task.cancel()
+    error = {
+        "deadline": turbo.requests.exceptions.Timeout,
+        "cancel": asyncio.CancelledError,
+        "exception": OSError,
+    }[failure]
+    with pytest.raises(error):
+        await task
+    assert terminated == [process.pid]
+    assert process.returncode == -9
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_hermes_http_total_timeout_remains_availability_only_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(turbo, "_hermes_openai_codex_attestation", lambda: (True, "gpt-test"))
+    monkeypatch.setenv("RANKSTEIN_HERMES_CODEX_API_KEY", "test-key")
+    monkeypatch.setenv("RANKSTEIN_ENABLE_HERMES_CODEX_ARTICLES", "1")
+
+    async def deadline(*args, **kwargs):
+        raise turbo.requests.exceptions.Timeout("total deadline")
+
+    monkeypatch.setattr(turbo, "_bounded_hermes_article_http", deadline)
+    result = await turbo._call_hermes_codex_for_article_result("tarta de coco", _domain(("Postres",)))
+
+    assert result.article is None
+    assert result.outcome == "availability_failure"
+    assert result.permits_free_fallback
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_real_trickling_http_response_cannot_outlive_total_deadline(monkeypatch) -> None:
+    # A disposable loopback server and child only; never contact Hermes or any
+    # production provider. Bytes arrive well inside the socket inactivity limit.
+    connected = asyncio.Event()
+    stopped = asyncio.Event()
+    children = []
+    handlers = []
+    original_spawn = turbo._create_owned_subprocess
+
+    async def capture_spawn(*args, **kwargs):
+        process = await original_spawn(*args, **kwargs)
+        children.append(process)
+        return process
+
+    async def trickle(reader, writer):
+        handlers.append(asyncio.current_task())
+        try:
+            await reader.readuntil(b"\r\n\r\n")
+            writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\nConnection: close\r\n\r\n")
+            await writer.drain()
+            connected.set()
+            while not stopped.is_set():
+                writer.write(b" ")
+                await writer.drain()
+                await asyncio.sleep(0.01)
+        except (OSError, asyncio.IncompleteReadError):
+            pass
+        finally:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except OSError:
+                pass
+
+    monkeypatch.setattr(turbo, "_create_owned_subprocess", capture_spawn)
+    server = await asyncio.start_server(trickle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        with pytest.raises(turbo.requests.exceptions.Timeout, match="total HTTP deadline"):
+            await turbo._bounded_hermes_article_http(
+                f"http://127.0.0.1:{port}/test",
+                headers={},
+                payload={"test": "isolated"},
+                timeout=5,
+            )
+        assert connected.is_set(), "test must actually receive a trickling response"
+        assert len(children) == 1
+        assert children[0].returncode is not None, "timed-out HTTP child was not reaped"
+    finally:
+        stopped.set()
+        server.close()
+        await server.wait_closed()
+        if handlers:
+            await asyncio.gather(*handlers)
+        for process in children:
+            await turbo._cleanup_owned_process(process)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("writer", ["codex", "hermes_free"])
+@pytest.mark.parametrize("failure", ["cancel", "timeout", "exception"])
+async def test_article_cli_abnormal_exit_reaps_only_its_owned_process(monkeypatch, writer, failure) -> None:
+    started = asyncio.Event()
+    terminated = []
+
+    class Process:
+        returncode = None
+        pid = 41003
+
+        async def communicate(self):
+            started.set()
+            if failure == "timeout":
+                raise TimeoutError
+            if failure == "exception":
+                raise OSError("isolated pipe failure")
+            await asyncio.Future()
+
+    process = Process()
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    async def terminate(owned):
+        assert owned is process
+        terminated.append(owned.pid)
+        owned.returncode = -9
+
+    monkeypatch.setenv("RANKSTEIN_ENABLE_CODEX_CLI_ARTICLES", "1")
+    monkeypatch.setenv("RANKSTEIN_CODEX_CLI_MODEL", "gpt-test")
+    monkeypatch.setattr(turbo, "_hermes_free_article_target", lambda: (True, ("openrouter", "test:free")))
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    call = turbo._call_codex_cli_for_article if writer == "codex" else turbo._call_hermes_free_for_article
+    task = asyncio.create_task(call("tarta de coco", _domain(("Postres",))))
+    await started.wait()
+    if failure == "cancel":
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    else:
+        assert await task is None
+    assert terminated == [process.pid]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_owned_spawn_cancellation_does_not_lose_child_handle(monkeypatch) -> None:
+    spawning = asyncio.Event()
+    allow_spawn = asyncio.Event()
+    terminated = []
+
+    class Process:
+        returncode = None
+        pid = 41004
+
+    process = Process()
+
+    async def spawn(*args, **kwargs):
+        spawning.set()
+        await allow_spawn.wait()
+        return process
+
+    async def terminate(owned):
+        terminated.append(owned.pid)
+        owned.returncode = -9
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    task = asyncio.create_task(turbo._create_owned_subprocess("unused"))
+    await spawning.wait()
+    task.cancel()
+    await asyncio.sleep(0)
+    assert not task.done()
+    allow_spawn.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert terminated == [process.pid]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_owned_cleanup_survives_repeated_cancellation_until_reaped(monkeypatch) -> None:
+    started = asyncio.Event()
+    allow_cleanup = asyncio.Event()
+
+    class Process:
+        returncode = None
+        pid = 41005
+
+    process = Process()
+
+    async def terminate(owned):
+        started.set()
+        await allow_cleanup.wait()
+        owned.returncode = -9
+
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    task = asyncio.create_task(turbo._cleanup_owned_process(process))
+    await started.wait()
+    task.cancel()
+    await asyncio.sleep(0)
+    task.cancel()
+    await asyncio.sleep(0)
+    assert not task.done()
+    allow_cleanup.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert process.returncode == -9
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_windows_tree_cleanup_targets_exact_pid_not_browser_names(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    commands = []
+
+    class Process:
+        returncode = None
+        pid = 41006
+
+        def kill(self):
+            self.returncode = -9
+
+        async def wait(self):
+            return self.returncode
+
+    class Killer:
+        returncode = 0
+
+        async def wait(self):
+            return 0
+
+    async def spawn(*args, **kwargs):
+        commands.append(args)
+        return Killer()
+
+    monkeypatch.setattr(turbo, "os", SimpleNamespace(name="nt"))
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    process = Process()
+    await turbo._terminate_process_tree(process)
+    assert commands == [("taskkill", "/PID", str(process.pid), "/T", "/F")]
+    assert process.returncode == -9
 
 
 @pytest.mark.unit
@@ -1602,6 +1992,14 @@ def _complete_remaster_report() -> dict:
                     "variant": variant,
                     "source": "pinterest",
                     "original_pin_id": f"pin-{source_index:02d}",
+                    "source_path": f"source-{source_index:02d}.jpg",
+                    "source_hash": "a" * 64,
+                    "source_quality": {
+                        "accepted": True,
+                        "policy": "text_free_pinterest_source",
+                        "version": 1,
+                        "source_hash": "a" * 64,
+                    },
                 }
             )
             details.append({"job_id": f"job-{source_index:02d}-{variant}"})
@@ -1755,6 +2153,55 @@ async def test_remaster_launcher_reuses_valid_existing_run_report_without_requeu
     assert result["success"] is True
     assert result["reused_existing_report"] is True
     assert Path(result["report_path"]) == report_path
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_outer_reconcile_deadline_reaps_remaster_tree_and_closes_logs(tmp_path, monkeypatch) -> None:
+    captured = {}
+    terminated = []
+
+    class Process:
+        returncode = None
+        pid = 41007
+
+        async def wait(self):
+            await asyncio.Future()
+
+    process = Process()
+
+    async def spawn(*args, **kwargs):
+        captured.update(kwargs)
+        return process
+
+    async def terminate(owned):
+        assert owned is process
+        terminated.append(owned.pid)
+        owned.returncode = -9
+
+    monkeypatch.setattr(turbo, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(turbo, "_find_valid_article_remaster_report", lambda **_: None)
+    monkeypatch.setattr(turbo, "_pipeline_event", lambda *args, **kwargs: None)
+    monkeypatch.setenv("RANKSTEIN_ENABLE_ARTICLE_REMASTERS", "1")
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(
+            turbo._launch_article_remaster_campaign(
+                keyword="tarta de coco",
+                title="Tarta de coco",
+                slug="tarta-de-coco",
+                category="Postres",
+                domain=_domain(("Postres",)),
+                pipeline_run_id="test-isolated-cancel",
+            ),
+            timeout=0.01,
+        )
+
+    assert terminated == [process.pid]
+    assert process.returncode == -9
+    assert captured["stdout"].closed
+    assert captured["stderr"].closed
 
 
 @pytest.mark.unit

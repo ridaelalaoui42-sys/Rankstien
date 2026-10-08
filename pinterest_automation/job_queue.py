@@ -84,6 +84,7 @@ class JobStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     DEAD = "dead"
+    HELD = "held"
 
 
 @dataclass
@@ -657,6 +658,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             job.status = JobStatus.COMPLETED.value
             job.completed_at = completed_at
             job.result = result
@@ -694,6 +697,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             job.status = JobStatus.COMPLETED.value
             job.completed_at = completed_at
             job.result = result
@@ -754,6 +759,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             job.error_log.append(f"Attempt {job.attempt}: {error}")
 
             if job.attempt >= job.max_attempts:
@@ -804,6 +811,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             job.error_log.append(f"Attempt {job.attempt}: {error}")
 
             if job.attempt >= job.max_attempts:
@@ -845,6 +854,55 @@ class JobQueue:
                 await db.commit()
                 logger.warning(f"Job {job_id} scheduled for retry in {backoff:.1f}s (attempt {job.attempt})")
 
+    def hold_campaign_jobs(self, job_ids: list[str], *, pipeline_run_id: str, reason: str) -> dict:
+        """Atomically quarantine exact, unleased remaster jobs without deleting them.
+
+        Held rows cannot be dequeued and cannot be released by routine retry
+        handling. Replacement creative must receive fresh campaign proof; this
+        API intentionally provides no generic automatic unhold operation.
+        """
+        ids = [str(job_id).strip() for job_id in job_ids]
+        if not ids or any(not job_id for job_id in ids) or len(set(ids)) != len(ids):
+            raise ValueError("Hold requires distinct, explicit job IDs")
+        if not pipeline_run_id.strip() or not reason.strip():
+            raise ValueError("Hold requires an exact pipeline run and a reason")
+        with self._lock, self._conn() as conn:
+            conn.execute("BEGIN IMMEDIATE;")
+            try:
+                selected = []
+                for job_id in ids:
+                    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+                    if row is None:
+                        raise ValueError(f"Job {job_id} is missing or already terminal")
+                    job = _row_to_job(row)
+                    extra = job.payload.get("extra") or {}
+                    if (
+                        not isinstance(extra, dict)
+                        or extra.get("pipeline_run_id") != pipeline_run_id
+                        or extra.get("campaign_type") != "article_remaster_pairs"
+                    ):
+                        raise ValueError(f"Job {job_id} does not belong to the requested remaster run")
+                    if job.status not in {
+                        JobStatus.PENDING.value,
+                        JobStatus.RETRY.value,
+                        JobStatus.HELD.value,
+                    }:
+                        raise ValueError(f"Job {job_id} is leased or terminal; refusing to overwrite it")
+                    if job.status != JobStatus.HELD.value:
+                        job.error_log.append(f"Source-quality hold: {reason.strip()[:500]}")
+                    selected.append(job)
+                for job in selected:
+                    conn.execute(
+                        "UPDATE jobs SET status = ?, next_retry_at = NULL, error_log_json = ? WHERE id = ?",
+                        (JobStatus.HELD.value, json.dumps(job.error_log, ensure_ascii=False), job.id),
+                    )
+                conn.execute("COMMIT;")
+            except Exception:
+                conn.execute("ROLLBACK;")
+                raise
+        logger.warning("Held %d exact remaster jobs for run %s", len(ids), pipeline_run_id)
+        return {"held": len(ids), "job_ids": ids, "pipeline_run_id": pipeline_run_id}
+
     def release(self, job_id: str, delay_seconds: float = 15.0) -> None:
         """Release a leased job back to the queue (e.g. if lock couldn't be acquired).
         Resets status to 'pending', schedules next retry, and decrements attempt count.
@@ -856,6 +914,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             new_attempt = max(0, job.attempt - 1)
             try:
                 conn.execute("BEGIN IMMEDIATE;")
@@ -887,6 +947,8 @@ class JobQueue:
             if row is None:
                 return
             job = _row_to_job(row)
+            if job.status == JobStatus.HELD.value:
+                return
             new_attempt = max(0, job.attempt - 1)
             try:
                 await db.execute("BEGIN IMMEDIATE;")

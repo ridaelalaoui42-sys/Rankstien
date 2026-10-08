@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +45,7 @@ class GA4Connector:
         if not self.is_configured or not self.key_path:
             return None
         try:
-            with open(self.key_path, "r", encoding="utf-8") as f:
+            with open(self.key_path, encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("client_email")
         except Exception:
@@ -56,7 +55,7 @@ class GA4Connector:
         if not self.is_configured or not self.key_path:
             return None
         try:
-            with open(self.key_path, "r", encoding="utf-8") as f:
+            with open(self.key_path, encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("project_id")
         except Exception:
@@ -71,9 +70,7 @@ class GA4Connector:
             from google.oauth2 import service_account
 
             scopes = ["https://www.googleapis.com/auth/analytics.readonly"]
-            creds = service_account.Credentials.from_service_account_file(
-                str(self.key_path), scopes=scopes
-            )
+            creds = service_account.Credentials.from_service_account_file(str(self.key_path), scopes=scopes)
             creds.refresh(Request())
             return creds.token
         except Exception as exc:
@@ -98,11 +95,13 @@ class GA4Connector:
             for acct in summaries:
                 for prop in acct.get("propertySummaries", []):
                     prop_id = prop.get("property", "").replace("properties/", "")
-                    props.append({
-                        "property_id": prop_id,
-                        "display_name": prop.get("displayName", ""),
-                        "property_type": prop.get("propertyType", ""),
-                    })
+                    props.append(
+                        {
+                            "property_id": prop_id,
+                            "display_name": prop.get("displayName", ""),
+                            "property_type": prop.get("propertyType", ""),
+                        }
+                    )
             return props
         except Exception:
             return []
@@ -281,4 +280,3 @@ class GA4Connector:
             return {}
 
     query_traffic_overview = query_traffic_summary
-

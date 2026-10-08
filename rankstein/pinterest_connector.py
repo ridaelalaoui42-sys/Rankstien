@@ -57,11 +57,14 @@ class PinterestConnector:
             cookie_age_days = None
 
             if session_dir.exists():
-                cookie_files = list(session_dir.glob("cookies*.json")) or list(session_dir.glob("sessionstore*.json*"))
+                cookie_files = list(session_dir.glob("cookies*.json")) or list(
+                    session_dir.glob("sessionstore*.json*")
+                )
                 if cookie_files:
                     has_cookies = True
                     newest = max(f.stat().st_mtime for f in cookie_files)
                     import time
+
                     cookie_age_days = round((time.time() - newest) / 86400, 1)
 
             sessions_status[domain_handle] = {
@@ -73,10 +76,20 @@ class PinterestConnector:
         return {
             "api_connected": api_connected,
             "has_api_token": bool(self.access_token),
-            "api_user": api_details.get("username") if isinstance(api_details, dict) and api_connected else None,
+            "api_user": api_details.get("username")
+            if isinstance(api_details, dict) and api_connected
+            else None,
             "browser_sessions": sessions_status,
-            "overall_status": "CONNECTED_API" if api_connected else ("CONNECTED_BROWSER" if any(s["active"] for s in sessions_status.values()) else "NOT_CONFIGURED"),
-            "action_needed": None if api_connected or any(s["active"] for s in sessions_status.values()) else "Provide PINTEREST_ACCESS_TOKEN or log in via browser session.",
+            "overall_status": "CONNECTED_API"
+            if api_connected
+            else (
+                "CONNECTED_BROWSER"
+                if any(s["active"] for s in sessions_status.values())
+                else "NOT_CONFIGURED"
+            ),
+            "action_needed": None
+            if api_connected or any(s["active"] for s in sessions_status.values())
+            else "Provide PINTEREST_ACCESS_TOKEN or log in via browser session.",
         }
 
     def fetch_trending_terms(self, region: str = "ES", limit: int = 20) -> list[dict[str, Any]]:
@@ -99,12 +112,18 @@ class PinterestConnector:
                             "growth_rate": item.get("pct_growth_mom", 0),
                             "source": "Pinterest API v5",
                         }
-                        for item in items if isinstance(item, dict)
+                        for item in items
+                        if isinstance(item, dict)
                     ]
             except Exception as exc:
                 logger.warning("Pinterest API trends query failed: %s", exc)
 
         # Fallback to trend intelligence library
         from rankstein.trend_intelligence import fetch_pinterest_trending_terms
+
         raw_terms = fetch_pinterest_trending_terms(region, limit=limit)
-        return [{"keyword": t, "growth_rate": "+100%", "source": "Pinterest Trends Discovery"} for t in raw_terms if t]
+        return [
+            {"keyword": t, "growth_rate": "+100%", "source": "Pinterest Trends Discovery"}
+            for t in raw_terms
+            if t
+        ]

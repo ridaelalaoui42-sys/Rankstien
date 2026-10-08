@@ -23,6 +23,9 @@ const state = {
   view: "overview",
   data: null,
   pins: null,
+  pinTotal: null,
+  pinPolling: false,
+  lastPinRefresh: 0,
   recipes: [],
   keywords: [],
   token: "",
@@ -67,7 +70,7 @@ function badge(value) {
       ? "active"
       : ["failed", "error", "offline", "dead"].includes(key)
         ? "bad"
-        : ["attention", "warning", "needs verification", "stale"].includes(key)
+        : ["attention", "warning", "needs verification", "stale", "held", "quality hold", "quarantined"].includes(key)
           ? "warn"
           : "";
   return `<span class="badge ${kind}">${esc(value || "unknown")}</span>`;
@@ -174,8 +177,8 @@ function indexCampaigns() {
     state.campaigns.set(String(c.id), c);
 }
 function campaignMarkup(c) {
-  const action = c.overall_state === "active" ? "Executing" : c.overall_state === "waiting" ? "Waiting" : "Last recorded";
-  return `<article class="campaign"><div class="campaign-head"><div><h3>${esc(c.keyword || c.title)}</h3><small>${esc(c.domain_handle)} / ${esc(c.slug)}</small></div>${badge(c.overall_state)}</div><div class="campaign-stage">${action}: ${esc(c.current_label || c.run_status)}${c.current_detail ? ` &middot; ${esc(c.current_detail)}` : ""}</div><div class="stages" aria-label="Recorded workflow stages">${(c.stages || []).map((s) => `<span class="stage ${esc(s.state)}" title="${esc(s.label + ": " + s.state)}"></span>`).join("")}</div><div class="campaign-foot"><button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>${external(c.article_url, "Article")}${external(c.pin_url, "Primary pin")}<span class="muted">${date(c.updated_at)}</span></div></article>`;
+  const action = c.quality_hold ? "Quality hold" : c.overall_state === "active" ? "Executing" : c.overall_state === "waiting" ? "Waiting" : "Last recorded";
+  return `<article class="campaign"><div class="campaign-head"><div><h3>${esc(c.keyword || c.title)}</h3><small>${esc(c.domain_handle)} / ${esc(c.slug)}</small></div>${badge(c.quality_hold ? "Quality hold" : c.overall_state)}</div><div class="campaign-stage">${action}: ${esc(c.current_label || c.run_status)}${c.current_detail ? ` &middot; ${esc(c.current_detail)}` : ""}</div><div class="stages" aria-label="Recorded workflow stages">${(c.stages || []).map((s) => `<span class="stage ${esc(s.state)}" title="${esc(s.label + ": " + s.state)}"></span>`).join("")}</div><div class="campaign-foot"><button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>${external(c.article_url, "Article")}${external(c.pin_url, "Primary pin")}<span class="muted">${date(c.updated_at)}</span></div></article>`;
 }
 function renderOverview() {
   const d = state.data;
@@ -187,7 +190,7 @@ function renderOverview() {
   $("metrics").innerHTML =
     metric(
       "Verified pin records",
-      number(state.pins?.total),
+      number(state.pinTotal),
       "All accounts / proof recorded",
       "mint",
       "badge-check",
@@ -195,7 +198,7 @@ function renderOverview() {
     metric(
       "Queue backlog",
       number((q.pending || 0) + (q.retry || 0)),
-      `${q.processing || 0} processing / all domains`,
+      `${q.processing || 0} processing / ${q.held || 0} quality-held / all domains`,
       "cyan",
       "layers",
     ) +
@@ -229,6 +232,7 @@ function renderOverview() {
       "workflow",
     );
   const provider = d.article_provider || {};
+  $("stop-batch").disabled = !d.actions?.production?.alive;
   const supervisorToggle = $("supervisor-toggle");
   supervisorToggle.disabled = !r.supervisor;
   supervisorToggle.dataset.command = sup.running
@@ -299,7 +303,7 @@ function renderCampaigns() {
         ],
         rows.map(
           (c) =>
-            `<tr><td><button class="link-button" data-campaign="${esc(c.id)}">${esc(c.keyword || c.title)}</button><span class="subtext">${esc(c.current_label)}</span></td><td class="mono">${esc(c.domain_handle)}</td><td>${badge(c.overall_state === "attention" ? "Needs verification" : c.overall_state)}</td><td>${external(c.article_url, "Article")} ${external(c.pin_url, "Pin")}</td><td class="mono">${esc(date(c.updated_at))}</td><td><button class="icon-button" data-campaign="${esc(c.id)}" title="Inspect campaign" aria-label="Inspect campaign">${icon("chevron-right")}</button></td></tr>`,
+            `<tr><td><button class="link-button" data-campaign="${esc(c.id)}">${esc(c.keyword || c.title)}</button><span class="subtext">${esc(c.quality_hold ? c.current_detail : c.current_label)}</span></td><td class="mono">${esc(c.domain_handle)}</td><td>${badge(c.quality_hold ? "Quality hold" : c.overall_state === "attention" ? "Needs verification" : c.overall_state)}</td><td>${external(c.article_url, "Article")} ${external(c.pin_url, "Pin")}</td><td class="mono">${esc(date(c.updated_at))}</td><td><button class="icon-button" data-campaign="${esc(c.id)}" title="Inspect campaign" aria-label="Inspect campaign">${icon("chevron-right")}</button></td></tr>`,
         ),
       )
     : empty("No matching history");
@@ -334,6 +338,13 @@ function renderQueue() {
       "Includes upload and save jobs",
       "mint",
       "check-check",
+    ) +
+    metric(
+      "Quality holds",
+      number(q.held || 0),
+      "Quarantined / excluded from worker claims",
+      "gold",
+      "shield-alert",
     );
 }
 function renderRuntime() {
@@ -419,7 +430,7 @@ async function refreshStatus() {
     $("freshness").textContent =
       refresh.state === "warming"
         ? "Warming up..."
-        : `${stale ? "Stale" : refresh.state === "refreshing" ? "Refreshing" : "Updated"} ${age}s ago`;
+        : `${!$("auto-refresh").checked ? "Snapshot" : stale ? "Stale" : refresh.state === "refreshing" ? "Refreshing" : "Updated"} ${age}s ago`;
     $("connection-alert").hidden = !stale;
     if (stale)
       $("connection-alert").textContent =
@@ -471,6 +482,10 @@ async function loadView() {
       const data = await api("/api/rankstein/pins?" + params);
       if (generation !== state.loads.get(key) || view !== state.view) return;
       state.pins = data;
+      if (!params.get("account") && !params.get("search")) {
+        state.pinTotal = data.total;
+        state.lastPinRefresh = Date.now();
+      }
       renderPins();
       renderOverview();
     } else if (view === "logs") {
@@ -597,6 +612,7 @@ function showCampaign(id) {
   const c = state.campaigns.get(id);
   if (!c) return;
   $("detail-title").textContent = c.keyword || c.title || "Campaign";
+  if (c.quality_hold) $("detail-title").textContent += " / Quality hold";
   const previews = [
     ...Object.values(c.previews || {}),
     ...(c.remaster?.pairs || [])
@@ -687,6 +703,11 @@ const commands = {
     "Request a graceful supervisor shutdown. Already-published pins remain unchanged.",
     "Request stop",
   ],
+  "stop-production": [
+    "Stop production batch",
+    "Stop the tracked production process and its child article workers. The Pinterest supervisor and queued pins keep running. In-flight articles may need verification; published content is not removed.",
+    "Stop batch",
+  ],
 };
 function openCommand(command) {
   state.command = command;
@@ -723,6 +744,8 @@ async function runCommand(event) {
     } else if (c === "requeue") path = "/api/rankstein/control/requeue-dlq";
     else if (c === "stop-supervisor")
       path = "/api/rankstein/control/stop/supervisor";
+    else if (c === "stop-production")
+      path = "/api/rankstein/control/stop/production";
     else if (c === "trends")
       path =
         "/api/rankstein/control/refresh-trends?" +
@@ -742,12 +765,14 @@ async function runCommand(event) {
       result.message ||
         (c === "requeue"
           ? `${result.requeued || 0} jobs restored; ${result.skipped || 0} retained.`
+          : c === "stop-production"
+            ? result.stopped ? "Batch stopped. Queued Pinterest jobs continue." : "The batch is no longer running."
           : c === "stop-supervisor"
             ? "Graceful stop requested."
             : `Started ${c}${result.pid ? " / PID " + result.pid : ""}.`),
     );
     if (result.pid) {
-      $("log-mode").value = c;
+      $("log-mode").value = c === "stop-production" ? "production" : c;
       location.hash = "logs";
     }
     await refreshStatus();
@@ -1545,7 +1570,12 @@ $("new-batch").addEventListener("click", () => openCommand("production"));
 $("command-form").addEventListener("submit", runCommand);
 $("refresh").addEventListener("click", async () => {
   await refreshStatus();
+  await refreshPinTotal();
   await loadView();
+});
+$("auto-refresh").addEventListener("change", () => {
+  if ($("auto-refresh").checked) refreshStatus();
+  else $("freshness").textContent = "Live paused";
 });
 $("domain").addEventListener("change", () => {
   renderStatus();
@@ -1609,9 +1639,25 @@ document.addEventListener("visibilitychange", () => {
 setInterval(() => {
   if (!document.hidden && $("auto-refresh").checked) {
     refreshStatus();
+    if (Date.now() - state.lastPinRefresh > 30000) refreshPinTotal();
     if (state.view === "logs") loadView();
   }
 }, 6000);
+async function refreshPinTotal() {
+  if (state.pinPolling) return;
+  state.pinPolling = true;
+  try {
+    const pins = await api("/api/rankstein/pins?limit=1");
+    state.pinTotal = pins.total;
+    state.lastPinRefresh = Date.now();
+    renderOverview();
+    icons();
+  } catch {
+    /* Keep the last known global count; a filtered feed is not a replacement. */
+  } finally {
+    state.pinPolling = false;
+  }
+}
 async function init() {
   icons();
   switchView();
@@ -1621,13 +1667,7 @@ async function init() {
     toast(error.message);
   }
   await refreshStatus();
-  try {
-    state.pins = await api("/api/rankstein/pins?limit=1");
-    renderOverview();
-    icons();
-  } catch {
-    /* Pin metrics remain unavailable. */
-  }
+  await refreshPinTotal();
   await loadView();
 }
 init();

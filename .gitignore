@@ -64,6 +64,8 @@ article_*.json
 **/data/state_store.db/
 **/data/runtime/
 **/data/worktrees/
+**/data/cache/
+**/data/capture-spool/
 *.log
 *.bak
 *.bak.*
@@ -83,6 +85,7 @@ data/reports/launcher/
 data/reports/pinterest_draft_clear_*.json
 data/reports/pinterest_login_*.json
 data/reports/production_validation_*.json
+data/reports/operator_recovery_validation_*.json
 data/reports/autonomous-cycle-*.json
 data/reports/article-quality-repair-*.json
 data/reports/live-article-quality-*.json

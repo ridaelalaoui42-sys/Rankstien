@@ -1010,8 +1010,13 @@ figcaption {
     max-width: 200px;
   }
   .page-heading {
+    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
     margin-bottom: 22px;
+  }
+  .heading-actions {
+    justify-content: flex-end;
   }
   h1 {
     font-size: 22px;
@@ -1283,4 +1288,3 @@ figcaption {
     grid-template-columns: 1fr;
   }
 }
-

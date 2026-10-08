@@ -66,6 +66,9 @@ def test_domain_bound_start(client, monkeypatch):
 def test_status_warming_is_truthful(client, monkeypatch):
     monkeypatch.setattr(routes, "_STATUS_CACHE", None)
     monkeypatch.setattr(routes, "_schedule_status_refresh", lambda: False)
+    monkeypatch.setattr(routes, "_latest_production_batch", lambda: None)
+    monkeypatch.setattr(routes, "_load_processes", lambda: {})
+    monkeypatch.setattr(routes, "_action_snapshots", lambda _: {})
     data = client.get("/api/rankstein/status").json()
     assert data["status_refresh"]["state"] == "warming"
     assert data["queue"] == {}
@@ -118,3 +121,41 @@ def test_logs_tail_and_secret_redaction(monkeypatch, tmp_path):
     assert "secret-value-not-for-client" not in redacted
     assert "abc.def.ghi" not in redacted
     assert "[redacted]" in redacted
+
+
+@pytest.mark.parametrize("killed", [True, False])
+def test_stop_records_only_confirmed_owned_processes(client, monkeypatch, killed):
+    registry = {"production": {"pid": 123, "command": ["python", "production"], "started_at": 10}}
+    saved = []
+    monkeypatch.setattr(routes, "_load_processes", lambda: registry)
+    monkeypatch.setattr(routes, "_pid_alive", lambda *args: True)
+    monkeypatch.setattr(routes, "_kill_pid_tree", lambda pid: killed)
+    monkeypatch.setattr(routes, "_save_processes", saved.append)
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    response = client.post("/api/rankstein/control/stop/production", headers={"X-RankStein-CSRF": token})
+    if killed:
+        assert response.status_code == 200
+        assert response.json()["stopped"] is True
+        assert saved[0]["production"]["stop_requested"] is True
+    else:
+        assert response.status_code == 503
+        assert saved == []
+        assert "stop_requested" not in registry["production"]
+
+
+def test_stopping_finished_or_reused_pid_does_not_erase_outcome(client, monkeypatch):
+    registry = {"production": {"pid": 123, "returncode": 0, "finished_at": 20}}
+    monkeypatch.setattr(routes, "_load_processes", lambda: registry)
+    monkeypatch.setattr(routes, "_pid_alive", lambda *args: False)
+    monkeypatch.setattr(routes, "_kill_pid_tree", lambda pid: pytest.fail("Must not kill an unowned PID"))
+    monkeypatch.setattr(routes, "_save_processes", lambda data: pytest.fail("Must preserve terminal history"))
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    response = client.post("/api/rankstein/control/stop/production", headers={"X-RankStein-CSRF": token})
+    assert response.json()["stopped"] is False
+    assert registry["production"]["returncode"] == 0
+
+
+def test_stop_rejects_unknown_modes(client):
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    response = client.post("/api/rankstein/control/stop/unknown", headers={"X-RankStein-CSRF": token})
+    assert response.status_code == 404

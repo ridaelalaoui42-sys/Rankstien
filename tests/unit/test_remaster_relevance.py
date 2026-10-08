@@ -45,6 +45,17 @@ def test_relevance_requires_actual_keyword_match_not_only_context_terms() -> Non
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "title", ["Pastel de zanahoria sin horno", "Tarta de limón SIN HORNO cremosa y fácil"]
+)
+def test_generated_campaign_queries_retain_required_no_oven_modifier(title: str) -> None:
+    brief = build_recipe_image_scrape_brief(title)
+    assert "sin horno" in brief["search_query"]
+    assert all("sin horno" in query for query in brief["search_queries"])
+    assert "horno" not in brief["core_terms"]
+
+
+@pytest.mark.unit
 def test_relevance_rejects_generic_recipe_with_wrong_core_ingredient() -> None:
     assert not is_relevant_recipe_pin(
         "ensalada de garbanzos",

@@ -465,6 +465,24 @@ def _validate_article_remaster_assets(
             errors.append(f"{pair_id} is not backed exclusively by a Pinterest source")
         if not str(asset.get("original_pin_id") or "").strip():
             errors.append(f"{pair_id} is missing its Pinterest source pin id")
+        quality = asset.get("source_quality")
+        source_path = Path(str(asset.get("source_path") or ""))
+        source_hash = str(asset.get("source_hash") or "")
+        if (
+            not isinstance(quality, dict)
+            or quality.get("accepted") is not True
+            or quality.get("policy") != "text_free_pinterest_source"
+            or quality.get("version") != 1
+            or not source_hash
+            or quality.get("source_hash") != source_hash
+        ):
+            errors.append(f"{pair_id} has no accepted, hash-bound source text review")
+        else:
+            try:
+                if hashlib.sha256(source_path.read_bytes()).hexdigest() != source_hash:
+                    errors.append(f"{pair_id} source changed after its text review")
+            except OSError:
+                errors.append(f"{pair_id} reviewed source image is unavailable")
         asset_domain = str(asset.get("domain_handle") or "").strip()
         if asset_domain and asset_domain.casefold() != domain_handle.casefold():
             errors.append(f"{pair_id} belongs to domain {asset_domain}, not requested domain {domain_handle}")
@@ -617,7 +635,7 @@ def _enqueue_remaster_jobs_atomically(queue, plans: list[dict]) -> dict:
                     continue
                 record = {**plan["detail"], **existing, "created": False}
                 records.append(record)
-                if existing["location"] == "dlq" or existing["state"] in {"dead", "failed"}:
+                if existing["location"] == "dlq" or existing["state"] in {"dead", "failed", "held"}:
                     blocked.append(record)
 
             if blocked:
@@ -746,6 +764,9 @@ def enqueue_article_remasters(
                 "source",
                 "original_pin_id",
                 "original_url",
+                "source_path",
+                "source_hash",
+                "source_quality",
             )
             if asset.get(key) not in (None, "")
         }
@@ -810,8 +831,8 @@ def enqueue_article_remasters(
 
     if enqueue_result["blocked"]:
         return _article_remaster_failure(
-            "Remaster batch retry found existing job(s) in the Pinterest DLQ; "
-            "recover or reconcile the DLQ before retrying",
+            "Remaster batch retry found held or dead-lettered Pinterest job(s); "
+            "use fresh reviewed sources for quality holds, or reconcile the DLQ before retrying",
             slug=slug_norm,
             duplicates_skipped=enqueue_result["existing"],
             job_details=enqueue_result["records"],

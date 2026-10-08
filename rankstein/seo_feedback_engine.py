@@ -15,18 +15,15 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from rankstein.domain import Domain, DomainRegistry
+from rankstein.domain import DomainRegistry
 from rankstein.ga4_connector import GA4Connector
 from rankstein.google_trends_connector import GoogleTrendsConnector
 from rankstein.gsc_connector import GSCConnector
-from rankstein.keyword_roadmap import read_keyword_rows
 from rankstein.pinterest_connector import PinterestConnector
 
 logger = logging.getLogger("rankstein.seo_feedback")
@@ -380,7 +377,9 @@ class SEOFeedbackEngine:
         # Convert to objects
         rows = []
         for b in baseline_queries:
-            domain_url = "https://recetadolce.com" if b["domain"] == "recetadolce" else "https://recetagenial.com"
+            domain_url = (
+                "https://recetadolce.com" if b["domain"] == "recetadolce" else "https://recetagenial.com"
+            )
             rows.append(
                 GSCPerformanceRow(
                     query=b["query"],
@@ -401,12 +400,42 @@ class SEOFeedbackEngine:
     def _gather_google_trends(self) -> list[TrendSignal]:
         """Aggregate current Google Trends search velocity and breakout queries using live pytrends & RSS."""
         base_candidates = [
-            ("tarta de manzana con hojaldre rapida", "tarta de manzana", "Peak Autumn/Winter", "Quick Pastry / Family"),
-            ("crema de calabaza asada y jengibre", "crema de calabaza", "Peak Autumn/Winter", "Healthy Comfort Soup"),
-            ("bizcocho de avena y platano sin azucar", "bizcocho de avena", "Evergreen", "Sugar-free Breakfast"),
-            ("garbanzos con espinacas y bacalao", "garbanzos con espinacas", "Rising Breakout", "Traditional Spanish Stew"),
-            ("galletas de mantequilla faciles con 3 ingredientes", "galletas de mantequilla", "Rising Breakout", "Minimal Ingredient Pastry"),
-            ("ensaladilla rusa clasica con mayonesa casera", "ensaladilla rusa", "Fading (Summer Trough)", "Cold Tapas"),
+            (
+                "tarta de manzana con hojaldre rapida",
+                "tarta de manzana",
+                "Peak Autumn/Winter",
+                "Quick Pastry / Family",
+            ),
+            (
+                "crema de calabaza asada y jengibre",
+                "crema de calabaza",
+                "Peak Autumn/Winter",
+                "Healthy Comfort Soup",
+            ),
+            (
+                "bizcocho de avena y platano sin azucar",
+                "bizcocho de avena",
+                "Evergreen",
+                "Sugar-free Breakfast",
+            ),
+            (
+                "garbanzos con espinacas y bacalao",
+                "garbanzos con espinacas",
+                "Rising Breakout",
+                "Traditional Spanish Stew",
+            ),
+            (
+                "galletas de mantequilla faciles con 3 ingredientes",
+                "galletas de mantequilla",
+                "Rising Breakout",
+                "Minimal Ingredient Pastry",
+            ),
+            (
+                "ensaladilla rusa clasica con mayonesa casera",
+                "ensaladilla rusa",
+                "Fading (Summer Trough)",
+                "Cold Tapas",
+            ),
             ("gazpacho andaluz tradicional", "gazpacho andaluz", "Fading (Summer Trough)", "Cold Soup"),
         ]
 
@@ -649,16 +678,16 @@ class SEOFeedbackEngine:
         date_display = datetime.now().strftime("%B %d, %Y")
 
         lines = [
-            f"# 🎯 RankStein Cross-Channel SEO & Trend Feedback Report",
+            "# 🎯 RankStein Cross-Channel SEO & Trend Feedback Report",
             f"**Audit Timestamp:** `{now_str}` | **Report Date:** {date_display}",
-            f"**Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)",
+            "**Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)",
             "",
             "---",
             "",
             "## 📊 1. Executive Performance & Impressions Summary",
             "",
-            f"| Metric | Current Portfolio Value | Health Status | Benchmark Target |",
-            f"| :--- | :---: | :---: | :---: |",
+            "| Metric | Current Portfolio Value | Health Status | Benchmark Target |",
+            "| :--- | :---: | :---: | :---: |",
             f"| **Google Search Impressions (Monthly)** | **{summary['total_search_impressions']:,}** | 🟢 Growing (+24%) | > 75,000 |",
             f"| **Organic Search Clicks** | **{summary['total_organic_clicks']:,}** | 🟢 Healthy | > 3,500 |",
             f"| **Average SERP CTR** | **{summary['average_ctr_pct']}%** | 🟡 Opportunity | > 4.50% |",
@@ -675,40 +704,48 @@ class SEOFeedbackEngine:
         ]
 
         for item in post_more:
-            lines.extend([
-                f"#### 🚀 {item.keyword.title()} (`{item.target_domain}`)",
-                f"- **Cluster / Board:** `{item.cluster}` | **Growth:** `{item.growth_velocity}` | **Demand Index:** `{item.demand_index}/100`",
-                f"- **Data Rationale:** {item.rationale}",
-                f"- **Actionable Strategy:** {item.action_item}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"#### 🚀 {item.keyword.title()} (`{item.target_domain}`)",
+                    f"- **Cluster / Board:** `{item.cluster}` | **Growth:** `{item.growth_velocity}` | **Demand Index:** `{item.demand_index}/100`",
+                    f"- **Data Rationale:** {item.rationale}",
+                    f"- **Actionable Strategy:** {item.action_item}",
+                    "",
+                ]
+            )
 
-        lines.extend([
-            "---",
-            "",
-            "### 🔴 POST LESS / AVOID: Saturated, Declining, or Zero-ROI Topics",
-            "> **Halt or deprioritize production for these categories.** Crawl budget and generation compute should be protected from low-yield topics.",
-            "",
-        ])
+        lines.extend(
+            [
+                "---",
+                "",
+                "### 🔴 POST LESS / AVOID: Saturated, Declining, or Zero-ROI Topics",
+                "> **Halt or deprioritize production for these categories.** Crawl budget and generation compute should be protected from low-yield topics.",
+                "",
+            ]
+        )
 
         for item in avoid:
-            lines.extend([
-                f"#### 🛑 {item.keyword.title()} (`{item.target_domain}`)",
-                f"- **Velocity:** `{item.growth_velocity}` | **Demand Score:** `{item.demand_index}/100` | **Risk:** `{item.competition_level}`",
-                f"- **Why to Avoid:** {item.rationale}",
-                f"- **Remediation:** {item.action_item}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"#### 🛑 {item.keyword.title()} (`{item.target_domain}`)",
+                    f"- **Velocity:** `{item.growth_velocity}` | **Demand Score:** `{item.demand_index}/100` | **Risk:** `{item.competition_level}`",
+                    f"- **Why to Avoid:** {item.rationale}",
+                    f"- **Remediation:** {item.action_item}",
+                    "",
+                ]
+            )
 
-        lines.extend([
-            "---",
-            "",
-            "### ⚡ 3. Striking Distance Opportunities (Quick Traffic Wins)",
-            "> Existing published articles ranking between **#4 and #15** with high Google impressions. Upgrading their CTR and Pinterest pins produces immediate traffic without writing new articles.",
-            "",
-            "| Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |",
-            "| :--- | :--- | :---: | :---: | :---: | :--- |",
-        ])
+        lines.extend(
+            [
+                "---",
+                "",
+                "### ⚡ 3. Striking Distance Opportunities (Quick Traffic Wins)",
+                "> Existing published articles ranking between **#4 and #15** with high Google impressions. Upgrading their CTR and Pinterest pins produces immediate traffic without writing new articles.",
+                "",
+                "| Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |",
+                "| :--- | :--- | :---: | :---: | :---: | :--- |",
+            ]
+        )
 
         for r in gsc_rows:
             if r.opportunity_type in {"striking_distance", "low_ctr_fix"}:
@@ -716,42 +753,50 @@ class SEOFeedbackEngine:
                     f"| **{r.query}** | `{r.domain}` | {r.impressions:,} | {r.ctr}% | #{r.position} | {r.recommended_action} |"
                 )
 
-        lines.extend([
-            "",
-            "---",
-            "",
-            "## 📈 4. Google Trends & Pinterest Trends Live Signals",
-            "",
-            "### Google Search Signals (Spain - ES)",
-            "| Search Term | Source | Velocity | Seasonality | Intent Type |",
-            "| :--- | :--- | :---: | :--- | :--- |",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                "",
+                "## 📈 4. Google Trends & Pinterest Trends Live Signals",
+                "",
+                "### Google Search Signals (Spain - ES)",
+                "| Search Term | Source | Velocity | Seasonality | Intent Type |",
+                "| :--- | :--- | :---: | :--- | :--- |",
+            ]
+        )
         for t in google_trends:
             vel_symbol = f"+{t.velocity_pct}%" if t.velocity_pct > 0 else f"{t.velocity_pct}%"
             lines.append(f"| {t.term} | {t.source} | **{vel_symbol}** | {t.seasonality} | {t.intent} |")
 
-        lines.extend([
-            "",
-            "### Pinterest Search Signals (Spain - ES)",
-            "| Trend Concept | Source | Repin Velocity | Category Intent | Action |",
-            "| :--- | :--- | :---: | :--- | :--- |",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Pinterest Search Signals (Spain - ES)",
+                "| Trend Concept | Source | Repin Velocity | Category Intent | Action |",
+                "| :--- | :--- | :---: | :--- | :--- |",
+            ]
+        )
         for p in pinterest_trends:
             vel_symbol = f"+{p.velocity_pct}%" if p.velocity_pct > 0 else f"{p.velocity_pct}%"
-            lines.append(f"| {p.term} | {p.source} | **{vel_symbol}** | {p.intent} | Prioritize Visual 2:3 Pin |")
+            lines.append(
+                f"| {p.term} | {p.source} | **{vel_symbol}** | {p.intent} | Prioritize Visual 2:3 Pin |"
+            )
 
-        lines.extend([
-            "",
-            "---",
-            "",
-            "## 🛠️ 5. Next Execution Steps in RankStein System",
-            "1. **Roadmap Injection:** Inject the 5 recommended **POST MORE** keywords into `recetadolce` and `recetagenial` roadmaps via the Operator Dashboard or CLI.",
-            "2. **Visual Standard Enforcement:** Apply the newly calibrated **'LESS TEXT MORE IMAGE'** standard (Dancing Script Bold + un-occluded food photography) across all new pins.",
-            "3. **Remaster Queue Execution:** Launch remaster batch for the top 3 striking-distance recipes (`tarta tatin`, `ensalada de pasta`, `mousse de chocolate`).",
-            "4. **Meta Tag Optimization:** Update the 2 sub-3% CTR titles to highlight preparation speed and specific ingredient counts.",
-            "",
-            "_Generated autonomously by RankStein SEO Feedback Engine._",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                "",
+                "## 🛠️ 5. Next Execution Steps in RankStein System",
+                "1. **Roadmap Injection:** Inject the 5 recommended **POST MORE** keywords into `recetadolce` and `recetagenial` roadmaps via the Operator Dashboard or CLI.",
+                "2. **Visual Standard Enforcement:** Apply the newly calibrated **'LESS TEXT MORE IMAGE'** standard (Dancing Script Bold + un-occluded food photography) across all new pins.",
+                "3. **Remaster Queue Execution:** Launch remaster batch for the top 3 striking-distance recipes (`tarta tatin`, `ensalada de pasta`, `mousse de chocolate`).",
+                "4. **Meta Tag Optimization:** Update the 2 sub-3% CTR titles to highlight preparation speed and specific ingredient counts.",
+                "",
+                "_Generated autonomously by RankStein SEO Feedback Engine._",
+            ]
+        )
 
         return "\n".join(lines)
 

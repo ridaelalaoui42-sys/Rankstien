@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -34,6 +35,9 @@ def _production_assets(tmp_path: Path, *, suffix: str = "") -> tuple[list[str], 
     for source_index in range(1, 16):
         pair_id = f"source-{source_index:02d}"
         pin_id = f"100000000000000{source_index:02d}"
+        source = tmp_path / f"{pair_id}-source.jpg"
+        source.write_bytes(f"source-photo-{source_index}".encode())
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
         for variant in ("viral_visual", "recipe_card"):
             image = tmp_path / f"{pair_id}-{variant}{suffix}.jpg"
             image.write_bytes(f"{pair_id}:{variant}".encode())
@@ -49,6 +53,14 @@ def _production_assets(tmp_path: Path, *, suffix: str = "") -> tuple[list[str], 
                     "variant": variant,
                     "variant_label": variant.replace("_", " ").title(),
                     "source_batch": "scrape",
+                    "source_path": str(source),
+                    "source_hash": source_hash,
+                    "source_quality": {
+                        "accepted": True,
+                        "policy": "text_free_pinterest_source",
+                        "version": 1,
+                        "source_hash": source_hash,
+                    },
                     "domain_handle": "recetadolce",
                 }
             )
@@ -74,6 +86,32 @@ def _enqueue(
         pipeline_run_id="run-123",
         limit=30,
     )
+
+
+def test_unreviewed_source_blocks_entire_campaign_before_enqueue(queue, tmp_path):
+    paths, assets = _production_assets(tmp_path)
+    assets[0].pop("source_quality")
+    result = _enqueue(tmp_path, image_paths=paths, assets=assets)
+    assert result["success"] is False
+    assert queue.get_stats()["total"] == 0
+
+
+def test_source_changed_after_review_blocks_entire_campaign(queue, tmp_path):
+    paths, assets = _production_assets(tmp_path)
+    Path(assets[0]["source_path"]).write_bytes(b"now a different image")
+    result = _enqueue(tmp_path, image_paths=paths, assets=assets)
+    assert result["success"] is False
+    assert queue.get_stats()["total"] == 0
+
+
+def test_held_campaign_cannot_be_credited_by_duplicate_enqueue(queue, tmp_path):
+    first = _enqueue(tmp_path)
+    queue.hold_campaign_jobs(
+        [item["job_id"] for item in first["details"]], pipeline_run_id="run-123", reason="Quality review"
+    )
+    repeated = _enqueue(tmp_path)
+    assert repeated["success"] is False
+    assert queue.get_stats()["by_status"] == {"held": 30}
 
 
 @pytest.mark.unit

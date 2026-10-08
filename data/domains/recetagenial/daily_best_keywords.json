@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T10:48:30.721178+00:00",
+  "generated_at": "2026-10-08T12:22:34.279695+00:00",
   "domain": "recetagenial",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -14,7 +14,7 @@
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 154.0,
+      "score": 152.0,
       "pinterest_score": 93.0,
       "google_news_hits": 5,
       "google_news_titles": [
@@ -26,8 +26,8 @@
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 5.0,
-      "search_volume_score": 6.0,
-      "search_demand_score": 6.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -206,35 +206,12 @@
         "Rosa Rullán, experta en nutrición, enseña su receta de ensalada para llevar a la playa: \"No tienes por qué recurrir a la ensalada de pasta de siempre, esta es sencilla y tiene 60g de proteína\"",
         "Vicky Martín Berrocal, sobre su ensalada de garbanzos de bote y aguacate: \"Para el aderezo, sustituyo la miel por el sirope de agave porque engorda menos\"",
         "Miguel Ducrós, nutricionista: «Los garbanzos de bote mejoran en esta ensalada fría y alta en proteínas con atún, zumo de limón y medio pepino»",
-        "Los chefs hermanos Torres coinciden: “El secreto de una gran ensalada de garbanzos está en el aquafaba y un superalimento con numerosas propiedades”"
+        "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
       "search_volume_score": 20.0,
       "search_demand_score": 20.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "paella de marisco casera",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "High",
-      "score": 128.0,
-      "pinterest_score": 67.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
-        "12 restaurantes en Valencia para comer paella auténtica",
-        "Dosier de arroces",
-        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
-        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 4.0,
-      "search_volume_score": 12.0,
-      "search_demand_score": 12.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -274,8 +251,8 @@
         "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos",
         "Cómo convertir unos garbanzos de bote en un plato gourmet en tres minutos, según José Andrés",
         "Chef José Andrés: “El mejor aliño para los garbanzos de bote necesita ladolemono y cilantro”",
-        "La cena saludable que recomiendan los mejores nutricionistas: con garbanzos de bote y lista en 10 minutos",
-        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”"
+        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”",
+        "La cena saludable que recomiendan los mejores nutricionistas: con garbanzos de bote y lista en 10 minutos"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
@@ -304,6 +281,29 @@
       "specificity_score": 4.0,
       "search_volume_score": 4.0,
       "search_demand_score": 4.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "paella de marisco casera",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 126.0,
+      "pinterest_score": 67.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
+        "Dosier de arroces",
+        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
+        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri",
+        "Las 31 mejores recetas con langostinos de Directo al Paladar: cocina fácil y casera para todo el año"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 10.0,
+      "search_demand_score": 10.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true

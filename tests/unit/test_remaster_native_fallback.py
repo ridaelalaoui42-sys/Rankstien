@@ -231,7 +231,10 @@ def test_partial_scrape_does_not_generate_native_fill_or_any_variants(
 
 
 @pytest.mark.unit
-def test_pinterest_search_timeouts_retry_each_query_and_report_diagnostics() -> None:
+def test_pinterest_search_timeouts_retry_each_query_and_report_diagnostics(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(remasterer, "DOWNLOAD_DIR", tmp_path / "raw")
+    monkeypatch.setattr(remasterer, "SESSION_DIR", tmp_path / "sessions" / "default")
+
     class TimedOutPage:
         def __init__(self) -> None:
             self.urls: list[str] = []
@@ -261,13 +264,13 @@ def test_pinterest_search_timeouts_retry_each_query_and_report_diagnostics() -> 
 
     assert collected == []
     assert len(page.urls) == 6
-    assert studio.last_collection_diagnostics == {
+    expected = {
         "queries_planned": 3,
         "query_attempts": 6,
         "queries_succeeded": 0,
         "query_failures": 6,
         "login_wall_detected": 0,
-        "blocked_reason": "",
+        "blocked_reason": "insufficient_clean_sources",
         "result_cards_seen": 0,
         "pin_images_seen": 0,
         "pin_links_seen": 0,
@@ -277,8 +280,19 @@ def test_pinterest_search_timeouts_retry_each_query_and_report_diagnostics() -> 
         "download_failed": 0,
         "undersized_rejected": 0,
         "invalid_image_rejected": 0,
+        "text_rejected": 0,
+        "text_unavailable": 0,
+        "held_sources_skipped": 0,
+        "excluded_source_count": 0,
+        "candidate_limit": 90,
+        "deadline_exceeded": 0,
+        "ocr_checks_started": 0,
+        "ocr_checks_completed": 0,
+        "ocr_in_progress": 0,
+        "phase": "collecting",
         "accepted": 0,
     }
+    assert {key: studio.last_collection_diagnostics[key] for key in expected} == expected
 
 
 @pytest.mark.unit

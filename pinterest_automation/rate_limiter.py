@@ -86,18 +86,46 @@ class RateLimiter:
         try:
             conn = _rl_conn(self._db_file)
             rows = conn.execute(
-                "SELECT * FROM rl_counters WHERE day_key = ? AND hour_key = ?",
-                (self._day_key(), self._hour_key()),
+                "SELECT * FROM rl_counters WHERE day_key = ? ORDER BY hour_key",
+                (self._day_key(),),
             ).fetchall()
             conn.close()
+            current_hour = self._hour_key()
             for row in rows:
                 op = row["operation"]
-                self._daily_counts[op] = row["daily_count"]
-                self._hourly_counts[op] = row["hourly_count"]
+                # Hourly rows contain cumulative daily totals. A restart in a
+                # new hour must retain earlier usage without summing snapshots.
+                self._daily_counts[op] = max(self._daily_counts.get(op, 0), row["daily_count"])
+                if row["hour_key"] == current_hour:
+                    self._hourly_counts[op] = row["hourly_count"]
+                # Ordered rows recover the latest failure/cooldown state even
+                # when there has been no execution in the current hour.
                 self._failure_streaks[op] = row["failure_streak"]
                 self._cooldown_until[op] = row["cooldown_until"]
         except Exception as e:
             logger.warning("Rate limiter: failed to load persisted state: %s", e)
+
+    def get_persisted_daily_counts(self) -> dict[str, int] | None:
+        """Read today's shared totals without changing limiter or database state.
+
+        Domain workers have separate limiter instances, so a global observer's
+        cache is not an accurate aggregate. ``None`` means unavailable, not zero.
+        """
+        try:
+            db_uri = self._db_file.resolve().as_uri() + "?mode=ro"
+            conn = sqlite3.connect(db_uri, uri=True, timeout=10.0)
+            try:
+                rows = conn.execute(
+                    "SELECT operation, MAX(daily_count) FROM rl_counters "
+                    "WHERE day_key = ? GROUP BY operation",
+                    (self._day_key(),),
+                ).fetchall()
+            finally:
+                conn.close()
+            return {operation: count for operation, count in rows}
+        except (OSError, sqlite3.Error) as exc:
+            logger.warning("Rate limiter: persisted daily reporting unavailable: %s", exc)
+            return None
 
     def _persist(self, operation: str):
         """Upsert current state for operation into DB."""

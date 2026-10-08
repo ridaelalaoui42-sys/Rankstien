@@ -12,6 +12,10 @@ Unified package providing:
 - self_healing: DOM analysis + LLM-powered selector recovery with caching
 """
 
+from rankstein.windows_compat import disable_optional_wmi_queries
+
+disable_optional_wmi_queries()
+
 from .campaign import create_pinterest_campaign, enqueue_folder
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpenError, get_circuit_breaker
 from .config import AutomationConfig, get_config

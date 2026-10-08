@@ -8,8 +8,11 @@ import json
 import math
 import os
 import re
+import sqlite3
 import sys
+import time
 import unicodedata
+from contextlib import suppress
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -28,6 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from rankstein.pipeline_events import record_pipeline_stage, set_pipeline_run_status
 from rankstein.remaster_variants import create_recipe_card_pin, create_viral_visual_pin
+from rankstein.source_image_quality import assess_source_image
 
 
 def _pipeline_event(
@@ -77,12 +81,169 @@ MIN_IMAGE_HEIGHT = int(os.environ.get("RANKSTEIN_REMASTER_MIN_IMAGE_HEIGHT", "70
 PRODUCTION_SOURCE_TARGET = 15
 PRODUCTION_ASSET_TARGET = 30
 PRODUCTION_VARIANTS = {"viral_visual", "recipe_card"}
+COLLECTION_TIMEOUT_SECONDS = 600.0
+BROWSER_START_TIMEOUT_SECONDS = 60.0
+BROWSER_STOP_TIMEOUT_SECONDS = 20.0
+SOURCE_INTAKE_TIMEOUT_SECONDS = 680.0
+COLLECTION_PROGRESS_INTERVAL_SECONDS = 5.0
+DEFAULT_CANDIDATE_LIMIT = 90
 PINTEREST_PIN_CARD_SELECTOR = '[data-test-id="pin"], [data-grid-item="true"]'
 PINTEREST_LOGIN_WALL_MARKERS = (
     "has cerrado sesión",
     "you've been logged out",
     "you have been logged out",
 )
+
+
+def _bounded_seconds(name: str, default: float, maximum: float, requested=None) -> float:
+    try:
+        value = float(os.environ.get(name, str(default)) if requested is None else requested)
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("invalid deadline")
+    except (TypeError, ValueError):
+        value = default
+    return min(maximum, max(0.01, value))
+
+
+def _candidate_limit(requested=None) -> int:
+    try:
+        value = int(
+            os.environ.get("RANKSTEIN_REMASTER_CANDIDATE_LIMIT", str(DEFAULT_CANDIDATE_LIMIT))
+            if requested is None
+            else requested
+        )
+    except (TypeError, ValueError):
+        value = DEFAULT_CANDIDATE_LIMIT
+    return max(1, min(value, 150))
+
+
+def _isolated_remaster_directories(domain_handle: str, pipeline_run_id: str) -> tuple[Path, Path]:
+    """Each attempt owns new paths; held queue payload files are never replaced."""
+    domain = re.sub(r"[^a-zA-Z0-9_-]+", "-", domain_handle).strip("-") or "manual"
+    run = re.sub(r"[^a-zA-Z0-9_-]+", "-", pipeline_run_id).strip("-") or "manual"
+    attempt = f"{datetime.now(UTC):%Y%m%d_%H%M%S_%f}-{uuid4().hex[:8]}"
+    suffix = Path(domain) / run / attempt
+    return DOWNLOAD_DIR / suffix, REMASTER_DIR / suffix
+
+
+def _held_campaign_source_pin_ids(
+    domain_handle: str,
+    pipeline_run_id: str,
+    *,
+    queue_paths: list[Path] | None = None,
+) -> set[str]:
+    """Read only actual held jobs for this exact domain/run, never report claims.
+
+    Do not instantiate JobQueue here: its initialization can migrate legacy
+    queue state. Both shared and domain partitions are checked read-only.
+    """
+    if not domain_handle or not pipeline_run_id:
+        return set()
+    if queue_paths is None:
+        from pinterest_automation.job_queue import DB_FILE
+        from rankstein.domain import get_registry
+
+        domain = get_registry().get(domain_handle)
+        queue_paths = [Path(DB_FILE), domain.root / "jobs.db"]
+    excluded: set[str] = set()
+    deadline = time.monotonic() + 3.0
+    for path in dict.fromkeys(Path(value).resolve() for value in queue_paths):
+        if not path.is_file():
+            continue
+        with sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True, timeout=3.0) as connection:
+            connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+            for (payload_json,) in connection.execute(
+                "SELECT payload_json FROM jobs WHERE status = 'held' AND type = 'pin_upload'"
+            ):
+                payload = json.loads(payload_json)
+                extra = payload.get("extra") if isinstance(payload, dict) else None
+                if not isinstance(extra, dict):
+                    continue
+                if (
+                    extra.get("campaign_type") != "article_remaster_pairs"
+                    or extra.get("pipeline_run_id") != pipeline_run_id
+                    or extra.get("domain_handle") != domain_handle
+                    or payload.get("domain_handle", domain_handle) != domain_handle
+                ):
+                    continue
+                pin_id = str(extra.get("source_pin_id") or "").strip()
+                if re.fullmatch(r"[0-9]+", pin_id):
+                    excluded.add(pin_id)
+    return excluded
+
+
+def _emit_source_progress(studio, *, deadline: float) -> None:
+    diagnostics = getattr(studio, "last_collection_diagnostics", {})
+    diagnostics["remaining_seconds"] = round(max(0.0, deadline - time.monotonic()), 1)
+    print(
+        "SOURCE_COLLECTION_PROGRESS "
+        f"phase={diagnostics.get('phase', 'collecting')} "
+        f"accepted={diagnostics.get('accepted', 0)} "
+        f"examined={diagnostics.get('pins_examined', 0)} "
+        f"ocr_running={diagnostics.get('ocr_in_progress', 0)} "
+        f"text_rejected={diagnostics.get('text_rejected', 0)} "
+        f"text_unavailable={diagnostics.get('text_unavailable', 0)} "
+        f"held_sources_skipped={diagnostics.get('held_sources_skipped', 0)} "
+        f"blocked_reason={diagnostics.get('blocked_reason', '')} "
+        f"remaining_seconds={diagnostics['remaining_seconds']}",
+        flush=True,
+    )
+
+
+async def _source_progress_heartbeat(studio, finished: asyncio.Event, *, deadline: float) -> None:
+    # An Event waiter avoids a tight loop if a caller replaces asyncio.sleep.
+    while not finished.is_set():
+        try:
+            await asyncio.wait_for(finished.wait(), timeout=COLLECTION_PROGRESS_INTERVAL_SECONDS)
+        except TimeoutError:
+            _emit_source_progress(studio, deadline=deadline)
+
+
+class _ProfileLease:
+    """Nonblocking cross-process lease; the OS releases it if its owner dies."""
+
+    def __init__(self, profile: Path):
+        self.path = profile / ".rankstein-remaster.lease"
+        self.stream = None
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        stream = self.path.open("a+b")
+        try:
+            if stream.seek(0, 2) == 0:
+                stream.write(b"0")
+                stream.flush()
+            stream.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            stream.close()
+            return False
+        self.stream = stream
+        return True
+
+    def release(self) -> None:
+        if self.stream is None:
+            return
+        try:
+            self.stream.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self.stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
+        finally:
+            self.stream.close()
+            self.stream = None
 
 
 def _resolve_session_name(session_name: str | None = None, *, domain_handle: str = "") -> str:
@@ -385,13 +546,24 @@ class PinRemasterer:
         self.pw = None
         self.context = None
         self.page = None
+        self._profile_lease = None
         self.last_collection_diagnostics: dict[str, int | str] = {}
 
     async def start(self):
-        from pinterest_automation.browser_utils import kill_browser_locks
+        # Never delete locks or kill another campaign's browser. A legacy
+        # owner without this lease is protected by Chromium's profile lock.
+        lease = _ProfileLease(self.session_dir)
+        if self._profile_lease is not None or not lease.acquire():
+            raise RuntimeError("remaster_profile_busy")
+        self._profile_lease = lease
+        try:
+            await self._start_browser()
+        except BaseException:
+            lease.release()
+            self._profile_lease = None
+            raise
 
-        kill_browser_locks(self.session_dir, "chromium")
-
+    async def _start_browser(self):
         self.pw = await async_playwright().start()
         launch_options = {
             "user_data_dir": str(self.session_dir),
@@ -419,10 +591,15 @@ class PinRemasterer:
         await Stealth().apply_stealth_async(self.page)
 
     async def stop(self):
-        if self.context:
-            await self.context.close()
-        if self.pw:
-            await self.pw.stop()
+        try:
+            if self.context:
+                await self.context.close()
+            if self.pw:
+                await self.pw.stop()
+        finally:
+            if self._profile_lease is not None:
+                self._profile_lease.release()
+                self._profile_lease = None
 
     async def collect_and_download(
         self,
@@ -434,10 +611,81 @@ class PinRemasterer:
         min_core_matches: int | None = None,
         expected_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
         blocked_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
+        excluded_pin_ids: set[str] | list[str] | None = None,
+        download_dir: Path | None = None,
+        max_candidates: int | None = None,
+        timeout_seconds: float | None = None,
+        progress_enabled: bool = True,
+    ):
+        """Bound collection, including navigation/download/OCR, to ten minutes."""
+        timeout = _bounded_seconds(
+            "RANKSTEIN_REMASTER_COLLECTION_TIMEOUT_SECONDS",
+            COLLECTION_TIMEOUT_SECONDS,
+            COLLECTION_TIMEOUT_SECONDS,
+            timeout_seconds,
+        )
+        deadline = time.monotonic() + timeout
+        finished = asyncio.Event()
+        heartbeat = (
+            asyncio.create_task(_source_progress_heartbeat(self, finished, deadline=deadline))
+            if progress_enabled
+            else None
+        )
+        try:
+            results = await asyncio.wait_for(
+                self._collect_and_download(
+                    keyword,
+                    count=count,
+                    search_query=search_query,
+                    search_queries=search_queries,
+                    core_terms=core_terms,
+                    min_core_matches=min_core_matches,
+                    expected_terms=expected_terms,
+                    blocked_terms=blocked_terms,
+                    excluded_pin_ids=set(excluded_pin_ids or []),
+                    download_dir=download_dir or _isolated_remaster_directories("collector", "")[0],
+                    max_candidates=_candidate_limit(max_candidates),
+                ),
+                timeout=timeout,
+            )
+            if len(results) < count and not self.last_collection_diagnostics.get("blocked_reason"):
+                self.last_collection_diagnostics["blocked_reason"] = "insufficient_clean_sources"
+            return results
+        except TimeoutError:
+            self.last_collection_diagnostics.update(blocked_reason="collection_timeout", deadline_exceeded=1)
+            return []
+        except asyncio.CancelledError:
+            self.last_collection_diagnostics["blocked_reason"] = "collection_cancelled"
+            raise
+        finally:
+            self.last_collection_diagnostics["ocr_in_progress"] = 0
+            finished.set()
+            if heartbeat:
+                heartbeat.cancel()
+                with suppress(asyncio.CancelledError):
+                    await heartbeat
+            _emit_source_progress(self, deadline=deadline)
+
+    async def _collect_and_download(
+        self,
+        keyword: str,
+        count: int = 50,
+        search_query: str = "",
+        search_queries: str | list[str] | tuple[str, ...] | set[str] | None = None,
+        core_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
+        min_core_matches: int | None = None,
+        expected_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
+        blocked_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
+        excluded_pin_ids: set[str] | None = None,
+        download_dir: Path | None = None,
+        max_candidates: int = DEFAULT_CANDIDATE_LIMIT,
     ):
         """Scrape multiple generated queries and download strongly relevant pins."""
         print(f"Collecting {count} viral pins for: {keyword}...")
         results = []
+        excluded_pin_ids = excluded_pin_ids or set()
+        download_dir = download_dir or DOWNLOAD_DIR
+        download_dir.mkdir(parents=True, exist_ok=True)
         generated_queries = _value_list(search_queries)
         primary_query = (search_query or keyword).strip()
         if primary_query and primary_query not in generated_queries:
@@ -479,6 +727,16 @@ class PinRemasterer:
             "download_failed": 0,
             "undersized_rejected": 0,
             "invalid_image_rejected": 0,
+            "text_rejected": 0,
+            "text_unavailable": 0,
+            "held_sources_skipped": 0,
+            "excluded_source_count": len(excluded_pin_ids),
+            "candidate_limit": max_candidates,
+            "deadline_exceeded": 0,
+            "ocr_checks_started": 0,
+            "ocr_checks_completed": 0,
+            "ocr_in_progress": 0,
+            "phase": "collecting",
             "accepted": 0,
         }
         self.last_collection_diagnostics = diagnostics
@@ -486,7 +744,7 @@ class PinRemasterer:
         timeout = httpx.Timeout(30.0, connect=15.0)
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             for query_index, resolved_query in enumerate(generated_queries, 1):
-                if len(results) >= count:
+                if len(results) >= count or diagnostics["pins_examined"] >= max_candidates:
                     break
                 print(f"   Search {query_index}/{len(generated_queries)}: {resolved_query}")
                 search_url = f"{PINTEREST_BASE}/search/pins/?q={quote_plus(resolved_query)}&rs=typed"
@@ -556,6 +814,12 @@ class PinRemasterer:
                                 diagnostics["duplicates_skipped"] += 1
                                 continue
                             examined_pin_ids.add(pin_id)
+                            if pin_id in excluded_pin_ids:
+                                diagnostics["held_sources_skipped"] += 1
+                                continue
+                            if diagnostics["pins_examined"] >= max_candidates:
+                                diagnostics["blocked_reason"] = "candidate_limit"
+                                break
                             diagnostics["pins_examined"] += 1
 
                             img_url = await img_el.get_attribute("src") or ""
@@ -618,8 +882,23 @@ class PinRemasterer:
                                 continue
 
                             file_ext = ".png" if image_format == "png" else ".jpg"
-                            raw_path = DOWNLOAD_DIR / f"{pin_id}{file_ext}"
+                            raw_path = download_dir / f"{pin_id}{file_ext}"
                             raw_path.write_bytes(resp.content)
+                            diagnostics["ocr_checks_started"] += 1
+                            diagnostics["ocr_in_progress"] = 1
+                            try:
+                                source_quality = await asyncio.to_thread(assess_source_image, raw_path)
+                            finally:
+                                diagnostics["ocr_in_progress"] = 0
+                            diagnostics["ocr_checks_completed"] += 1
+                            if not source_quality.get("accepted"):
+                                rejection = (
+                                    "text_rejected"
+                                    if source_quality.get("reason") == "embedded_text"
+                                    else "text_unavailable"
+                                )
+                                diagnostics[rejection] += 1
+                                continue
                             results.append(
                                 {
                                     "pin_id": pin_id,
@@ -631,6 +910,8 @@ class PinRemasterer:
                                     "search_query": resolved_query,
                                     "relevance_score": relevance_score,
                                     "source": "pinterest",
+                                    "source_hash": source_quality["source_hash"],
+                                    "source_quality": source_quality,
                                 }
                             )
                             diagnostics["accepted"] = len(results)
@@ -641,6 +922,9 @@ class PinRemasterer:
                             continue
 
                     if len(results) >= count:
+                        break
+                    if diagnostics["pins_examined"] >= max_candidates:
+                        diagnostics["blocked_reason"] = "candidate_limit"
                         break
                     if len(examined_pin_ids) == previous_examined:
                         stagnant_rounds += 1
@@ -657,6 +941,8 @@ class PinRemasterer:
             f"accepted={diagnostics['accepted']}/{count} "
             f"examined={diagnostics['pins_examined']} "
             f"relevance_rejected={diagnostics['relevance_rejected']} "
+            f"text_rejected={diagnostics['text_rejected']} "
+            f"text_unavailable={diagnostics['text_unavailable']} "
             f"query_failures={diagnostics['query_failures']}"
         )
         return results
@@ -1459,6 +1745,110 @@ def write_article_remaster_report(
     return report
 
 
+async def _collect_campaign_sources(
+    studio,
+    keyword: str,
+    *,
+    source_target: int,
+    domain_handle: str,
+    pipeline_run_id: str,
+    download_dir: Path,
+    collection_kwargs: dict,
+) -> list[dict]:
+    """Bound preflight/start/collection/recheck/stop to at most 680 seconds.
+
+    Phase upper bounds are start 60s, collection plus exact source rechecks
+    600s, and stop 20s. The total deadline includes exclusion reads and reserves
+    cleanup time. Timed-out cleanup is failed intake, not success. No browser
+    other than this studio's own context is cleaned up here.
+    """
+    total = _bounded_seconds(
+        "RANKSTEIN_REMASTER_INTAKE_TIMEOUT_SECONDS",
+        SOURCE_INTAKE_TIMEOUT_SECONDS,
+        SOURCE_INTAKE_TIMEOUT_SECONDS,
+    )
+    deadline = time.monotonic() + total
+    studio.last_collection_diagnostics = {"phase": "held_source_preflight", "accepted": 0}
+    finished = asyncio.Event()
+    heartbeat = asyncio.create_task(_source_progress_heartbeat(studio, finished, deadline=deadline))
+    collected = []
+    failure = ""
+
+    def phase_budget(maximum: float, *, reserve_cleanup: bool = True) -> float:
+        remaining = deadline - time.monotonic()
+        if reserve_cleanup:
+            remaining -= BROWSER_STOP_TIMEOUT_SECONDS
+        if remaining <= 0:
+            raise TimeoutError
+        return min(maximum, remaining)
+
+    try:
+        preflight_budget = phase_budget(4.0)
+        excluded = await asyncio.wait_for(
+            asyncio.to_thread(_held_campaign_source_pin_ids, domain_handle, pipeline_run_id),
+            timeout=preflight_budget,
+        )
+        studio.last_collection_diagnostics.update(
+            phase="starting_browser", excluded_source_count=len(excluded)
+        )
+        start_budget = phase_budget(BROWSER_START_TIMEOUT_SECONDS)
+        await asyncio.wait_for(studio.start(), timeout=start_budget)
+        studio.last_collection_diagnostics["phase"] = "collecting"
+        async with asyncio.timeout(phase_budget(COLLECTION_TIMEOUT_SECONDS)):
+            collected = await studio.collect_and_download(
+                keyword,
+                count=source_target,
+                excluded_pin_ids=excluded,
+                download_dir=download_dir,
+                progress_enabled=False,
+                **collection_kwargs,
+            )
+            # Enforce exclusions independently if a legacy collector ignores
+            # the new parameter. Only fresh source pairs can replace held work.
+            collected = [item for item in collected if str(item.get("pin_id") or "") not in excluded]
+            # Recheck exact selected files even for legacy/mock collectors.
+            if len(collected) >= source_target:
+                studio.last_collection_diagnostics["phase"] = "validating_source_quality"
+                for item in collected[:source_target]:
+                    studio.last_collection_diagnostics["ocr_in_progress"] = 1
+                    quality = await asyncio.to_thread(assess_source_image, item.get("raw_path", ""))
+                    studio.last_collection_diagnostics["ocr_in_progress"] = 0
+                    item["source_quality"] = quality
+                    item["source_hash"] = quality.get("source_hash", "")
+    except TimeoutError:
+        failure = f"{studio.last_collection_diagnostics.get('phase', 'source_intake')}_timeout"
+    except asyncio.CancelledError:
+        failure = "source_intake_cancelled"
+        raise
+    except Exception as exc:
+        failure = "remaster_profile_busy" if str(exc) == "remaster_profile_busy" else "source_intake_failed"
+        studio.last_collection_diagnostics["error_type"] = type(exc).__name__
+    finally:
+        studio.last_collection_diagnostics.update(phase="stopping_browser", ocr_in_progress=0)
+        try:
+            stop_budget = phase_budget(BROWSER_STOP_TIMEOUT_SECONDS, reserve_cleanup=False)
+            await asyncio.wait_for(studio.stop(), timeout=stop_budget)
+        except asyncio.CancelledError:
+            failure = "source_intake_cancelled"
+            raise
+        except Exception as exc:
+            studio.last_collection_diagnostics["cleanup_error_type"] = type(exc).__name__
+            failure = failure or "browser_cleanup_failed"
+        finally:
+            studio.last_collection_diagnostics["phase"] = (
+                "source_intake_complete" if not failure else "incomplete"
+            )
+            if failure:
+                studio.last_collection_diagnostics["blocked_reason"] = failure
+                collected = []
+            finished.set()
+            heartbeat.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat
+            _emit_source_progress(studio, deadline=deadline)
+    return collected
+
+
 async def run_remasterer(
     keyword,
     article_title,
@@ -1497,7 +1887,7 @@ async def run_remasterer(
         return []
 
     remasterer = PinRemasterer(headless=True, session_name=session_name)
-    await remasterer.start()
+    raw_output_dir, final_output_dir = _isolated_remaster_directories(domain_handle, pipeline_run_id)
 
     print("\n--- RankStein Remasterer V5 Paired Studio Active ---")
     print(f"Targeting: {keyword} | Title: {article_title} | Brand: {brand_name} | Session: {session_name}")
@@ -1510,28 +1900,22 @@ async def run_remasterer(
         output_target=target_count,
         search_query=search_query,
     )
-    try:
-        collected = await remasterer.collect_and_download(
-            keyword,
-            count=source_target,
-            search_query=search_query,
-            search_queries=search_queries,
-            core_terms=core_terms,
-            min_core_matches=min_core_matches,
-            expected_terms=expected_terms,
-            blocked_terms=blocked_terms,
-        )
-    except BaseException as exc:
-        _pipeline_event(
-            pipeline_run_id,
-            "pinterest_siphon",
-            "failed",
-            "Pinterest source collection failed",
-            error=str(exc)[:240],
-        )
-        _pipeline_status(pipeline_run_id, "attention")
-        await remasterer.stop()
-        raise
+    collected = await _collect_campaign_sources(
+        remasterer,
+        keyword,
+        source_target=source_target,
+        domain_handle=domain_handle,
+        pipeline_run_id=pipeline_run_id,
+        download_dir=raw_output_dir,
+        collection_kwargs={
+            "search_query": search_query,
+            "search_queries": search_queries,
+            "core_terms": core_terms,
+            "min_core_matches": min_core_matches,
+            "expected_terms": expected_terms,
+            "blocked_terms": blocked_terms,
+        },
+    )
     scraped_count = len(collected)
     diagnostics = getattr(remasterer, "last_collection_diagnostics", {})
     source_intake_complete = scraped_count >= source_target
@@ -1563,7 +1947,6 @@ async def run_remasterer(
             diagnostics=diagnostics,
         )
         _pipeline_status(pipeline_run_id, "attention")
-        await remasterer.stop()
         return []
 
     collected = collected[:source_target]
@@ -1589,7 +1972,33 @@ async def run_remasterer(
             unique_pin_ids=len(set(source_pin_ids)),
         )
         _pipeline_status(pipeline_run_id, "attention")
-        await remasterer.stop()
+        return []
+
+    # Bounded intake rechecked the exact selected files independently of
+    # collector metadata, before browser cleanup and either composition.
+    blocked_sources = []
+    for item in collected:
+        source_quality = item.get("source_quality") or {}
+        if not source_quality.get("accepted"):
+            blocked_sources.append(
+                {"pin_id": item["pin_id"], "reason": source_quality.get("reason", "ocr_unavailable")}
+            )
+    if blocked_sources:
+        print(
+            f"INCOMPLETE: {len(blocked_sources)}/{source_target} source images failed "
+            "the text-free quality gate; no variants were created"
+        )
+        _pipeline_event(
+            pipeline_run_id,
+            "remaster",
+            "failed",
+            "Source-image text quality gate failed; no variants created",
+            generated=0,
+            target=target_count,
+            source_target=source_target,
+            blocked_sources=blocked_sources,
+        )
+        _pipeline_status(pipeline_run_id, "attention")
         return []
 
     final_assets = []
@@ -1613,7 +2022,7 @@ async def run_remasterer(
             title=article_title,
             domain_handle=domain_handle,
             pair_id=pair_id,
-            output_dir=REMASTER_DIR,
+            output_dir=final_output_dir,
         )
         recipe_card = create_recipe_card_pin(
             source_path=item["raw_path"],
@@ -1623,7 +2032,7 @@ async def run_remasterer(
             tip_text=tip_text,
             domain_handle=domain_handle,
             pair_id=pair_id,
-            output_dir=REMASTER_DIR,
+            output_dir=final_output_dir,
         )
         pair_results = (visual, recipe_card)
         if all(result.get("success") for result in pair_results):
@@ -1633,6 +2042,8 @@ async def run_remasterer(
                         "original_pin_id": item["pin_id"],
                         "original_url": item.get("original_url", ""),
                         "source_path": item.get("raw_path", ""),
+                        "source_hash": item["source_hash"],
+                        "source_quality": item["source_quality"],
                         "remastered_path": str(result["output_path"]),
                         "source": item.get("source", "pinterest"),
                         "source_batch": (
@@ -1674,7 +2085,6 @@ async def run_remasterer(
                 pairs_failed=len(failed_pairs),
             )
 
-    await remasterer.stop()
     if len(final_assets) < target_count:
         print(f"\nINCOMPLETE: {len(final_assets)}/{target_count} luxury pins generated in {REMASTER_DIR}")
         _pipeline_event(

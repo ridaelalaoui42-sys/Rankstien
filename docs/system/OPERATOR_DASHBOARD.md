@@ -40,6 +40,10 @@ recorded evidence, not proof of current platform authentication.
 The dashboard offers bounded domain-scoped article batches, maintained
 audit/seed and trend commands, supervisor controls, board normalization, and
 selective transient DLQ recovery. Mutations require explicit confirmation.
+The confirmed Stop batch action targets only the tracked production process
+and its child article workers. It leaves the Pinterest supervisor and queued
+jobs running. A failed stop does not overwrite the process registry, and a
+finished process retains its recorded outcome.
 Starting services does not start a production batch. Supervisor startup may
 publish already-pending queue jobs.
 
@@ -48,6 +52,11 @@ cross-origin/cross-site requests, and mutations without the per-process operator
 session token. Do not expose it through a public reverse proxy. No service role
 keys, Pinterest passwords, cookie contents, or session profile paths are sent
 to the UI. Scripts and icon assets are served locally.
+
+The overview pin total is a separate all-account snapshot; filtering the pin
+feed never replaces it. Automatic global pin-count refreshes are coalesced and
+bounded to one request per 30 seconds. Pausing live telemetry is labeled as a
+paused/snapshot view.
 
 ## Verification
 
