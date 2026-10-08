@@ -319,3 +319,153 @@ def test_published_count_includes_articles_waiting_for_pin_proof(tmp_path: Path)
         tracker.complete_keyword("recetagenial", keyword, "Needs Verification")
     assert tracker.verified("recetagenial") == 0
     assert tracker.published_count("recetagenial") == 10
+
+
+@pytest.mark.unit
+def test_start_keyword_clears_waiting_state_without_changing_completed_counts(tmp_path: Path) -> None:
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-resume-waiting",
+        domain_handles=["recetadolce"],
+        target_per_domain=10,
+    )
+    tracker.start_keyword("recetadolce", "tarta de coco", "Postres", "Pinterest Trends")
+    tracker.complete_keyword("recetadolce", "tarta de coco", "Live")
+    tracker.start_keyword("recetadolce", "tarta de pera", "Postres", "Pinterest Trends")
+    tracker.complete_keyword("recetadolce", "tarta de pera", "Failed")
+    tracker.mark_domain_waiting("recetadolce", "No unattempted Pinterest keyword; researching new candidates")
+    before = json.loads(json.dumps(tracker.data))
+
+    tracker.start_keyword("recetadolce", "galletas de avena", "Postres", "Pinterest Trends")
+
+    report = json.loads(tracker.path.read_text(encoding="utf-8"))
+    domain = report["domains"]["recetadolce"]
+    assert domain["state"] == "running"
+    assert "detail" not in domain
+    assert domain["running_keywords"] == ["galletas de avena"]
+    assert domain["verified"] == before["domains"]["recetadolce"]["verified"] == 1
+    assert domain["failed"] == before["domains"]["recetadolce"]["failed"] == 1
+    assert domain["articles"][:2] == before["domains"]["recetadolce"]["articles"]
+    assert report["verified_total"] == before["verified_total"]
+    assert report["failed_total"] == before["failed_total"]
+
+
+@pytest.mark.unit
+def test_failed_retry_authorization_preserves_history_and_survives_restart(tmp_path: Path) -> None:
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-authorized-retry",
+        domain_handles=["recetadolce"],
+        target_per_domain=10,
+    )
+    tracker.start_keyword("recetadolce", "tarta de coco", "Postres", "Pinterest Trends")
+    tracker.attach_run("recetadolce", "tarta de coco", "failed-run-1")
+    tracker.complete_keyword("recetadolce", "tarta de coco", "Failed")
+    before = json.loads(json.dumps(tracker.data))
+
+    assert tracker.authorize_failed_retry(
+        "recetadolce",
+        " TARTA DE COCO ",
+        "Codex quota reset; original run failed with HTTP 429",
+        pipeline_run_id="failed-run-1",
+    )
+    authorized_report = json.loads(tracker.path.read_text(encoding="utf-8"))
+    assert not tracker.authorize_failed_retry(
+        "recetadolce", "tarta de coco", "Repeated authorization", pipeline_run_id="failed-run-1"
+    )
+    assert json.loads(tracker.path.read_text(encoding="utf-8")) == authorized_report
+    article = tracker.data["domains"]["recetadolce"]["articles"][-1]
+    assert article["state"] == "failed"
+    assert article["roadmap_status"] == "Failed"
+    assert article["completed_at"] == before["domains"]["recetadolce"]["articles"][-1]["completed_at"]
+    assert article["retry_authorized"] is True
+    assert "HTTP 429" in article["retry_reason"]
+    assert tracker.data["failed_total"] == before["failed_total"] == 1
+    assert tracker.published_count("recetadolce") == 0
+
+    resumed = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-authorized-retry",
+        domain_handles=["recetadolce"],
+        target_per_domain=10,
+    )
+    assert "tarta de coco" not in resumed.attempted_keyword_keys("recetadolce")
+    resumed.start_keyword("recetadolce", "tarta de coco", "Postres", "Pinterest Trends")
+    resumed.attach_run("recetadolce", "tarta de coco", "failed-run-2")
+    resumed.complete_keyword("recetadolce", "tarta de coco", "Failed")
+    assert "tarta de coco" in resumed.attempted_keyword_keys("recetadolce")
+    assert not resumed.authorize_failed_retry(
+        "recetadolce", "tarta de coco", "Replay of old permission", pipeline_run_id="failed-run-1"
+    )
+    assert "tarta de coco" in resumed.attempted_keyword_keys("recetadolce")
+    assert len(resumed.data["domains"]["recetadolce"]["articles"]) == 2
+    assert resumed.data["failed_total"] == 2
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("status", ["Live", "Needs Verification", "Rejected", "interrupted"])
+def test_failed_retry_rejects_other_states_without_changes(tmp_path: Path, status: str) -> None:
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-retry-other-state",
+        domain_handles=["recetagenial"],
+        target_per_domain=10,
+    )
+    tracker.start_keyword("recetagenial", "pollo al horno", "Carnes", "Pinterest Trends")
+    tracker.attach_run("recetagenial", "pollo al horno", "run-1")
+    tracker.complete_keyword("recetagenial", "pollo al horno", status)
+    before = json.loads(json.dumps(tracker.data))
+    assert not tracker.authorize_failed_retry(
+        "recetagenial", "pollo al horno", "Provider recovered", pipeline_run_id="run-1"
+    )
+    assert tracker.data == before
+
+
+@pytest.mark.unit
+def test_failed_retry_requires_latest_exact_run_and_reason(tmp_path: Path) -> None:
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-retry-exact-run",
+        domain_handles=["recetagenial"],
+        target_per_domain=10,
+    )
+    for run_id in ("failed-run-1", "failed-run-2"):
+        tracker.start_keyword("recetagenial", "pollo al horno", "Carnes", "Pinterest Trends")
+        tracker.attach_run("recetagenial", "pollo al horno", run_id)
+        tracker.complete_keyword("recetagenial", "pollo al horno", "Failed")
+    before = json.loads(json.dumps(tracker.data))
+    for handle, keyword, reason, run_id in (
+        ("recetagenial", "pollo al horno", "Recovered", "failed-run-1"),
+        ("recetagenial", "pollo al horno", "Recovered", ""),
+        ("recetagenial", "pollo al horno", " ", "failed-run-2"),
+        ("recetagenial", "missing recipe", "Recovered", "failed-run-2"),
+        ("missing-domain", "pollo al horno", "Recovered", "failed-run-2"),
+    ):
+        assert not tracker.authorize_failed_retry(handle, keyword, reason, pipeline_run_id=run_id)
+        assert tracker.data == before
+    assert tracker.authorize_failed_retry(
+        "recetagenial", "pollo al horno", "Recovered", pipeline_run_id="failed-run-2"
+    )
+    articles = tracker.data["domains"]["recetagenial"]["articles"]
+    assert "retry_authorized" not in articles[0]
+    assert articles[1]["retry_authorized"] is True
+
+
+@pytest.mark.unit
+def test_published_history_cannot_be_retried_by_shadowing_it_with_a_failed_row(tmp_path: Path) -> None:
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-retry-published-history",
+        domain_handles=["recetagenial"],
+        target_per_domain=10,
+    )
+    tracker.start_keyword("recetagenial", "pollo al horno", "Carnes", "Pinterest Trends")
+    tracker.complete_keyword("recetagenial", "pollo al horno", "Needs Verification")
+    tracker.start_keyword("recetagenial", "POLLO AL HORNO", "Carnes", "Pinterest Trends")
+    tracker.attach_run("recetagenial", "POLLO AL HORNO", "shadow-run")
+    tracker.complete_keyword("recetagenial", "POLLO AL HORNO", "Failed")
+    assert not tracker.authorize_failed_retry(
+        "recetagenial", "pollo al horno", "Recovered", pipeline_run_id="shadow-run"
+    )
+    tracker.data["domains"]["recetagenial"]["articles"][-1]["retry_authorized"] = True
+    assert "pollo al horno" in tracker.attempted_keyword_keys("recetagenial")

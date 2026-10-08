@@ -63,6 +63,7 @@ article_*.json
 **/data/remaster_final/
 **/data/state_store.db/
 **/data/runtime/
+**/data/worktrees/
 *.log
 *.bak
 *.bak.*

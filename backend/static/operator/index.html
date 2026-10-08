@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="dark light" />
     <title>RankStein | Operator</title>
     <link rel="icon" href="/operator-assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/operator-assets/operator.css" />
+    <link rel="stylesheet" href="/operator-assets/operator.css?v=2" />
     <script defer src="/operator-assets/lucide.min.js"></script>
-    <script defer src="/operator-assets/operator.js"></script>
+    <script defer src="/operator-assets/operator.js?v=2"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to workspace</a>
@@ -48,6 +48,9 @@
         >
         <a href="#recipes" data-view="recipes"
           ><i data-lucide="book-open"></i>Recipes</a
+        >
+        <a href="#seo-radar" data-view="seo-radar"
+          ><i data-lucide="trending-up"></i>SEO & Trends Radar</a
         >
         <div class="sidebar-label">SYSTEM</div>
         <a href="#services" data-view="services"
@@ -267,6 +270,177 @@
             <span id="recipe-count" class="muted"></span>
           </div>
           <div id="recipes" class="recipe-grid"></div>
+        </section>
+        <section id="view-seo-radar" class="view" hidden>
+          <div class="toolbar" style="justify-content:space-between; align-items:center;">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button class="button primary" id="btn-refresh-seo-feedback">
+                <i data-lucide="refresh-cw"></i>Refresh signals
+              </button>
+              <a href="/api/rankstein/seo-feedback/download" target="_blank" class="button" id="btn-download-seo-report">
+                <i data-lucide="download"></i>Export Markdown
+              </a>
+            </div>
+            <div id="seo-freshness" class="muted" style="font-size:12px;"></div>
+          </div>
+
+          <!-- Real Data Connectivity Strip -->
+          <div class="section-heading" style="margin-top:16px;">
+            <h2>Live Signal Connectors</h2>
+            <span class="muted">Google & Pinterest API Integrations</span>
+          </div>
+          <div id="seo-connectors" class="seo-connectors-grid"></div>
+
+          <!-- High-Level KPI Metric Strip -->
+          <div id="seo-metrics" class="metrics" style="margin-top:16px;"></div>
+
+          <!-- Direct System Exploitation Console -->
+          <div class="seo-exploitation-console">
+            <div class="seo-exploitation-header">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:18px;">⚡</span>
+                  <strong style="font-size:15px;">Live System Exploitation Console</strong>
+                  <span class="badge ok">Direct Autonomous Link</span>
+                </div>
+                <p class="muted" style="margin:4px 0 0; font-size:12px;">
+                  Directly inject high-velocity keywords into roadmaps, purge zero-demand topics, or launch targeted visual remasters.
+                </p>
+              </div>
+              <div class="seo-exploitation-actions">
+                <button class="button primary" id="btn-inject-all-post-more">
+                  <i data-lucide="rocket"></i>Inject All POST MORE
+                </button>
+                <button class="button danger" id="btn-purge-avoid-topics">
+                  <i data-lucide="shield-alert"></i>Purge AVOID Topics
+                </button>
+                <button class="button secondary" id="btn-launch-remaster-queue">
+                  <i data-lucide="repeat"></i>Launch Remaster Queue
+                </button>
+              </div>
+            </div>
+            <div id="seo-exploitation-feedback" class="seo-feedback-alert" hidden></div>
+          </div>
+
+          <!-- Visual Telemetry Charts Grid -->
+          <div class="section-heading" style="margin-top:24px;">
+            <h2>Visual Performance Telemetry</h2>
+            <span class="muted">Native 2D Canvas Intelligence</span>
+          </div>
+          <div class="seo-charts-grid">
+            <!-- SERP Quadrant -->
+            <div class="seo-chart-card">
+              <div class="seo-chart-header">
+                <div>
+                  <strong>SERP Opportunity Quadrant (Rank vs Impressions)</strong>
+                  <p class="muted" style="margin:2px 0 0; font-size:11px;">Green: Dominating (#1-#3) • Gold: Striking Distance (#4-#10) • Red: Low CTR</p>
+                </div>
+                <span class="badge ok">Live GSC Scatter</span>
+              </div>
+              <div class="seo-canvas-container" style="height:250px; position:relative;">
+                <canvas id="serpQuadrantCanvas" style="width:100%; height:100%; display:block;"></canvas>
+                <div id="serpQuadrantTooltip" class="seo-tooltip" hidden></div>
+              </div>
+            </div>
+
+            <!-- Audience Channel Ingestion -->
+            <div class="seo-chart-card">
+              <div class="seo-chart-header">
+                <div>
+                  <strong>Audience Acquisition Channels</strong>
+                  <p class="muted" style="margin:2px 0 0; font-size:11px;">Pinterest Social Siphon vs Google Search vs Direct</p>
+                </div>
+                <span class="badge ok">GA4 Verified</span>
+              </div>
+              <div class="seo-canvas-container" style="height:190px;">
+                <canvas id="channelShareCanvas" style="width:100%; height:100%; display:block;"></canvas>
+              </div>
+              <div class="seo-channel-breakdown">
+                <div class="seo-channel-stat">
+                  <span class="muted">Pinterest</span>
+                  <strong id="seoDonutPinterest" style="color:var(--violet, #c084fc);">68.4%</strong>
+                </div>
+                <div class="seo-channel-stat">
+                  <span class="muted">Google Search</span>
+                  <strong id="seoDonutGoogle" style="color:var(--cyan, #00f0ff);">26.2%</strong>
+                </div>
+                <div class="seo-channel-stat">
+                  <span class="muted">Direct/Ref</span>
+                  <strong id="seoDonutDirect" style="color:var(--gold, #ffd700);">5.4%</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trends Velocity Chart -->
+          <div class="seo-chart-card" style="margin-top:16px;">
+            <div class="seo-chart-header">
+              <div>
+                <strong>Google Trends Velocity Curves & Seasonal Trajectory</strong>
+                <p class="muted" style="margin:2px 0 0; font-size:11px;">0-100 search volume interest index over 30 days (Spain - ES)</p>
+              </div>
+              <span class="badge ok">Velocity Radar</span>
+            </div>
+            <div class="seo-canvas-container" style="height:190px; position:relative;">
+              <canvas id="velocityTrendsCanvas" style="width:100%; height:100%; display:block;"></canvas>
+              <div id="velocityTooltip" class="seo-tooltip" hidden></div>
+            </div>
+          </div>
+
+          <!-- Strategic Content Advisor: POST MORE vs AVOID -->
+          <div class="section-heading" style="margin-top:24px;">
+            <h2>Strategic Content Advisor</h2>
+            <span class="muted">What to post more vs what to avoid</span>
+          </div>
+          <div class="seo-advisor-grid">
+            <div class="seo-advisor-col">
+              <div class="seo-advisor-header post-more">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <i data-lucide="flame" style="color:var(--mint, #00ffa3);"></i>
+                  <strong>POST MORE: High Demand & Trend Surges</strong>
+                </div>
+                <span class="badge ok" id="seo-post-more-count">0</span>
+              </div>
+              <div id="seo-post-more-list" class="seo-card-list"></div>
+            </div>
+            <div class="seo-advisor-col">
+              <div class="seo-advisor-header avoid">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <i data-lucide="alert-triangle" style="color:var(--crimson, #ef4444);"></i>
+                  <strong>POST LESS / AVOID: Saturated & Zero-ROI</strong>
+                </div>
+                <span class="badge bad" id="seo-avoid-count">0</span>
+              </div>
+              <div id="seo-avoid-list" class="seo-card-list"></div>
+            </div>
+          </div>
+
+          <!-- Striking Distance & CTR Leads Table -->
+          <div class="section-heading" style="margin-top:24px;">
+            <h2>Striking Distance Leads (Quick Wins)</h2>
+            <span class="muted">Positions #4-#15 • Immediate traffic unlocks</span>
+          </div>
+          <div id="seo-striking-table"></div>
+
+          <!-- Dual Trends Table Grid -->
+          <div class="section-heading" style="margin-top:24px;">
+            <h2>Cross-Platform Trend Velocity</h2>
+            <span class="muted">Google Search vs Pinterest Aesthetics</span>
+          </div>
+          <div class="seo-dual-trends-grid">
+            <div>
+              <h3 style="font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="trending-up" style="color:var(--cyan);"></i> Google Search Signals (Spain)
+              </h3>
+              <div id="seo-google-trends-table"></div>
+            </div>
+            <div>
+              <h3 style="font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="pin" style="color:var(--gold);"></i> Pinterest Visual Trends (Spain)
+              </h3>
+              <div id="seo-pinterest-trends-table"></div>
+            </div>
+          </div>
         </section>
         <section id="view-services" class="view" hidden>
           <div id="resources" class="metrics"></div>

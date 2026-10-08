@@ -248,31 +248,22 @@ def mark_keyword_status(path: Path, title: str, keyword: str, status: str) -> bo
 def append_keyword_rows(path: Path, title: str, new_rows: list[KeywordRow]) -> int:
     """Append unique keyword rows while preserving existing roadmap state.
 
-    Trend refreshes often rediscover keywords that are already present in the
-    roadmap. If the old row is ``Failed``/``Needs Verification``/``Staged``,
-    treating that rediscovery as a plain duplicate leaves the roadmap with zero
-    Pending keywords forever. Re-activate retryable duplicate rows instead of
-    ignoring them so a fresh trend signal can refill the worker queue.
+    Rediscovery is evidence, not retry authorization. In particular, published
+    ``Needs Verification`` work must never become a new article reservation.
+    Existing non-Pending states are preserved; an explicit retry operation is
+    required to return a failed keyword to the worker queue.
     """
     rows = read_keyword_rows(path)
     existing_by_key = {row.keyword.casefold(): row for row in rows}
-    added_or_reactivated = 0
+    added = 0
     metadata_refreshed = False
-    retryable_duplicate_statuses = {"failed", "needs verification", "staged"}
     for row in new_rows:
         key = row.keyword.casefold()
         if not row.keyword.strip():
             continue
         existing = existing_by_key.get(key)
         if existing:
-            if existing.status.strip().casefold() in retryable_duplicate_statuses:
-                existing.cluster = row.cluster or existing.cluster
-                existing.source = row.source or existing.source
-                existing.target_blog = row.target_blog or existing.target_blog
-                existing.priority = row.priority or existing.priority
-                existing.status = "Pending"
-                added_or_reactivated += 1
-            elif existing.status.strip().casefold() == "pending":
+            if existing.status.strip().casefold() == "pending":
                 refreshed_values = (
                     row.cluster or existing.cluster,
                     row.source or existing.source,
@@ -296,7 +287,7 @@ def append_keyword_rows(path: Path, title: str, new_rows: list[KeywordRow]) -> i
             continue
         rows.append(row)
         existing_by_key[key] = row
-        added_or_reactivated += 1
-    if added_or_reactivated or metadata_refreshed:
+        added += 1
+    if added or metadata_refreshed:
         write_keyword_rows(path, title, rows)
-    return added_or_reactivated
+    return added

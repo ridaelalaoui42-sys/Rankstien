@@ -509,6 +509,49 @@ def setup_rankstein_routes() -> APIRouter:
         require_admin(request)
         return _get_board_mappings()
 
+    @router.get("/seo-feedback")
+    def get_seo_feedback(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _get_seo_feedback_report()
+
+    @router.post("/control/seo-feedback/refresh")
+    def refresh_seo_feedback(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _run_seo_feedback_refresh()
+
+    @router.post("/control/seo-feedback/add-to-roadmap")
+    async def add_seo_recommendation_to_roadmap(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _add_recommendation_to_roadmap(body)
+
+    @router.post("/control/seo-feedback/add-all-post-more")
+    def add_all_post_more_keywords(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _add_all_post_more_to_roadmap()
+
+    @router.post("/control/seo-feedback/purge-avoid-topics")
+    def purge_avoid_topics(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _purge_avoid_topics_from_roadmap()
+
+    @router.post("/control/seo-feedback/launch-remaster")
+    async def launch_seo_remaster(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _launch_seo_remaster(body)
+
+    @router.post("/control/seo-feedback/launch-single-turbo")
+    async def launch_seo_turbo(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _launch_seo_single_turbo(body)
+
+    @router.get("/seo-feedback/download")
+    def download_seo_feedback_report(request: Request) -> Any:
+        require_admin(request)
+        return _download_seo_report()
+
     return router
 
 
@@ -901,6 +944,15 @@ def _live_runtime_status(payload: dict[str, Any]) -> dict[str, Any]:
                     if article.get("state") == "running":
                         article["state"] = "interrupted"
     pipeline = payload.get("pipeline")
+    is_warming = payload.get("status_refresh", {}).get("state") == "warming"
+    if pipeline and not is_warming:
+        pipeline = dict(pipeline)
+        _attach_live_research_lanes(
+            pipeline,
+            production_batch=batch,
+            production_action=production,
+        )
+        response["pipeline"] = pipeline
     if pipeline and not production.get("alive"):
         pipeline = dict(pipeline)
         ongoing = pipeline.get("ongoing_campaigns") or []
@@ -921,13 +973,18 @@ def _live_runtime_status(payload: dict[str, Any]) -> dict[str, Any]:
             0,
             int(summary.get("active") or 0) - sum(item.get("overall_state") == "active" for item in removed),
         )
+        summary["waiting"] = max(
+            0,
+            int(summary.get("waiting") or 0)
+            - sum(item.get("overall_state") == "waiting" for item in removed),
+        )
         pipeline["summary"] = summary
         response["pipeline"] = pipeline
     response.update(
         {
             "processes": processes,
             "actions": actions,
-            "production_batch": batch,
+            "production_batch": _production_batch_presentation(batch),
             "runtime_updated_at": int(time.time()),
         }
     )
@@ -1003,7 +1060,7 @@ def _status_payload() -> dict[str, Any]:
     processes = _load_processes()
     process_status = _process_status(processes)
     actions = _action_snapshots(process_status)
-    production_batch = _latest_production_batch()
+    production_batch = _production_batch_presentation(_latest_production_batch())
     pipeline = build_pipeline_payload(RANKSTEIN_ROOT, limit=100)
     _attach_live_research_lanes(
         pipeline,
@@ -1054,6 +1111,36 @@ def _attach_live_research_lanes(
 ) -> None:
     """Show per-domain keyword research before a concrete keyword is reserved."""
 
+    # Artifact snapshots can outlive keyword reservation. Replace their synthetic
+    # research rows with the current batch state on every live status response.
+    previous_lanes = {
+        str(item.get("id")): item
+        for collection in ("campaigns", "ongoing_campaigns", "research_lanes")
+        for item in pipeline.get(collection) or []
+        if str(item.get("id") or "").startswith("research-")
+    }
+    if previous_lanes:
+        for collection in ("campaigns", "ongoing_campaigns", "research_lanes"):
+            pipeline[collection] = [
+                item
+                for item in pipeline.get(collection) or []
+                if str(item.get("id") or "") not in previous_lanes
+            ]
+        for count in ("total_campaigns", "ongoing_total"):
+            pipeline[count] = max(0, int(pipeline.get(count) or 0) - len(previous_lanes))
+        summary = dict(pipeline.get("summary") or {})
+        summary["ongoing"] = max(0, int(summary.get("ongoing") or 0) - len(previous_lanes))
+        summary["active"] = max(
+            0,
+            int(summary.get("active") or 0)
+            - sum(item.get("overall_state") == "active" for item in previous_lanes.values()),
+        )
+        summary["waiting"] = max(
+            0,
+            int(summary.get("waiting") or 0)
+            - sum(item.get("overall_state") == "waiting" for item in previous_lanes.values()),
+        )
+        pipeline["summary"] = summary
     if not production_batch or not production_action.get("alive"):
         return
     stage = str(production_action.get("stage") or "").casefold()
@@ -1077,10 +1164,13 @@ def _attach_live_research_lanes(
         if domain.get("running_keywords"):
             continue
         remaining = max(0, target - verified)
+        waiting = str(domain.get("state") or "").casefold() == "waiting"
         detail = (
             "Pinterest Trends/Search supplies candidates; Google News, Trends, and "
             "Suggestions validate the same exact phrase; waiting for a qualified Pending keyword"
         )
+        if waiting:
+            detail = str(domain.get("detail") or "Waiting for a fresh qualified Pinterest keyword")
         stages = []
         for key, label, phase, service in STAGE_DEFINITIONS:
             is_research = key == "keyword_search"
@@ -1090,7 +1180,7 @@ def _attach_live_research_lanes(
                     "label": label,
                     "phase": phase,
                     "service": service,
-                    "state": "running" if is_research else "pending",
+                    "state": ("waiting" if waiting else "running") if is_research else "pending",
                     "detail": detail if is_research else "Waiting for keyword selection",
                     "updated_at": production_action.get("updated_at") if is_research else None,
                     "metrics": {"sources": sources} if is_research else {},
@@ -1125,10 +1215,10 @@ def _attach_live_research_lanes(
                 "in_current_batch": True,
                 "batch_id": production_batch.get("batch_id") or "",
                 "batch_state": "researching",
-                "overall_state": "active",
+                "overall_state": "waiting" if waiting else "active",
                 "is_ongoing": True,
                 "current_stage": "keyword_search",
-                "current_label": "Keyword search",
+                "current_label": "Waiting for qualified keywords" if waiting else "Keyword search",
                 "current_detail": detail,
                 "progress": 5,
                 "age_seconds": int(production_action.get("elapsed_seconds") or 0),
@@ -1144,9 +1234,47 @@ def _attach_live_research_lanes(
     pipeline["research_lanes"] = lanes
     pipeline["total_campaigns"] = int(pipeline.get("total_campaigns") or 0) + len(lanes)
     pipeline["ongoing_total"] = int(pipeline.get("ongoing_total") or 0) + len(lanes)
-    summary = pipeline.setdefault("summary", {})
+    summary = dict(pipeline.get("summary") or {})
     summary["ongoing"] = int(summary.get("ongoing") or 0) + len(lanes)
-    summary["active"] = int(summary.get("active") or 0) + len(lanes)
+    summary["active"] = int(summary.get("active") or 0) + sum(
+        lane["overall_state"] == "active" for lane in lanes
+    )
+    summary["waiting"] = int(summary.get("waiting") or 0) + sum(
+        lane["overall_state"] == "waiting" for lane in lanes
+    )
+    pipeline["summary"] = summary
+
+
+def _production_batch_presentation(batch: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Derive truthful display counts without rewriting legacy tracker counters."""
+
+    if batch is None:
+        return None
+    totals = {
+        "produced": 0,
+        "awaiting_verification": 0,
+        "failed_attempts": 0,
+        "interrupted_attempts": 0,
+    }
+    domains = {}
+    for handle, domain in (batch.get("domains") or {}).items():
+        latest = {}
+        counts = dict.fromkeys(totals, 0)
+        for article in domain.get("articles") or []:
+            state = str(article.get("state") or "").replace("_", " ").strip().casefold()
+            counts["failed_attempts"] += state == "failed"
+            counts["interrupted_attempts"] += state == "interrupted"
+            keyword = str(article.get("keyword") or "").strip()
+            if keyword:
+                latest[keyword] = state
+        counts["produced"] = sum(
+            state in {"verified", "live", "needs verification"} for state in latest.values()
+        )
+        counts["awaiting_verification"] = sum(state == "needs verification" for state in latest.values())
+        domains[handle] = {**domain, "presentation_counts": counts}
+        for key, count in counts.items():
+            totals[key] += count
+    return {**batch, "domains": domains, "presentation_counts": totals}
 
 
 def _latest_production_batch() -> dict[str, Any] | None:
@@ -1885,3 +2013,217 @@ def _opencode_status() -> dict[str, Any]:
     except Exception as exc:
         out["error"] = str(exc)
     return out
+
+
+def _get_seo_feedback_report() -> dict[str, Any]:
+    from dataclasses import asdict
+    import sys
+    import importlib
+    sys.path.insert(0, str(RANKSTEIN_ROOT))
+    import rankstein.seo_feedback_engine
+    importlib.reload(rankstein.seo_feedback_engine)
+    from rankstein.seo_feedback_engine import SEOFeedbackEngine
+
+    engine = SEOFeedbackEngine(RANKSTEIN_ROOT)
+    report_data = engine.load_latest_report()
+    if not report_data:
+        rep = engine.run_full_feedback_analysis()
+        report_data = asdict(rep) if hasattr(rep, "__dataclass_fields__") else rep
+    return {"ok": True, "report": report_data}
+
+
+def _run_seo_feedback_refresh() -> dict[str, Any]:
+    from dataclasses import asdict
+    import sys
+    import importlib
+    sys.path.insert(0, str(RANKSTEIN_ROOT))
+    import rankstein.seo_feedback_engine
+    importlib.reload(rankstein.seo_feedback_engine)
+    from rankstein.seo_feedback_engine import SEOFeedbackEngine
+
+    engine = SEOFeedbackEngine(RANKSTEIN_ROOT)
+    rep = engine.run_full_feedback_analysis()
+    return {
+        "ok": True,
+        "message": "SEO and Trend feedback analysis refreshed.",
+        "report": asdict(rep),
+    }
+
+
+def _add_recommendation_to_roadmap(body: dict[str, Any]) -> dict[str, Any]:
+    keyword = (body.get("keyword") or "").strip()
+    domain = (body.get("domain") or "recetadolce").strip().lower()
+    cluster = (body.get("cluster") or "General").strip()
+    priority = (body.get("priority") or "High").strip()
+
+    if not keyword:
+        raise HTTPException(status_code=400, detail="Keyword is required")
+
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    target_file = RANKSTEIN_ROOT / "data" / "domains" / domain_clean / "keywords.md"
+    if not target_file.exists():
+        target_file = RANKSTEIN_ROOT / "memory" / "keywords.md"
+
+    domain_label = (
+        "Receta Dolce"
+        if domain_clean == "recetadolce"
+        else ("Receta Genial" if domain_clean == "recetagenial" else domain_clean.title())
+    )
+    row_line = f"| {keyword} | {cluster} | SEO Feedback Radar | {domain_label} | {priority} | Pending |\n"
+
+    try:
+        content = target_file.read_text(encoding="utf-8") if target_file.exists() else ""
+        if keyword.lower() in content.lower():
+            return {
+                "ok": True,
+                "already_present": True,
+                "keyword": keyword,
+                "domain": domain_clean,
+                "message": f"Keyword '{keyword}' is already in {domain_clean} roadmap.",
+            }
+
+        with open(target_file, "a", encoding="utf-8") as f:
+            f.write(row_line)
+
+        return {
+            "ok": True,
+            "keyword": keyword,
+            "domain": domain_clean,
+            "message": f"Added '{keyword}' to {domain_clean} roadmap with High priority.",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _download_seo_report() -> Any:
+    report_file = (
+        RANKSTEIN_ROOT
+        / "data"
+        / "reports"
+        / "seo_feedback"
+        / "seo_trend_feedback_report_latest.md"
+    )
+    if not report_file.exists():
+        import sys
+        sys.path.insert(0, str(RANKSTEIN_ROOT))
+        from rankstein.seo_feedback_engine import SEOFeedbackEngine
+
+        engine = SEOFeedbackEngine(RANKSTEIN_ROOT)
+        engine.run_full_feedback_analysis()
+
+    return FileResponse(
+        path=str(report_file),
+        filename="RankStein_SEO_Trend_Feedback_Report.md",
+        media_type="text/markdown",
+    )
+
+
+def _add_all_post_more_to_roadmap() -> dict[str, Any]:
+    report_res = _get_seo_feedback_report()
+    report = report_res.get("report") or {}
+    items = report.get("post_more_recommendations") or []
+    if not items:
+        return {"ok": False, "message": "No recommendations found in latest report."}
+    added: list[str] = []
+    already: list[str] = []
+    for item in items:
+        kw = item.get("keyword")
+        dm = item.get("target_domain") or "recetadolce"
+        cl = item.get("cluster") or "General"
+        if not kw:
+            continue
+        res = _add_recommendation_to_roadmap({"keyword": kw, "domain": dm, "cluster": cl, "priority": "High"})
+        if res.get("already_present"):
+            already.append(kw)
+        else:
+            added.append(kw)
+    return {
+        "ok": True,
+        "added_count": len(added),
+        "already_present_count": len(already),
+        "added": added,
+        "already_present": already,
+        "message": f"Successfully injected {len(added)} high-demand keywords into active roadmaps ({len(already)} already present).",
+    }
+
+
+def _purge_avoid_topics_from_roadmap() -> dict[str, Any]:
+    report_res = _get_seo_feedback_report()
+    report = report_res.get("report") or {}
+    avoid_items = report.get("avoid_recommendations") or []
+    if not avoid_items:
+        return {"ok": False, "message": "No avoid recommendations found in latest report."}
+
+    avoid_terms = [a.get("keyword", "").strip().lower() for a in avoid_items if a.get("keyword")]
+    deprioritized: list[str] = []
+
+    for domain_handle in ["recetadolce", "recetagenial"]:
+        rm_path = RANKSTEIN_ROOT / "data" / "domains" / domain_handle / "keywords.md"
+        if not rm_path.exists():
+            continue
+        try:
+            lines = rm_path.read_text(encoding="utf-8").splitlines()
+            modified = False
+            new_lines = []
+            for line in lines:
+                lower_line = line.lower()
+                matched = any(term in lower_line for term in avoid_terms)
+                if matched and "| Pending |" in line:
+                    line = line.replace("| Pending |", "| Deprioritized (Avoid) |")
+                    term_name = line.split("|")[1].strip() if "|" in line else domain_handle
+                    deprioritized.append(f"{domain_handle}: {term_name}")
+                    modified = True
+                new_lines.append(line)
+            if modified:
+                rm_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        except Exception:
+            pass
+
+    return {
+        "ok": True,
+        "deprioritized_count": len(deprioritized),
+        "deprioritized": deprioritized,
+        "message": f"Deprioritized {len(deprioritized)} saturated/declining keywords from roadmaps to conserve crawl budget.",
+    }
+
+
+def _launch_seo_remaster(body: dict[str, Any]) -> dict[str, Any]:
+    keyword = (body.get("keyword") or "").strip()
+    slug = (body.get("slug") or "").strip()
+    cmd = [_rankstein_python(), str(RANKSTEIN_ROOT / "run_autonomous.py"), "enqueue-folder"]
+    proc = _start_background("remaster", cmd)
+    return {
+        "ok": True,
+        "keyword": keyword,
+        "slug": slug,
+        "message": f"Visual-first remaster sequence initiated for '{keyword or 'batch'}' (PID: {proc.pid}).",
+        "pid": proc.pid,
+    }
+
+
+def _launch_seo_single_turbo(body: dict[str, Any]) -> dict[str, Any]:
+    domain = (body.get("domain") or "recetadolce").strip().lower()
+    keyword = (body.get("keyword") or "").strip()
+    if keyword:
+        _add_recommendation_to_roadmap({"keyword": keyword, "domain": domain, "priority": "Urgent"})
+
+    cmd = [
+        _rankstein_python(),
+        str(RANKSTEIN_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+        "--domain",
+        domain,
+        "--limit",
+        "1",
+        "--workers",
+        "1",
+        "--once",
+    ]
+    proc = _start_background(f"turbo-{domain}", cmd)
+    return {
+        "ok": True,
+        "domain": domain,
+        "keyword": keyword,
+        "message": f"Targeted article worker launched for {domain}: '{keyword or 'Next Pending'}' (PID: {proc.pid}).",
+        "pid": proc.pid,
+    }
+

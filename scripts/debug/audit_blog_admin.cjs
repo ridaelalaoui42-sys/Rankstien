@@ -71,7 +71,9 @@ async function auditSite(browser, site) {
     }
     result.checks.anonymousApis = true;
     await context.addCookies([{ name: site.cookie, value: 'authenticated', url: site.origin }]);
-    await page.goto(site.origin + '/admin', { waitUntil: 'domcontentloaded' });
+    const forgedResponse = await page.goto(site.origin + '/admin', { waitUntil: 'domcontentloaded' });
+    result.forgedResponseStatus = forgedResponse.status();
+    await page.waitForURL((url) => url.pathname === '/admin/login', { timeout: 20000 });
     assert.equal(new URL(page.url()).pathname, '/admin/login', site.name + ': forged cookie must be rejected');
     await context.clearCookies();
     if (bypassCookies.length) await context.addCookies(bypassCookies);
@@ -175,7 +177,7 @@ async function auditSite(browser, site) {
         page.getByRole('button', { name: 'Publicar Receta', exact: true }).click(),
       ]);
       assert.equal(rejected.status(), 422);
-      await page.getByRole('alert').filter({ hasText: 'Añade los datos de la receta' }).waitFor();
+      await page.getByRole('alert').filter({ hasText: /Añade (los datos|los ingredientes|las instrucciones)/ }).waitFor();
       result.checks.incompletePublicationBlocked = true;
 
       await page.goto(site.origin + '/admin/settings');
@@ -266,6 +268,8 @@ async function auditSite(browser, site) {
   } catch (error) {
     result.failure = error.message;
     result.failurePath = new URL(page.url()).pathname;
+    result.pageTitle = await page.title();
+    result.headings = await page.locator('h1').allTextContents();
     result.alerts = await page.getByRole('alert').allTextContents();
     result.passed = false;
     return result;

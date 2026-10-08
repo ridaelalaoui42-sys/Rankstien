@@ -155,13 +155,16 @@ def test_append_keyword_rows_refreshes_pending_research_metadata(tmp_path: Path)
 
 
 @pytest.mark.unit
-def test_append_keyword_rows_reactivates_failed_duplicate_trends(tmp_path: Path) -> None:
+@pytest.mark.parametrize("status", ["Failed", "Needs Verification", "Staged", "In Progress", "Live"])
+def test_append_keyword_rows_preserves_existing_terminal_and_published_states(
+    tmp_path: Path, status: str
+) -> None:
     path = tmp_path / "keywords.md"
     write_keyword_rows(
         path,
         "Test Roadmap",
         [
-            KeywordRow("Tarta Opera", cluster="Old", source="Old", priority="Low", status="Failed"),
+            KeywordRow("Tarta Opera", cluster="Old", source="Old", priority="Low", status=status),
             KeywordRow("Gazpacho", status="Live"),
         ],
     )
@@ -183,9 +186,9 @@ def test_append_keyword_rows_reactivates_failed_duplicate_trends(tmp_path: Path)
     )
 
     rows = read_keyword_rows(path)
-    assert changed == 1
+    assert changed == 0
     assert [(row.keyword, row.cluster, row.source, row.priority, row.status) for row in rows] == [
-        ("Tarta Opera", "Postres", "Pinterest Trends + Google News", "High", "Pending"),
+        ("Tarta Opera", "Old", "Old", "Low", status),
         ("Gazpacho", "General", "Startup", "Medium", "Live"),
     ]
 

@@ -1,6 +1,8 @@
 import threading
 import time
 
+import pytest
+
 from backend.api import operator_routes as routes
 from backend.services.operator_pipeline import (
     _campaign_is_ongoing,
@@ -80,3 +82,77 @@ def test_failed_article_does_not_show_a_running_writer():
     assert (
         next(s for s in campaign["stages"] if s["key"] == "article_write")["metrics"]["interrupted"] is True
     )
+
+
+@pytest.mark.parametrize("genial_keywords", [["tarta de queso saludable"], []])
+@pytest.mark.parametrize("cached_research", [True, False])
+def test_live_status_replaces_cached_research_after_keyword_reservation(
+    monkeypatch, genial_keywords, cached_research
+):
+    lock = threading.Lock()
+    lock.acquire()
+    lanes = (
+        [
+            {
+                "id": f"research-{domain}",
+                "domain_handle": domain,
+                "batch_id": "production-test",
+                "overall_state": "active",
+                "queue": {},
+            }
+            for domain in ("recetadolce", "recetagenial")
+        ]
+        if cached_research
+        else []
+    )
+    initial_count = len(lanes) + 1
+    article = {"id": "current-article", "keyword": "galletas de avena coco", "queue": {"active": 0}}
+    cached = {
+        "pipeline": {
+            "campaigns": [*lanes, article],
+            "ongoing_campaigns": [*lanes, article],
+            "research_lanes": lanes,
+            "total_campaigns": initial_count,
+            "ongoing_total": initial_count,
+            "summary": {"ongoing": initial_count, "active": initial_count},
+        }
+    }
+    batch = {
+        "batch_id": "production-test",
+        "state": "running",
+        "domains": {
+            "recetadolce": {"target": 10, "verified": 1, "running_keywords": ["galletas de avena coco"]},
+            "recetagenial": {"target": 10, "verified": 0, "running_keywords": genial_keywords},
+        },
+    }
+    monkeypatch.setattr(routes, "STATUS_CACHE_LOCK", lock)
+    monkeypatch.setattr(routes, "_STATUS_CACHE", (time.monotonic() - 100, cached))
+    monkeypatch.setattr(routes, "_load_processes", lambda: {})
+    monkeypatch.setattr(routes, "_process_status", lambda _: {})
+    monkeypatch.setattr(
+        routes,
+        "_action_snapshots",
+        lambda _: {
+            "production": {"alive": True, "stage": "Researching and writing articles", "updated_at": 123}
+        },
+    )
+    monkeypatch.setattr(routes, "_latest_production_batch", lambda: batch)
+    try:
+        first = routes._cached_status_payload()
+        second = routes._cached_status_payload()
+    finally:
+        lock.release()
+
+    expected_research = [] if genial_keywords else ["research-recetagenial"]
+    for result in (first, second):
+        assert result["production_batch"]["domains"]["recetadolce"]["running_keywords"] == [
+            "galletas de avena coco"
+        ]
+        pipeline = result["pipeline"]
+        assert [row["id"] for row in pipeline["research_lanes"]] == expected_research
+        assert [row["id"] for row in pipeline["ongoing_campaigns"]] == [*expected_research, "current-article"]
+        assert [row["id"] for row in pipeline["campaigns"]] == [*expected_research, "current-article"]
+        assert pipeline["ongoing_total"] == pipeline["summary"]["ongoing"] == 1 + len(expected_research)
+        assert pipeline["total_campaigns"] == pipeline["summary"]["active"] == 1 + len(expected_research)
+    assert cached["pipeline"]["research_lanes"] == lanes
+    assert cached["pipeline"]["ongoing_total"] == cached["pipeline"]["summary"]["active"] == initial_count

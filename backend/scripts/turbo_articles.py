@@ -3447,14 +3447,65 @@ def _load_pinterest_qualified_keyword_keys(domain: Domain) -> tuple[set[str], st
     return eligible, "ok" if eligible else "keyword_missing_pinterest_origin"
 
 
-async def _auto_refresh_keywords(domain: Domain) -> int:
-    """Call refresh_trend_keywords for a domain and return how many rows were added."""
+def _production_discovery_keyword_allowed(keyword: str, domain: Domain) -> bool:
+    """Reject off-domain, pet, and known foreign-language Pinterest noise."""
+    folded = _ascii_fold(keyword)
+    if re.search(r"\b(gatos?|perros?|mascotas?|cachorros?|cats?|dogs?|pets?)\b", folded):
+        return False
+    if domain.language.casefold().startswith("es") and re.search(
+        r"\b(saudavel|saudaveis|recheio|bolo|fazer|receitas?|frango|morango|forno|recipes?|chicken)\b",
+        folded,
+    ):
+        return False
+    if not is_recipe_aware_keyword(keyword, domain=domain) or _keyword_specificity_score(keyword) <= 0:
+        return False
     try:
-        from rankstein.trend_intelligence import refresh_domain_trend_lists
+        _normalize_category("", "", domain, context=keyword)
+    except CategoryPolicyError:
+        return False
+    return True
+
+
+async def _auto_refresh_keywords(domain: Domain, *, excluded_keywords: set[str] | None = None) -> int:
+    """Discover unattempted Pinterest phrases before exact independent validation.
+
+    Collect at most 240 observed phrases, enough to walk the collector's maximum
+    24 seed queries at its ten-phrase per-query cap. The browser deadline cancels
+    the async collector and runs its cleanup rather than abandoning a live
+    background thread that could lock the next refresh's domain profile.
+    """
+    try:
+        from rankstein.trend_intelligence import (
+            DEFAULT_REGION,
+            _fetch_pinterest_niche_trending_terms_async,
+            refresh_domain_trend_lists,
+        )
 
         logger.info(
             "[%s] Queue empty — Pinterest Trends/Search supplies candidates; Google News, Google Trends, and Suggestions validate exact phrases…",
             domain.handle,
+        )
+        excluded = {keyword.strip().casefold() for keyword in (excluded_keywords or set())}
+        excluded.update(
+            row.keyword.strip().casefold()
+            for row in read_keyword_rows(domain.keywords_file)
+            if row.status.strip().casefold() != "pending"
+        )
+        region = (os.environ.get("RANKSTEIN_TRENDS_REGION") or DEFAULT_REGION).upper()
+        observed_terms = await asyncio.wait_for(
+            _fetch_pinterest_niche_trending_terms_async(domain, region, 240),
+            timeout=300,
+        )
+        fresh_terms = [
+            term
+            for term in observed_terms
+            if term.strip().casefold() not in excluded and _production_discovery_keyword_allowed(term, domain)
+        ]
+        logger.info(
+            "[%s] Pinterest discovery observed %d phrases; %d unattempted in-domain candidates remain before ranking.",
+            domain.handle,
+            len(observed_terms),
+            len(fresh_terms),
         )
         report = await asyncio.get_event_loop().run_in_executor(
             None,
@@ -3462,6 +3513,8 @@ async def _auto_refresh_keywords(domain: Domain) -> int:
                 [domain],
                 limit_per_domain=15,
                 append_to_roadmap=True,
+                pinterest_terms=fresh_terms,
+                region=region,
                 use_playwright=True,
                 candidate_origin_policy="pinterest_required",
             ),
@@ -3543,12 +3596,7 @@ async def _run_domain(
     _consecutive_empty = 0
     attempted_keywords = set()
     if _PRODUCTION_BATCH_TRACKER is not None:
-        domain_progress = _PRODUCTION_BATCH_TRACKER.data.get("domains", {}).get(domain.handle, {})
-        attempted_keywords = {
-            str(item.get("keyword") or "").strip().casefold()
-            for item in domain_progress.get("articles", [])
-            if item.get("state") != "interrupted"
-        }
+        attempted_keywords = _PRODUCTION_BATCH_TRACKER.attempted_keyword_keys(domain.handle)
 
     while True:
         if success_target and _PRODUCTION_BATCH_TRACKER is not None:
@@ -3612,7 +3660,7 @@ async def _run_domain(
                     domain.handle,
                     research_reason,
                 )
-            added = await _auto_refresh_keywords(domain)
+            added = await _auto_refresh_keywords(domain, excluded_keywords=attempted_keywords)
             refreshed_eligible, refreshed_reason = _load_pinterest_qualified_keyword_keys(domain)
             refreshed_eligible -= attempted_keywords
             fresh_pending = any(

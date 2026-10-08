@@ -108,16 +108,140 @@ def test_source_relevance_rejects_generic_keyword_drift() -> None:
 def test_empty_queue_refresh_requires_pinterest_origin_candidates(monkeypatch) -> None:
     calls = []
 
+    async def collect(domain, region, limit):
+        assert limit == 240
+        return ["tarta de coco"]
+
     def fake_refresh(domains, **kwargs):
         calls.append(kwargs)
         return {"domains": {domains[0].handle: {"roadmap_added": 2}}}
 
     monkeypatch.setattr(trend_intelligence, "refresh_domain_trend_lists", fake_refresh)
+    monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
 
     added = asyncio.run(turbo._auto_refresh_keywords(_domain(("Postres",))))
 
     assert added == 2
     assert calls[0]["candidate_origin_policy"] == "pinterest_required"
+    assert calls[0]["pinterest_terms"] == ["tarta de coco"]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_refresh_ranks_new_longtails_after_excluding_attempted_and_published_phrases(
+    tmp_path, monkeypatch
+) -> None:
+    from rankstein.keyword_roadmap import KeywordRow, read_keyword_rows, write_keyword_rows
+
+    domain = replace(_domain(("Postres",)), root=tmp_path, keywords_file=tmp_path / "keywords.md")
+    old_terms = [f"tarta de coco numero {index}" for index in range(15)]
+    write_keyword_rows(
+        domain.keywords_file,
+        "Test",
+        [KeywordRow(term, status="Pending") for term in old_terms]
+        + [
+            KeywordRow("tarta de coco publicada", status="Needs Verification"),
+            KeywordRow("tarta de coco fallida", status="Failed"),
+        ],
+    )
+    fresh_phrase = "galletas de almendra crujientes"
+
+    async def collect(_domain, region, limit):
+        assert _domain is domain and limit == 240
+        return old_terms + ["tarta de coco publicada", "tarta de coco fallida", fresh_phrase]
+
+    async def google_only(*args):
+        raise AssertionError("Google discovery must not supply production candidates")
+
+    monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
+    monkeypatch.setattr(trend_intelligence, "_search_volume_proxy", lambda *args: 8.0)
+    monkeypatch.setattr(trend_intelligence, "fetch_google_news_signals", lambda *args: [])
+    monkeypatch.setattr(trend_intelligence, "fetch_google_autocomplete_terms", google_only)
+    monkeypatch.setattr(trend_intelligence, "fetch_google_news_discovery_terms", google_only)
+    monkeypatch.setattr(trend_intelligence, "fetch_google_trending_terms", google_only)
+
+    added = await turbo._auto_refresh_keywords(domain, excluded_keywords=set(old_terms))
+
+    assert added == 1
+    report = json.loads((tmp_path / "daily_best_keywords.json").read_text(encoding="utf-8"))
+    assert [(row["keyword"], row["pinterest_origin"]) for row in report["items"]] == [(fresh_phrase, True)]
+    rows = {row.keyword: row.status for row in read_keyword_rows(domain.keywords_file)}
+    assert rows["tarta de coco publicada"] == "Needs Verification"
+    assert rows["tarta de coco fallida"] == "Failed"
+    assert rows[fresh_phrase] == "Pending"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_production_refresh_exclusions_are_domain_local(tmp_path, monkeypatch) -> None:
+    from rankstein.keyword_roadmap import KeywordRow, write_keyword_rows
+
+    first = replace(_domain(("Postres",)), handle="first", root=tmp_path / "first")
+    second = replace(_domain(("Postres",)), handle="second", root=tmp_path / "second")
+    first.root.mkdir()
+    second.root.mkdir()
+    first = replace(first, keywords_file=first.root / "keywords.md")
+    second = replace(second, keywords_file=second.root / "keywords.md")
+    write_keyword_rows(first.keywords_file, "First", [KeywordRow("tarta de coco", status="Failed")])
+    write_keyword_rows(second.keywords_file, "Second", [])
+    calls = {}
+
+    async def collect(*args):
+        return ["tarta de coco"]
+
+    def refresh(domains, **kwargs):
+        calls[domains[0].handle] = kwargs["pinterest_terms"]
+        return {"domains": {domains[0].handle: {"roadmap_added": 0}}}
+
+    monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
+    monkeypatch.setattr(trend_intelligence, "refresh_domain_trend_lists", refresh)
+    await asyncio.gather(turbo._auto_refresh_keywords(first), turbo._auto_refresh_keywords(second))
+    assert calls == {"first": [], "second": ["tarta de coco"]}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "keyword",
+    ["croquetas caseras para gato", "mousse de chocolate saudável", "mousse de chocolate para recheio de bolo"],
+)
+def test_production_discovery_rejects_pet_and_foreign_language_noise(keyword) -> None:
+    assert not turbo._production_discovery_keyword_allowed(keyword, _domain(("Postres",)))
+
+
+@pytest.mark.unit
+def test_production_discovery_respects_dolce_dessert_categories() -> None:
+    domain = replace(
+        _domain(("fresas-y-nata", "tartas-y-pasteles", "chocolates", "dulces-saludables")),
+        handle="recetadolce",
+    )
+    assert not turbo._production_discovery_keyword_allowed("croquetas caseras de jamon", domain)
+    assert turbo._production_discovery_keyword_allowed("tarta de queso con pistacho", domain)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_production_refresh_deadline_cancels_and_cleans_up_collector(monkeypatch) -> None:
+    cleaned_up = []
+    real_wait_for = asyncio.wait_for
+
+    async def collect(*args):
+        try:
+            await asyncio.sleep(10)
+        finally:
+            cleaned_up.append(True)
+
+    async def short_deadline(task, *, timeout):
+        assert timeout == 300
+        return await real_wait_for(task, timeout=0.001)
+
+    def forbidden_refresh(*args, **kwargs):
+        raise AssertionError("timed-out Pinterest evidence cannot authorize keywords")
+
+    monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
+    monkeypatch.setattr(trend_intelligence, "refresh_domain_trend_lists", forbidden_refresh)
+    monkeypatch.setattr(turbo.asyncio, "wait_for", short_deadline)
+    assert await turbo._auto_refresh_keywords(_domain(("Postres",))) == 0
+    assert cleaned_up == [True]
 
 
 @pytest.mark.unit
@@ -187,7 +311,7 @@ async def test_worker_waits_instead_of_retrying_a_failed_keyword_after_refresh(t
         assert len(attempts) == 1, "same failed keyword was attempted again in this batch"
         return "Failed"
 
-    async def refresh(_):
+    async def refresh(_, **kwargs):
         mark_keyword_status(domain.keywords_file, "Test", "tarta de coco", "Pending")
         return 1
 
@@ -218,6 +342,9 @@ async def test_published_target_waits_for_pins_without_creating_extra_articles(m
         def published_count(self, handle):
             return 10
 
+        def attempted_keyword_keys(self, handle):
+            return set()
+
         def mark_domain_waiting(self, handle, reason):
             reasons.append(reason)
 
@@ -238,6 +365,58 @@ async def test_published_target_waits_for_pins_without_creating_extra_articles(m
     with pytest.raises(RuntimeError, match="waiting for Pinterest"):
         await turbo._run_domain(_domain(("Postres",)), workers=1, limit=10, once=False, success_target=10)
     assert "Published article target reached" in reasons[0]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("authorize,fresh", [(True, True), (False, True), (True, False)])
+async def test_worker_retries_failed_run_only_with_explicit_permission_and_fresh_evidence(
+    tmp_path, monkeypatch, authorize, fresh
+) -> None:
+    from rankstein.keyword_roadmap import EXPECTED_HEADER
+    from rankstein.production_batch import ProductionBatchTracker
+
+    domain = replace(_domain(("Postres",)), root=tmp_path, keywords_file=tmp_path / "keywords.md")
+    domain.keywords_file.write_text(
+        f"# Test\n\n{EXPECTED_HEADER}\n|---|---|---|---|---|---|\n"
+        "| tarta de coco | Postres | Pinterest Trends | test | High | Pending |\n",
+        encoding="utf-8",
+    )
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-worker-retry",
+        domain_handles=[domain.handle],
+        target_per_domain=10,
+    )
+    tracker.start_keyword(domain.handle, "tarta de coco", "Postres", "Pinterest Trends")
+    tracker.attach_run(domain.handle, "tarta de coco", "failed-run-1")
+    tracker.complete_keyword(domain.handle, "tarta de coco", "Failed")
+    if authorize:
+        assert tracker.authorize_failed_retry(
+            domain.handle, "tarta de coco", "Codex quota recovered", pipeline_run_id="failed-run-1"
+        )
+    attempts = []
+
+    async def article(keyword, *args, **kwargs):
+        attempts.append(keyword)
+        return "Failed"
+
+    async def refresh(_, **kwargs):
+        return 0
+
+    monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", tracker)
+    monkeypatch.setattr(
+        turbo,
+        "_load_pinterest_qualified_keyword_keys",
+        lambda _: ({"tarta de coco"} if fresh else set(), "ok"),
+    )
+    monkeypatch.setattr(turbo, "process_keyword", article)
+    monkeypatch.setattr(turbo, "_auto_refresh_keywords", refresh)
+    await turbo._run_domain(domain, workers=1, limit=1, once=True)
+    assert attempts == (["tarta de coco"] if authorize and fresh else [])
+    if attempts:
+        assert len(tracker.data["domains"][domain.handle]["articles"]) == 2
+        assert "tarta de coco" in tracker.attempted_keyword_keys(domain.handle)
 
 
 @pytest.mark.unit

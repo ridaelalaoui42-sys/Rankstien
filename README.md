@@ -7,7 +7,7 @@ Updated: 2026-08-24
 ## Current State
 
 - Core engine: CLI-first orchestration through `python rankstein.py launch` for full service startup, preflight, workers, Pinterest supervisor, and monitoring.
-- Article generation: direct Codex CLI is the production default (`RANKSTEIN_ARTICLE_PROVIDER=codex-cli`, `RANKSTEIN_CODEX_CLI_MODEL=gpt-5.6-sol`). An attested Hermes OpenAI-Codex route is permitted, but Gemini, Odysseus, OpenCode, OpenRouter, and template text are not article fallbacks. Provider failure stops publication.
+- Article generation: Hermes OpenAI Codex is the production default (`RANKSTEIN_ARTICLE_PROVIDER=hermes-codex`). The explicitly configured `hermes-codex-first-free` policy permits one approved free model through Hermes only when Codex is unavailable; content, schema, quality, or attestation failures do not permit fallback. Direct Gemini, Odysseus, OpenCode, OpenRouter, and template text are not article fallbacks. Provider failure stops publication.
 - Tool layer: RankStein MCP, Playwright Firefox, Playwright Chromium, Supabase MCP, NanoBanana MCP, and AgentMemory MCP.
 - Long-term memory: AgentMemory MCP plus local REST worker on `http://127.0.0.1:3111/agentmemory/health`.
 - Browser automation: Chromium is the unattended production browser; shared Playwright helpers retain Firefox support for interactive diagnostics.
@@ -29,7 +29,7 @@ playwright install firefox chromium
 
 Copy `.env.example` to `.env` and fill in local credentials. Do not commit `.env`, browser profiles, Supabase service role keys, Gemini auth files, Pinterest credentials, or generated article payloads.
 
-The production article provider is controlled by `RANKSTEIN_ARTICLE_PROVIDER=codex-cli`. Legacy engine settings do not authorize a non-Codex article provider.
+The production article provider is controlled by `RANKSTEIN_ARTICLE_PROVIDER=hermes-codex`. A human may explicitly select `hermes-codex-first-free` for the availability-only Hermes fallback, or `codex-cli` for direct Codex. Legacy engine settings do not authorize a non-Codex article provider.
 
 ## Run
 

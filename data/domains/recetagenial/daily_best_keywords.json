@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T03:46:55.797683+00:00",
+  "generated_at": "2026-10-08T09:50:10.792722+00:00",
   "domain": "recetagenial",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -33,35 +33,12 @@
       "qualified": true
     },
     {
-      "keyword": "salmón al horno recetas faciles",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "High",
-      "score": 151.0,
-      "pinterest_score": 88.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Paula Monreal, experta en alimentación saludable: \"Esta es la forma más fácil de cocinar salmón en la freidora de aire\"",
-        "Los chefs con más experiencia coinciden: \"Para que cualquier pescado al horno tenga más sabor se debe limpiar con agua con la misma salinidad que el mar\"",
-        "La receta de salmón marinado que Miguel Torres prepara en 15 minutos cuando quiere comer sano",
-        "Salmón al horno en papel de aluminio: una receta jugosa y aromática para Navidad",
-        "Con más proteínas, más barato y de temporada: así es el pescado español con el que sustituir al salmón"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 8.0,
-      "search_demand_score": 8.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
       "keyword": "paella de marisco video",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 139.0,
-      "pinterest_score": 84.0,
+      "score": 140.0,
+      "pinterest_score": 85.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Paella de marisco exprés: El invento japonés para \"disfrutar del sabor de España en tan solo 5 minutos\"",
@@ -79,24 +56,24 @@
       "qualified": true
     },
     {
-      "keyword": "arroz con leche en vaso",
+      "keyword": "tarta de queso de pistacho",
       "domain": "recetagenial",
-      "cluster": "Aperitivos",
+      "cluster": "Postres",
       "priority": "High",
-      "score": 135.0,
-      "pinterest_score": 66.0,
+      "score": 137.0,
+      "pinterest_score": 70.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Las 20 mejores recetas para Monsieur Cuisine Smart: fáciles, rápidas y deliciosas",
-        "TheGrefg y Jordi Roca unen fuerzas para hacer este singular postre: \"Hemos hecho una marranada de receta\"",
-        "La Navidad que se cocina en Colombia: sabores y tendencias de 2025 para lucirse en la mesa",
-        "Vasitos de postre, la tendencia que te conquistará (y más si son artesanales)",
-        "\"¡Esto está muy rico!\": Karlos Arguiñano transforma un postre de toda la vida en una receta vegana"
+        "La pastelera Alma Obregón tiene la receta más fácil de tarta de queso de pistacho: \"Espectacular y se prepara en un pis pas\"",
+        "10 tartas de queso creativas, cremosas (e irresistibles)",
+        "La receta de 'cheesecake' de pistacho más fácil de hacer y que ya es viral",
+        "El próximo 19/03, Día del Padre, se esperan colas kilométricas por la tarta de queso más rica de Madrid disponible en 7 sabores",
+        "Las 10 mejores tartas de queso de Madrid"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
+      "search_volume_score": 18.0,
+      "search_demand_score": 18.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -106,8 +83,8 @@
       "domain": "recetagenial",
       "cluster": "Carnes",
       "priority": "High",
-      "score": 132.0,
-      "pinterest_score": 69.0,
+      "score": 135.0,
+      "pinterest_score": 72.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Ensaladas de verano: 30 recetas fáciles, rápidas y deliciosas para comer saludable y disfrutar",
@@ -125,35 +102,12 @@
       "qualified": true
     },
     {
-      "keyword": "arroz con leche para vender publicidad",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "High",
-      "score": 131.0,
-      "pinterest_score": 80.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Hermanos Torres, cocineros: \"El arroz con leche más elegante y especial se hace con 150 ml de nata, canela y un pelín de sal\"",
-        "Dani García, chef malagueño: \"El mejor arroz con leche del mundo se hace con arroz, leche y nata, y es fundamental añadir una vaina de vainilla\"",
-        "Las ventas \"güenas güenas\" de la provincia de Cádiz",
-        "La leche cruda que bebe Haaland está autorizada y regulada. Aun así, en tu cocina puede convertirse en un problema serio",
-        "El localito en la CDMX que te vende arroz con leche en tamaño gigante y todavía le puedes poner Nutella, Lechera y más toppings"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 4.0,
-      "search_volume_score": 2.0,
-      "search_demand_score": 2.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
       "keyword": "croquetas caseras recetas para hacer",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 130.0,
-      "pinterest_score": 65.0,
+      "score": 134.0,
+      "pinterest_score": 69.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Iván de la Torre, chef, desvela el truco para hacer las mejores croquetas caseras: \"Están casi como las de tu abuela\"",
@@ -175,8 +129,8 @@
       "domain": "recetagenial",
       "cluster": "Carnes",
       "priority": "High",
-      "score": 130.0,
-      "pinterest_score": 61.0,
+      "score": 134.0,
+      "pinterest_score": 65.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Los chefs expertos coinciden: para que la ensaladilla rusa quede más ligera no hay que echarle patata, sino...",
@@ -194,19 +148,19 @@
       "qualified": true
     },
     {
-      "keyword": "salmón al horno con patatas",
+      "keyword": "tarta de queso mascarpone",
       "domain": "recetagenial",
-      "cluster": "Aperitivos",
+      "cluster": "Postres",
       "priority": "High",
-      "score": 129.0,
-      "pinterest_score": 60.0,
+      "score": 133.0,
+      "pinterest_score": 64.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "15 recetas con boniato: opciones fáciles y sabrosas para otoño",
-        "Salmón en salsa cremosa, la receta que se hizo viral y sí merece la pena",
-        "Chef Karlos Arguiñano: “Para los que estáis con dudas de qué hacer en Nochebuena, con una buena cola de salmón",
-        "Cómetelo. Pescado al horno con sofrito marin...",
-        "Menú semanal de Cocina Abierta del 16 al 22 de febrero, recetas caseras para comer bien"
+        "Ni Philadelphia ni mascarpone: la mejor tarta de queso se hace con uno de los quesos más famosos de Pontevedra",
+        "Ni tetilla, ni mascarpone: el curioso ingrediente que Samantha Vallejo-Nágera, chef española, añade en su receta de tarta de queso al horno",
+        "Crostata Paradiso: Eva Arguiñano elabora la receta de la tarta casera Paraíso, fácil y con ingredientes muy sencillos",
+        "La pastelera Alma Obregón tiene la receta más fácil de tarta de queso de pistacho: \"Espectacular y se prepara en un pis pas\"",
+        "Eva Arguiñano, chef: \"Si quieres una tarta de queso cremosa y deliciosa, olvida la harina y añade 3 huevos y un poco de nata\""
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
@@ -221,15 +175,15 @@
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 126.0,
-      "pinterest_score": 71.0,
+      "score": 129.0,
+      "pinterest_score": 74.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "La clave de la mejor tortilla de patata de especialidad: \"El AOVE tiene que ser el director de orquesta\"",
+        "La tortilla de patatas perfecta, según el chef Carlos Gómez: \"Si tiene esta cantidad de huevo, queda más cremosa y menos mazacote\"",
         "La tortilla murciana escala a la élite nacional: Cucú Food Experience, entre las diez mejores de España",
         "Karlos Arguiñano reinventa la tortilla con una versión alemana",
-        "Las 35 mejores tortillas de patata de Madrid: dónde comerlas",
-        "La alcaldesa visita 'Gourmet Nüvo', un establecimiento que aumenta la oferta gastronómica de la ciudad"
+        "Las 35 mejores tortillas de patata de Madrid: dónde comerlas"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
@@ -244,8 +198,8 @@
       "domain": "recetagenial",
       "cluster": "Ensaladas",
       "priority": "High",
-      "score": 124.0,
-      "pinterest_score": 55.0,
+      "score": 129.0,
+      "pinterest_score": 60.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Ensaladas de verano: 30 recetas fáciles, rápidas y deliciosas para comer saludable y disfrutar",
@@ -263,24 +217,24 @@
       "qualified": true
     },
     {
-      "keyword": "paella de marisco restaurante",
+      "keyword": "pollo al horno recetas faciles",
       "domain": "recetagenial",
-      "cluster": "Aperitivos",
+      "cluster": "Carnes",
       "priority": "High",
-      "score": 123.0,
-      "pinterest_score": 70.0,
+      "score": 128.0,
+      "pinterest_score": 53.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Restaurantes y arrocerías para celebrar el Día Mundial de la Paella si estás fuera de Valencia",
-        "Los 21 mejores arroces de Barcelona",
-        "Los 17 mejores restaurantes para comer paella en Valencia",
-        "El Restaurant Andalucía lleva el Arroz de Castelldefels al corazón de la ciudad",
-        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta"
+        "Dos chefs Michelin coinciden: “Para que el pollo asado quede mucho más jugoso, hay que cocinarlo antes en l...",
+        "Adiós a la pechuga de pollo de siempre: la receta fácil de Raquel Meroño con mozzarella y yogur",
+        "Rollitos de pollo, ensalada de lentejas, bizcocho de pera y 7 recetas fáciles más: este es el top 10 de Cocina Fácil del 9 al 16 de septiembre",
+        "Pollo al horno jugoso y con piel crujiente: estos son los trucos de los chefs José Andrés, Jordi Cruz y Dani García",
+        "Menú semanal del 10 al 16 de agosto"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 4.0,
-      "search_volume_score": 4.0,
-      "search_demand_score": 4.0,
+      "specificity_score": 3.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -290,8 +244,8 @@
       "domain": "recetagenial",
       "cluster": "Ensaladas",
       "priority": "High",
-      "score": 123.0,
-      "pinterest_score": 62.0,
+      "score": 127.0,
+      "pinterest_score": 66.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos",
@@ -309,19 +263,65 @@
       "qualified": true
     },
     {
+      "keyword": "tarta de queso saludable",
+      "domain": "recetagenial",
+      "cluster": "Postres",
+      "priority": "High",
+      "score": 127.0,
+      "pinterest_score": 58.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La tarta de queso más deliciosa del mundo es también la versión más saludable: queda súper cremosa",
+        "Así es la receta fácil de pastel de plátanos y arándanos del chef Roberto Bosquet: \"Tendrás un cheesecake saludable\"",
+        "Helado de cheesecake del chef Bosquet (saludable y sin azúcar)",
+        "Confirmado: Aldi tiene la mejor selección de postres proteicos para hacer una deliciosa tarta de queso y ca...",
+        "Menú semanal del 16 al 22 de febrero"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "paella de marisco restaurante",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 126.0,
+      "pinterest_score": 73.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Restaurantes y arrocerías para celebrar el Día Mundial de la Paella si estás fuera de Valencia",
+        "Los 21 mejores arroces de Barcelona",
+        "Los 17 mejores restaurantes para comer paella en Valencia",
+        "El Restaurant Andalucía lleva el Arroz de Castelldefels al corazón de la ciudad",
+        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
       "keyword": "paella de marisco casera",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 122.0,
-      "pinterest_score": 63.0,
+      "score": 126.0,
+      "pinterest_score": 67.0,
       "google_news_hits": 5,
       "google_news_titles": [
         "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
-        "12 restaurantes en Valencia para comer paella auténtica",
         "Dosier de arroces",
         "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
-        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri"
+        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri",
+        "Las 31 mejores recetas con langostinos de Directo al Paladar: cocina fácil y casera para todo el año"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
@@ -332,19 +332,19 @@
       "qualified": true
     },
     {
-      "keyword": "pollo al horno recetas faciles",
+      "keyword": "pollo al horno con arroz",
       "domain": "recetagenial",
       "cluster": "Carnes",
       "priority": "High",
       "score": 122.0,
-      "pinterest_score": 47.0,
+      "pinterest_score": 59.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Dos chefs Michelin coinciden: “Para que el pollo asado quede mucho más jugoso, hay que cocinarlo antes en l...",
-        "Adiós a la pechuga de pollo de siempre: la receta fácil de Raquel Meroño con mozzarella y yogur",
-        "Rollitos de pollo, ensalada de lentejas, bizcocho de pera y 7 recetas fáciles más: este es el top 10 de Cocina Fácil del 9 al 16 de septiembre",
-        "Pollo al horno jugoso y con piel crujiente: estos son los trucos de los chefs José Andrés, Jordi Cruz y Dani García",
-        "Menú semanal del 10 al 16 de agosto"
+        "Las 26 mejores recetas de comida china",
+        "María Lo, chef: \"El pollo al horno no queda jugoso solo con aceite; el truco está en usar 100 g de mantequilla\"",
+        "Dani García y los chefs expertos coinciden: «Para que el pollo al horno quede jugoso el truco es dejarlo re...",
+        "Menú de la semana: ideas ricas, sanas y sencillas para cocinar sin complicarte",
+        "Arroz al horno con alcachofas y codornices"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 3.0,

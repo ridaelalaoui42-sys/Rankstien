@@ -1,5 +1,5 @@
 # 🎯 RankStein Cross-Channel SEO & Trend Feedback Report
-**Audit Timestamp:** `2026-10-08T03:55:14.567519+00:00` | **Report Date:** October 08, 2026
+**Audit Timestamp:** `2026-10-08T04:21:30.766078+00:00` | **Report Date:** October 08, 2026
 **Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)
 
 ---
@@ -8,11 +8,11 @@
 
 | Metric | Current Portfolio Value | Health Status | Benchmark Target |
 | :--- | :---: | :---: | :---: |
-| **Google Search Impressions (Monthly)** | **88,910** | 🟢 Growing (+24%) | > 75,000 |
-| **Organic Search Clicks** | **3,677** | 🟢 Healthy | > 3,500 |
-| **Average SERP CTR** | **4.14%** | 🟡 Opportunity | > 4.50% |
-| **Average Position (Top 10)** | **5.7** | 🟢 Page 1 Traction | < 6.0 |
-| **Striking Distance Opportunities** | **7 Pages** | ⚡ High ROI Fixes | Rapid Remaster |
+| **Google Search Impressions (Monthly)** | **776** | 🟢 Growing (+24%) | > 75,000 |
+| **Organic Search Clicks** | **10** | 🟢 Healthy | > 3,500 |
+| **Average SERP CTR** | **1.29%** | 🟡 Opportunity | > 4.50% |
+| **Average Position (Top 10)** | **36.0** | 🟢 Page 1 Traction | < 6.0 |
+| **Striking Distance Opportunities** | **5 Pages** | ⚡ High ROI Fixes | Rapid Remaster |
 
 ---
 
@@ -78,15 +78,36 @@
 
 | Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **tarta tatin de manzana tradicional** | `recetadolce` | 3,890 | 3.65% | #5.4 | Remaster pin with visual-first script + add FAQ rich snippets to capture top 3. |
-| **ensalada de pasta con verduras asadas** | `recetagenial` | 4,920 | 4.27% | #4.8 | Enqueue 30-pin viral aesthetic batch for healthy meal prep intent. |
-| **mousse de chocolate negro facil** | `recetadolce` | 7,800 | 4.35% | #6.1 | Test short punchy meta title: 'Mousse de Chocolate en 15 Minutos (Solo 3 Ingredientes)'. |
-| **paella de pollo y marisco tradicional** | `recetagenial` | 14,200 | 3.66% | #7.2 | High impressions with modest CTR. Update hero pin with close-up socarrat shot. |
-| **galletas avena sin harina saludables** | `recetadolce` | 6,100 | 4.75% | #4.2 | Add video pin / pin carousel; ranking is on verge of top 3 position. |
-| **pollo al horno tiempo y temperatura** | `recetagenial` | 24,500 | 3.63% | #3.4 | Position is solid (3.4) but CTR is suppressed. Include exact '45 min a 200°C' in meta title. |
-| **torrijas caramelizadas con crema** | `recetadolce` | 5,300 | 3.4% | #8.5 | Seasonal pastry with high repin potential. Launch spring remaster campaign early. |
-| **pastel de zanahoria y nueces jugoso** | `recetadolce` | 4,100 | 2.8% | #9.4 | CTR is below 3%. Rewrite snippet emphasizing 'Glaseado de Queso Perfecto'. |
-| **sepia a la plancha tierna con ajo** | `recetagenial` | 6,700 | 4.62% | #5.1 | Target the 'truco para que quede tierna' search intent with FAQ schema. |
+| **mercadona tarta 3 chocolates** | `recetagenial` | 7 | 14.29% | #4.1 | Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin. |
+| **aperitivos gourmet para fiestas** | `recetagenial` | 5 | 0.0% | #46.8 | Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos recetas** | `recetagenial` | 5 | 0.0% | #53.2 | Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos gourmet recetas** | `recetagenial` | 2 | 0.0% | #70.5 | Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin. |
+| **receta lentejas con chorizo y panceta** | `recetagenial` | 1 | 100.0% | #62.0 | Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin. |
+| **"preparar postres faciles"** | `recetagenial` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |
+| **aecosan** | `recetagenial` | 1 | 0.0% | #52.0 | Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin. |
+| **aesan** | `recetagenial` | 1 | 0.0% | #28.0 | Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos originales** | `recetagenial` | 1 | 0.0% | #91.0 | Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin. |
+| **aperitivos para fiestas economicos** | `recetagenial` | 1 | 0.0% | #33.0 | Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin. |
+| **dulce chocolate** | `recetadolce` | 8 | 0.0% | #51.8 | Live GSC Query: Position #51.8, CTR 0.0%. Optimize title and visual pin. |
+| **dulce de chocolate** | `recetadolce` | 7 | 0.0% | #43.9 | Live GSC Query: Position #43.9, CTR 0.0%. Optimize title and visual pin. |
+| **arepa dominicana** | `recetadolce` | 4 | 0.0% | #37.0 | Live GSC Query: Position #37.0, CTR 0.0%. Optimize title and visual pin. |
+| **arroz con leche postre** | `recetadolce` | 2 | 0.0% | #64.0 | Live GSC Query: Position #64.0, CTR 0.0%. Optimize title and visual pin. |
+| **bourbon vanilla creme brulee** | `recetadolce` | 2 | 0.0% | #8.5 | Live GSC Query: Position #8.5, CTR 0.0%. Optimize title and visual pin. |
+| **chocolate tradicional** | `recetadolce` | 2 | 0.0% | #40.5 | Live GSC Query: Position #40.5, CTR 0.0%. Optimize title and visual pin. |
+| **dulce receta** | `recetadolce` | 2 | 0.0% | #56.0 | Live GSC Query: Position #56.0, CTR 0.0%. Optimize title and visual pin. |
+| **dulcespostres** | `recetadolce` | 2 | 0.0% | #30.5 | Live GSC Query: Position #30.5, CTR 0.0%. Optimize title and visual pin. |
+| **arepa dominicana receta** | `recetadolce` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |
+| **arroz con leche cremoso** | `recetadolce` | 1 | 0.0% | #92.0 | Live GSC Query: Position #92.0, CTR 0.0%. Optimize title and visual pin. |
+| **arroz con leche meloso** | `recetadolce` | 1 | 0.0% | #86.0 | Live GSC Query: Position #86.0, CTR 0.0%. Optimize title and visual pin. |
+| **bizcocho decorado con fresas** | `recetadolce` | 1 | 0.0% | #5.0 | Live GSC Query: Position #5.0, CTR 0.0%. Optimize title and visual pin. |
+| **blog dulce** | `recetadolce` | 1 | 0.0% | #82.0 | Live GSC Query: Position #82.0, CTR 0.0%. Optimize title and visual pin. |
+| **cena dulce** | `recetadolce` | 1 | 0.0% | #69.0 | Live GSC Query: Position #69.0, CTR 0.0%. Optimize title and visual pin. |
+| **chandelle casero** | `recetadolce` | 1 | 0.0% | #70.0 | Live GSC Query: Position #70.0, CTR 0.0%. Optimize title and visual pin. |
+| **cheesecake de dulce de leche** | `recetadolce` | 1 | 0.0% | #54.0 | Live GSC Query: Position #54.0, CTR 0.0%. Optimize title and visual pin. |
+| **como hacer arepa dominicana** | `recetadolce` | 1 | 0.0% | #29.0 | Live GSC Query: Position #29.0, CTR 0.0%. Optimize title and visual pin. |
+| **dulce choco** | `recetadolce` | 1 | 0.0% | #31.0 | Live GSC Query: Position #31.0, CTR 0.0%. Optimize title and visual pin. |
+| **dulce cocina** | `recetadolce` | 1 | 0.0% | #42.0 | Live GSC Query: Position #42.0, CTR 0.0%. Optimize title and visual pin. |
+| **dulce de arroz con leche** | `recetadolce` | 1 | 0.0% | #74.0 | Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin. |
 
 ---
 
@@ -95,13 +116,13 @@
 ### Google Search Signals (Spain - ES)
 | Search Term | Source | Velocity | Seasonality | Intent Type |
 | :--- | :--- | :---: | :--- | :--- |
-| tarta de manzana con hojaldre rapida | Google Trends | **+165.0%** | Peak Autumn/Winter | Quick Pastry / Family |
-| crema de calabaza asada y jengibre | Google Trends | **+140.0%** | Peak Autumn/Winter | Healthy Comfort Soup |
-| bizcocho de avena y platano sin azucar | Google Autocomplete | **+110.0%** | Evergreen | Sugar-free Breakfast |
-| garbanzos con espinacas y bacalao | Google News | **+95.0%** | Rising Breakout | Traditional Spanish Stew |
-| galletas de mantequilla faciles con 3 ingredientes | Google Trends | **+85.0%** | Rising Breakout | Minimal Ingredient Pastry |
-| ensaladilla rusa clasica con mayonesa casera | Google Trends | **-15.0%** | Fading (Summer Trough) | Cold Tapas |
-| gazpacho andaluz tradicional | Google Trends | **-48.0%** | Fading (Summer Trough) | Cold Soup |
+| tarta de manzana con hojaldre rapida | Google Trends RSS | **+120.0%** | Peak Autumn/Winter | Quick Pastry / Family |
+| crema de calabaza asada y jengibre | Google Trends RSS | **+120.0%** | Peak Autumn/Winter | Healthy Comfort Soup |
+| bizcocho de avena y platano sin azucar | Google Trends RSS | **-30.0%** | Evergreen | Sugar-free Breakfast |
+| garbanzos con espinacas y bacalao | Google Trends RSS | **+80.0%** | Rising Breakout | Traditional Spanish Stew |
+| galletas de mantequilla faciles con 3 ingredientes | Google Trends RSS | **+80.0%** | Rising Breakout | Minimal Ingredient Pastry |
+| ensaladilla rusa clasica con mayonesa casera | Google Trends RSS | **-30.0%** | Fading (Summer Trough) | Cold Tapas |
+| gazpacho andaluz tradicional | Google Trends RSS | **-30.0%** | Fading (Summer Trough) | Cold Soup |
 
 ### Pinterest Search Signals (Spain - ES)
 | Trend Concept | Source | Repin Velocity | Category Intent | Action |

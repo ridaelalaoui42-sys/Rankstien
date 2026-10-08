@@ -120,6 +120,83 @@ class ProductionBatchTracker:
                 for article in latest.values()
             )
 
+    def attempted_keyword_keys(self, domain_handle: str) -> set[str]:
+        """Exclude attempted keywords unless their latest failure permits one retry.
+
+        Retry permission stays on the failed attempt for audit history. A new
+        attempt supersedes it, so restarting a worker cannot reuse old permission.
+        Published work is excluded even if a later malformed report row shadows it.
+        """
+        with self._lock:
+            articles = self.data["domains"][domain_handle].get("articles", [])
+            latest = {str(article.get("keyword") or "").strip().casefold(): article for article in articles}
+            published = {
+                str(article.get("keyword") or "").strip().casefold()
+                for article in articles
+                if self._article_was_published(article)
+            }
+            return {
+                keyword
+                for keyword, article in latest.items()
+                if keyword
+                and (
+                    keyword in published
+                    or (
+                        article.get("state") != "interrupted"
+                        and not (article.get("state") == "failed" and article.get("retry_authorized") is True)
+                    )
+                )
+            }
+
+    def authorize_failed_retry(
+        self,
+        domain_handle: str,
+        keyword: str,
+        reason: str,
+        *,
+        pipeline_run_id: str,
+    ) -> bool:
+        """Authorize one exact latest failed attempt without erasing its history.
+
+        Operators must establish a recoverable failure and fresh keyword evidence
+        separately. This only changes batch retry permission; roadmap reservation,
+        source research, publication limits, and provider gates still apply.
+        """
+        keyword_key = keyword.strip().casefold()
+        if not keyword_key or not pipeline_run_id.strip() or not reason.strip():
+            return False
+        with self._lock:
+            domain = self.data.get("domains", {}).get(domain_handle)
+            if not isinstance(domain, dict) or self.data.get("state") == "complete":
+                return False
+            matches = [
+                article
+                for article in domain.get("articles", [])
+                if str(article.get("keyword") or "").strip().casefold() == keyword_key
+            ]
+            if not matches or any(self._article_was_published(article) for article in matches):
+                return False
+            article = matches[-1]
+            if (
+                article.get("state") != "failed"
+                or article.get("pipeline_run_id") != pipeline_run_id
+                or article.get("retry_authorized") is True
+            ):
+                return False
+            article["retry_authorized"] = True
+            article["retry_authorized_at"] = time.time()
+            article["retry_reason"] = reason.strip()[:500]
+            self._write()
+            return True
+
+    @staticmethod
+    def _article_was_published(article: dict) -> bool:
+        return any(
+            str(article.get(field) or "").replace("_", " ").strip().casefold()
+            in {"verified", "live", "published", "needs verification"}
+            for field in ("state", "roadmap_status")
+        )
+
     def start_keyword(
         self,
         domain_handle: str,
@@ -129,6 +206,8 @@ class ProductionBatchTracker:
     ) -> None:
         with self._lock:
             domain = self.data["domains"][domain_handle]
+            domain["state"] = "running"
+            domain.pop("detail", None)
             if keyword not in domain["running_keywords"]:
                 domain["running_keywords"].append(keyword)
             domain["articles"].append(

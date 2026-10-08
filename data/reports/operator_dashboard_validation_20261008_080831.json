@@ -1,0 +1,243 @@
+{
+  "created_at": "2026-10-08T08:08:31.5874574Z",
+  "browser": {
+    "results": [
+      {
+        "view": "overview",
+        "overflow": false,
+        "alerts": [],
+        "rows": 0,
+        "recipes": 0
+      },
+      {
+        "view": "workflows",
+        "overflow": false,
+        "alerts": [],
+        "rows": 0,
+        "recipes": 0
+      },
+      {
+        "view": "history",
+        "overflow": false,
+        "alerts": [],
+        "rows": 100,
+        "recipes": 0
+      },
+      {
+        "view": "pinterest",
+        "overflow": false,
+        "alerts": [],
+        "rows": 100,
+        "recipes": 0
+      },
+      {
+        "view": "keywords",
+        "overflow": false,
+        "alerts": [],
+        "rows": 500,
+        "recipes": 0
+      },
+      {
+        "view": "recipes",
+        "overflow": false,
+        "alerts": [],
+        "rows": 0,
+        "recipes": 80
+      },
+      {
+        "view": "services",
+        "overflow": false,
+        "alerts": [],
+        "rows": 6,
+        "recipes": 0
+      },
+      {
+        "view": "logs",
+        "overflow": false,
+        "alerts": [],
+        "rows": 0,
+        "recipes": 0
+      },
+      {
+        "view": "overview",
+        "mobileOverflow": false
+      },
+      {
+        "view": "workflows",
+        "mobileOverflow": false
+      },
+      {
+        "view": "history",
+        "mobileOverflow": false
+      },
+      {
+        "view": "pinterest",
+        "mobileOverflow": false
+      },
+      {
+        "view": "keywords",
+        "mobileOverflow": false
+      },
+      {
+        "view": "recipes",
+        "mobileOverflow": false
+      },
+      {
+        "view": "services",
+        "mobileOverflow": false
+      },
+      {
+        "view": "logs",
+        "mobileOverflow": false
+      }
+    ],
+    "errors": [],
+    "confirmedMockRequests": 1,
+    "liveMutations": 0
+  },
+  "accessibility": {
+    "results": [
+      {
+        "view": "overview",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "workflows",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "history",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "pinterest",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "keywords",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "recipes",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "services",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "logs",
+        "width": 1440,
+        "violations": []
+      },
+      {
+        "view": "overview",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "workflows",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "history",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "pinterest",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "keywords",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "recipes",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "services",
+        "width": 390,
+        "violations": []
+      },
+      {
+        "view": "logs",
+        "width": 390,
+        "violations": []
+      }
+    ],
+    "dialog": []
+  },
+  "tests": {
+    "ruff_check": "passed",
+    "focused_passed": 37,
+    "unit_passed": 476,
+    "ruff_format": "9 files formatted"
+  },
+  "runtime": {
+    "domains": [
+      "recetadolce",
+      "recetagenial"
+    ],
+    "health": {
+      "ok": true,
+      "service": "rankstein-operator",
+      "pid": 50788
+    },
+    "services": [
+      {
+        "name": "operator",
+        "port": 7000,
+        "healthy": true,
+        "port_open": true,
+        "optional": false
+      },
+      {
+        "name": "agentmemory",
+        "port": 3111,
+        "healthy": true,
+        "port_open": true,
+        "optional": false
+      },
+      {
+        "name": "hermes_codex",
+        "port": 8642,
+        "healthy": true,
+        "port_open": true,
+        "optional": false
+      },
+      {
+        "name": "hermes_dashboard",
+        "port": 9119,
+        "healthy": true,
+        "port_open": true,
+        "optional": false
+      }
+    ],
+    "legacy_odysseus_task_enabled": false,
+    "configured_accounts": 2,
+    "supervisor": {
+      "running": true,
+      "pid": 35624,
+      "heartbeat_age_seconds": 13.5,
+      "started_at": 1791365284.1507313,
+      "worker_count": 2
+    }
+  },
+  "notes": [
+    "UI publication commands intercepted and mocked; no live mutation made by browser tests.",
+    "Browser profile presence does not prove current Pinterest authentication."
+  ]
+}

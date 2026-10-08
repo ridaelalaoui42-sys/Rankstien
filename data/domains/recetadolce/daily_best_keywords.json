@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T03:51:09.636449+00:00",
+  "generated_at": "2026-10-08T09:54:31.060174+00:00",
   "domain": "recetadolce",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -19,8 +19,8 @@
       "google_news_hits": 5,
       "google_news_titles": [
         "5 recetas de galletas navideñas saludables: deliciosas y muy fáciles de hacer",
-        "Galletas de avena, plátano y cacao: el snack perfecto para no sabotear tu dieta",
         "Programa completo del 18/08/26 - Iliana Calabró preparó galletitas de avena, naranja, chocolate y miel en La cocina rebelde",
+        "Galletas de avena, plátano y cacao: el snack perfecto para no sabotear tu dieta",
         "Dakota Johnson, actriz (35 años), sobre sus galletas de avena caseras: \"En casa les encantan y son muy saludables. No tienen azúcar y están hechas con avena y harina de almendra\"",
         "Día de la Galletita: cuál es su origen y 5 recetas fáciles para prepararlas"
       ],
@@ -89,9 +89,9 @@
       "google_news_titles": [
         "El pastelero Jordi Roca comparte su deliciosa receta de bizcocho de chocolate sin harina",
         "La receta del bizcocho de chocolate de María Pombo tiene truco para que salga más esponjoso",
-        "Bizcocho de yema",
         "Así hace Anna Terés, experta en recetas fáciles, su bizcocho más esponjoso: \"Resulta increíble\"",
-        "Las 25 mejores recetas de tartas para celebrar el Día del Padre"
+        "Las 25 mejores recetas de tartas para celebrar el Día del Padre",
+        "Así es la torta El Principito, segunda finalista de la competencia de La cocina rebelde"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 3.0,
@@ -129,7 +129,7 @@
       "domain": "recetadolce",
       "cluster": "fresas-y-nata",
       "priority": "Medium",
-      "score": 112.0,
+      "score": 114.0,
       "pinterest_score": 45.0,
       "google_news_hits": 5,
       "google_news_titles": [
@@ -141,8 +141,8 @@
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
-      "search_volume_score": 18.0,
-      "search_demand_score": 18.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true

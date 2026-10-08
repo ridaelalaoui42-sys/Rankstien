@@ -35,7 +35,8 @@ class GA4Connector:
 
         self.dolce_prop_id = os.getenv("GA4_RECETADOLCE_PROPERTY_ID", "").strip()
         self.genial_prop_id = os.getenv("GA4_RECETAGENIAL_PROPERTY_ID", "").strip()
-        self.genial_measurement_id = "G-X7T6JVMK5V"
+        self.dolce_measurement_id = os.getenv("GA4_RECETADOLCE_MEASUREMENT_ID", "G-X16FJVMGW2").strip()
+        self.genial_measurement_id = os.getenv("GA4_RECETAGENIAL_MEASUREMENT_ID", "G-X7T6JVMK5V").strip()
 
     @property
     def is_configured(self) -> bool:

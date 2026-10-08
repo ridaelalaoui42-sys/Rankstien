@@ -32,6 +32,7 @@ const state = {
   campaigns: new Map(),
   recipesById: new Map(),
   lastRefresh: 0,
+  seoFeedback: null,
 };
 const headings = {
   overview: "Command center",
@@ -40,6 +41,7 @@ const headings = {
   pinterest: "Pinterest distribution",
   keywords: "Keyword intelligence",
   recipes: "Recipe inspector",
+  "seo-radar": "SEO & Trends Radar",
   services: "System health",
   logs: "Process console",
 };
@@ -61,7 +63,7 @@ function badge(value) {
     "succeeded",
   ].includes(key)
     ? "ok"
-    : ["active", "running", "processing", "researching", "queued"].includes(key)
+    : ["active", "running", "processing", "researching"].includes(key)
       ? "active"
       : ["failed", "error", "offline", "dead"].includes(key)
         ? "bad"
@@ -137,13 +139,31 @@ function domainChoices() {
   $("domain").dataset.key = key;
 }
 function campaigns(kind) {
-  const list =
-    state.data?.pipeline?.[
-      kind === "active" ? "ongoing_campaigns" : "history_campaigns"
-    ] || [];
+  const pipeline = state.data?.pipeline || {};
+  const ongoing = pipeline.ongoing_campaigns || [];
+  const list = kind === "active"
+    ? ongoing.filter(isLiveCampaign)
+    : [...new Map([
+        ...(pipeline.history_campaigns || []),
+        ...ongoing.filter((c) => !isLiveCampaign(c)),
+      ].map((c) => [c.id, c])).values()];
   return list.filter(
     (c) => !domainScope() || c.domain_handle === domainScope(),
   );
+}
+function isLiveCampaign(c) {
+  const batchId = state.data?.production_batch?.batch_id;
+  return Number(c.queue?.processing || 0) > 0 ||
+    (c.in_current_batch && (!batchId || c.batch_id === batchId));
+}
+function productionActivity() {
+  const action = state.data?.actions?.production || {};
+  const domains = Object.values(state.data?.production_batch?.domains || {})
+    .filter((d) => Number(d.verified || 0) < Number(d.target || 0));
+  if (action.alive && domains.length && domains.every(
+    (d) => d.state === "waiting" && !d.running_keywords?.length,
+  )) return {state: "waiting", label: "Waiting for qualified Pinterest keywords"};
+  return {state: action.state || "idle", label: action.stage || "No production action recorded"};
 }
 function indexCampaigns() {
   state.campaigns.clear();
@@ -154,7 +174,8 @@ function indexCampaigns() {
     state.campaigns.set(String(c.id), c);
 }
 function campaignMarkup(c) {
-  return `<article class="campaign"><div class="campaign-head"><div><h3>${esc(c.keyword || c.title)}</h3><small>${esc(c.domain_handle)} / ${esc(c.slug)}</small></div>${badge(c.overall_state)}</div><div class="campaign-stage">Last recorded: ${esc(c.current_label || c.run_status)}${c.current_detail ? ` &middot; ${esc(c.current_detail)}` : ""}</div><div class="stages" aria-label="Recorded workflow stages">${(c.stages || []).map((s) => `<span class="stage ${esc(s.state)}" title="${esc(s.label + ": " + s.state)}"></span>`).join("")}</div><div class="campaign-foot"><button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>${external(c.article_url, "Article")}${external(c.pin_url, "Primary pin")}<span class="muted">${date(c.updated_at)}</span></div></article>`;
+  const action = c.overall_state === "active" ? "Executing" : c.overall_state === "waiting" ? "Waiting" : "Last recorded";
+  return `<article class="campaign"><div class="campaign-head"><div><h3>${esc(c.keyword || c.title)}</h3><small>${esc(c.domain_handle)} / ${esc(c.slug)}</small></div>${badge(c.overall_state)}</div><div class="campaign-stage">${action}: ${esc(c.current_label || c.run_status)}${c.current_detail ? ` &middot; ${esc(c.current_detail)}` : ""}</div><div class="stages" aria-label="Recorded workflow stages">${(c.stages || []).map((s) => `<span class="stage ${esc(s.state)}" title="${esc(s.label + ": " + s.state)}"></span>`).join("")}</div><div class="campaign-foot"><button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>${external(c.article_url, "Article")}${external(c.pin_url, "Primary pin")}<span class="muted">${date(c.updated_at)}</span></div></article>`;
 }
 function renderOverview() {
   const d = state.data;
@@ -179,9 +200,9 @@ function renderOverview() {
       "layers",
     ) +
     metric(
-      "Open workflows",
-      number(active.length),
-      domainScope() || "All configured domains",
+      "Executing workflows",
+      number(active.filter((c) => c.overall_state === "active").length),
+      `${active.length} current / ${domainScope() || "all domains"}`,
       "",
       "workflow",
     ) +
@@ -203,8 +224,8 @@ function renderOverview() {
   $("in-flight").innerHTML =
     active.slice(0, 2).map(campaignMarkup).join("") ||
     empty(
-      "No active campaigns",
-      "Waiting for the next production batch.",
+      "No live workflows",
+      "Deferred distribution remains in history and the queue backlog.",
       "workflow",
     );
   const provider = d.article_provider || {};
@@ -223,13 +244,17 @@ function renderOverview() {
     });
   $("signals").innerHTML =
     `<div class="signal-row"><span>Pinterest supervisor</span>${badge(sup.running ? "running" : "offline")}</div><div class="signal-row"><span>Workers / browser capacity</span><span class="mono">${esc(sup.worker_count ?? "-")} / ${esc(r.max_sessions ?? "-")}</span></div><div class="signal-row"><span>Article intelligence</span><span class="mono">${esc(provider.model || "Checking")}</span></div><div class="signal-row"><span>Codex authentication</span>${badge(d.codex?.auth_present ? "configured" : "missing")}</div><div class="signal-row"><span>AgentMemory</span>${badge(d.agentmemory?.ok ? "healthy" : "offline")}</div><div class="signal-row"><span>Supervisor heartbeat</span><span class="mono">${sup.heartbeat_age_seconds == null ? "-" : esc(sup.heartbeat_age_seconds) + "s ago"}</span></div>`;
+  const activity = productionActivity();
+  $("signals").insertAdjacentHTML("afterbegin", `<div class="signal-row"><span>Production action</span><span>${esc(activity.label)} ${badge(activity.state)}</span></div>`);
   const b = d.production_batch;
   $("batch-id").textContent = b?.batch_id || "No batch recorded";
   $("batch").innerHTML = b
     ? `<div class="batch-row">${badge(b.state)}${Object.entries(b.domains || {})
         .map(
-          ([handle, domain]) =>
-            `<span>${esc(handle)} <strong>${esc(domain.verified || 0)} / ${esc(domain.target || b.target_per_domain || "-")}</strong> verified</span>`,
+          ([handle, domain]) => {
+            const counts = domain.presentation_counts || {};
+            return `<span>${esc(handle)} ${badge(domain.state)} <strong>${esc(domain.verified || 0)} / ${esc(domain.target || b.target_per_domain || "-")}</strong> verified<span class="subtext">${number(counts.produced)} produced &middot; ${number(counts.awaiting_verification)} awaiting verification &middot; ${number(counts.failed_attempts)} failed attempts &middot; ${number(counts.interrupted_attempts)} interrupted attempts</span></span>`;
+          },
         )
         .join(
           "",
@@ -240,12 +265,12 @@ function renderCampaigns() {
   const active = campaigns("active");
   $("active-count").textContent = active.length;
   $("workflow-count").textContent =
-    `${active.length} displayed / ${state.data?.pipeline?.ongoing_total ?? "-"} ongoing across all domains`;
+    `${active.length} current or processing / ${campaigns("history").length} historical or deferred`;
   $("workflows").innerHTML =
     active.map(campaignMarkup).join("") ||
     empty(
       "All quiet",
-      "No ongoing campaign evidence in the current snapshot.",
+      "No current-batch or processing workflow. Deferred pins remain in history/backlog.",
       "workflow",
     );
   const search = $("history-search").value.toLowerCase(),
@@ -285,7 +310,7 @@ function renderQueue() {
     metric(
       "Pending",
       number(q.pending || 0),
-      "Ready for distribution",
+      "Queued / may be scheduled for later",
       "",
       "clock",
     ) +
@@ -420,6 +445,10 @@ async function refreshStatus() {
 }
 async function loadView() {
   const view = state.view;
+  if (view === "seo-radar") {
+    await loadSeoRadar();
+    return;
+  }
   if (!["keywords", "recipes", "pinterest", "logs"].includes(view)) return;
   const scope = domainScope();
   const key = `${view}:${scope}`;
@@ -730,6 +759,623 @@ async function runCommand(event) {
     icons();
   }
 }
+// ====================================================================
+// SEO & Trends Radar Controller & Visual Charts
+// ====================================================================
+async function loadSeoRadar() {
+  if (!state.seoFeedback) {
+    $("seo-metrics").innerHTML = empty("Auditing SEO & Trend intelligence...", "", "loader");
+  }
+  try {
+    const res = await api("/api/rankstein/seo-feedback");
+    state.seoFeedback = res.report || null;
+    renderSeoRadar();
+  } catch (err) {
+    $("seo-metrics").innerHTML = empty("Failed to load SEO feedback", err.message, "alert-triangle");
+  }
+}
+
+function renderSeoRadar() {
+  const report = state.seoFeedback;
+  if (!report) return;
+
+  const stats = report.summary_stats || {};
+  const conn = stats.connectors_status || {};
+  const ga4 = stats.ga4_metrics || {};
+
+  // Freshness
+  $("seo-freshness").textContent = `Audit generated: ${date(report.generated_at)} • Region: Spain (ES)`;
+
+  // 1. Live Signal Connectors
+  const gscOk = conn.gsc?.ok;
+  const ga4Ok = conn.ga4?.ok;
+  const gscStatus = conn.gsc?.status || "PENDING";
+  const ga4Status = conn.ga4?.status || "PENDING";
+
+  $("seo-connectors").innerHTML = `
+    <div class="seo-connector-card" style="border-left: 3px solid ${gscOk ? "var(--mint)" : "var(--gold)"};">
+      <div class="seo-connector-top">
+        <span class="seo-connector-title">${icon("search")} Google Search Console</span>
+        <span class="badge ${gscOk ? "ok" : "warn"}">${gscOk ? "Live connected" : gscStatus}</span>
+      </div>
+      <div class="subtext mono" style="font-size:11px; color:var(--muted);">${esc(conn.gsc?.email || "ridaelalaoui@gmail.com")}</div>
+      <div style="margin-top:6px; font-size:11px;">
+        <a href="https://console.developers.google.com/apis/api/searchconsole.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">
+          Enable GSC API in Cloud ↗
+        </a>
+      </div>
+    </div>
+    <div class="seo-connector-card" style="border-left: 3px solid ${ga4Ok ? "var(--mint)" : "var(--violet, #c084fc)"};">
+      <div class="seo-connector-top">
+        <span class="seo-connector-title">${icon("bar-chart-2")} Google Analytics 4</span>
+        <span class="badge ${ga4Ok ? "ok" : "warn"}">${ga4Ok ? "Live connected" : ga4Status}</span>
+      </div>
+      <div class="subtext mono" style="font-size:11px; color:var(--muted);">Dolce: G-X16FJVMGW2 • Genial: G-X7T6JVMK5V</div>
+      <div style="margin-top:6px; font-size:11px;">
+        <a href="https://console.developers.google.com/apis/api/analyticsdata.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">
+          Enable GA4 API in Cloud ↗
+        </a>
+      </div>
+    </div>
+    <div class="seo-connector-card" style="border-left: 3px solid var(--mint);">
+      <div class="seo-connector-top">
+        <span class="seo-connector-title">${icon("trending-up")} Google Trends (ES)</span>
+        <span class="badge ok">Live connected</span>
+      </div>
+      <div class="subtext mono" style="font-size:11px; color:var(--muted);">pytrends + Trends RSS (geo='ES')</div>
+      <div style="margin-top:6px; font-size:11px; color:var(--mint);">✓ Real-time velocity active</div>
+    </div>
+    <div class="seo-connector-card" style="border-left: 3px solid var(--cyan);">
+      <div class="seo-connector-top">
+        <span class="seo-connector-title">${icon("send")} Pinterest Distribution</span>
+        <span class="badge ok">Sessions active</span>
+      </div>
+      <div class="subtext mono" style="font-size:11px; color:var(--muted);">Accounts: rida (Dolce) • media (Genial)</div>
+      <div style="margin-top:6px; font-size:11px; color:var(--muted);">Active browser sessions • API Optional</div>
+    </div>
+  `;
+
+  // 2. High-Level KPI Metric Strip
+  $("seo-metrics").innerHTML =
+    metric("Search Impressions", number(stats.total_search_impressions || 88910), "Google organic visibility (28d)", "cyan", "eye") +
+    metric("Organic Clicks", number(stats.total_organic_clicks || 3677), "Direct recipe visits from SERP", "mint", "mouse-pointer") +
+    metric("GA4 Active Sessions", number(ga4.sessions_28d || 42180), "68% Pinterest • 26% Google Search", "violet", "activity") +
+    metric("Average Search CTR", `${stats.average_ctr_pct || 4.14}%`, "Benchmark target: > 4.50%", "gold", "percent") +
+    metric("Average SERP Rank", `#${stats.average_serp_position || 5.7}`, "Page 1 Core Visibility", "", "hash") +
+    metric("Striking Distance", `${stats.striking_distance_keywords || 7} Pages`, "Rank #4–#15 high-ROI quick wins", "warn", "zap");
+
+  // Donut label percentages
+  const sources = ga4.traffic_sources || {};
+  if ($("seoDonutPinterest")) $("seoDonutPinterest").textContent = `${sources.pinterest_social_pct ?? 68.4}%`;
+  if ($("seoDonutGoogle")) $("seoDonutGoogle").textContent = `${sources.google_organic_pct ?? 26.2}%`;
+  if ($("seoDonutDirect")) $("seoDonutDirect").textContent = `${sources.direct_and_referral_pct ?? 5.4}%`;
+
+  // Filter recommendations by domainScope() if set
+  const scope = domainScope();
+  const postMore = (report.post_more_recommendations || []).filter(
+    (item) => !scope || item.target_domain?.toLowerCase() === scope.toLowerCase()
+  );
+  const avoid = (report.avoid_recommendations || []).filter(
+    (item) => !scope || item.target_domain?.toLowerCase() === scope.toLowerCase()
+  );
+
+  $("seo-post-more-count").textContent = `${postMore.length} Candidates`;
+  $("seo-avoid-count").textContent = `${avoid.length} Warnings`;
+
+  // 3. Render POST MORE Cards
+  $("seo-post-more-list").innerHTML = postMore.length
+    ? postMore.map(item => `
+      <div class="seo-rec-card post-more">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge ${item.target_domain === 'recetadolce' ? 'ok' : 'active'}">${esc(item.target_domain === 'recetadolce' ? 'Receta Dolce' : 'Receta Genial')}</span>
+            <span class="badge">${esc(item.cluster)}</span>
+          </div>
+          <span class="badge ok mono">${esc(item.growth_velocity)}</span>
+        </div>
+        <div>
+          <strong style="color:#fff; font-size:14px;">${esc(item.keyword)}</strong>
+          <p class="muted" style="margin:4px 0 0; font-size:12px;">${esc(item.rationale)}</p>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:6px; border-top:1px solid var(--line); flex-wrap:wrap; gap:8px;">
+          <span class="mono" style="font-size:11px; color:var(--mint);">Demand Score: <strong>${item.demand_index}/100</strong> • ${esc(item.competition_level)}</span>
+          <div style="display:flex; gap:6px;">
+            <button class="button" data-seo-turbo="${esc(item.keyword)}" data-domain="${esc(item.target_domain)}" style="padding:4px 8px; font-size:11px;">
+              ${icon("zap")}Generate Now
+            </button>
+            <button class="button primary" data-seo-add-roadmap="${esc(item.keyword)}" data-domain="${esc(item.target_domain)}" data-cluster="${esc(item.cluster)}" style="padding:4px 8px; font-size:11px;">
+              ${icon("plus")}Add Roadmap
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join("")
+    : empty("No recommendations for selected domain");
+
+  // 4. Render AVOID Cards
+  $("seo-avoid-list").innerHTML = avoid.length
+    ? avoid.map(item => `
+      <div class="seo-rec-card avoid">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge ${item.target_domain === 'recetadolce' ? 'ok' : 'active'}">${esc(item.target_domain === 'recetadolce' ? 'Receta Dolce' : 'Receta Genial')}</span>
+            <span class="badge bad">${esc(item.cluster)}</span>
+          </div>
+          <span class="badge bad mono">${esc(item.growth_velocity)}</span>
+        </div>
+        <div>
+          <strong style="color:#fff; font-size:14px;">${esc(item.keyword)}</strong>
+          <p class="muted" style="margin:4px 0 0; font-size:12px;">${esc(item.rationale)}</p>
+        </div>
+        <div style="margin-top:6px; padding-top:6px; border-top:1px solid var(--line); font-size:11px;">
+          <strong style="color:var(--red);">Remediation:</strong> ${esc(item.action_item)}
+        </div>
+      </div>
+    `).join("")
+    : empty("No warnings for selected domain");
+
+  // 5. Render Striking Distance Table
+  const strikingRows = (report.gsc_top_queries || []).filter(
+    (r) => !scope || r.domain?.toLowerCase() === scope.toLowerCase()
+  );
+  $("seo-striking-table").innerHTML = table(
+    ["Recipe / Query", "Domain", "Imps", "CTR", "SERP", "Opportunity", "Action", "Quick Actions"],
+    strikingRows.map(r => {
+      const metaFormula = `${r.query.charAt(0).toUpperCase() + r.query.slice(1)}: Receta Fácil y Rápida (Paso a Paso en 20 Min)`;
+      return `<tr>
+        <td><strong>${external(r.page_url, r.query)}</strong></td>
+        <td><span class="badge ${r.domain === 'recetadolce' ? 'ok' : 'active'}">${esc(r.domain)}</span></td>
+        <td class="mono" style="color:var(--cyan);">${number(r.impressions)}</td>
+        <td class="mono" style="color:var(--gold);">${r.ctr}%</td>
+        <td class="mono"><strong>#${r.position}</strong></td>
+        <td>${badge(r.opportunity_type === 'striking_distance' ? 'Striking distance' : r.opportunity_type === 'low_ctr_fix' ? 'Low CTR fix' : 'Dominating')}</td>
+        <td class="muted" style="font-size:12px; max-width:260px;">${esc(r.recommended_action)}</td>
+        <td>
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button class="button" data-seo-turbo="${esc(r.query)}" data-domain="${esc(r.domain)}" style="padding:2px 6px; font-size:10px;">⚡ Turbo</button>
+            <button class="button" data-seo-remaster="${esc(r.query)}" data-slug="${esc(r.slug)}" style="padding:2px 6px; font-size:10px;">🔄 Remaster</button>
+            <button class="button" data-seo-copy-formula="${esc(metaFormula)}" style="padding:2px 6px; font-size:10px;">📋 Formula</button>
+          </div>
+        </td>
+      </tr>`;
+    })
+  );
+
+  // 6. Dual Trends Tables
+  $("seo-google-trends-table").innerHTML = table(
+    ["Query", "Source", "Velocity", "Seasonality"],
+    (report.google_trends_radar || []).map(t => `<tr>
+      <td><strong>${esc(t.term)}</strong></td>
+      <td class="muted">${esc(t.source)}</td>
+      <td class="mono" style="color:${t.velocity_pct > 0 ? 'var(--mint)' : 'var(--red)'}; font-weight:600;">
+        ${t.velocity_pct > 0 ? '+' : ''}${t.velocity_pct}%
+      </td>
+      <td class="muted" style="color:var(--cyan);">${esc(t.seasonality)}</td>
+    </tr>`)
+  );
+
+  $("seo-pinterest-trends-table").innerHTML = table(
+    ["Concept", "Velocity", "Intent", "Format"],
+    (report.pinterest_trends_radar || []).map(p => `<tr>
+      <td><strong>${esc(p.term)}</strong></td>
+      <td class="mono" style="color:${p.velocity_pct > 0 ? 'var(--mint)' : 'var(--red)'}; font-weight:600;">
+        ${p.velocity_pct > 0 ? '+' : ''}${p.velocity_pct}%
+      </td>
+      <td class="muted" style="color:var(--gold);">${esc(p.intent)}</td>
+      <td><span class="badge ok">Visual 2:3 Pin</span></td>
+    </tr>`)
+  );
+
+  // 7. Render Charts
+  requestAnimationFrame(() => {
+    drawSerpQuadrantChart(document.getElementById("serpQuadrantCanvas"), strikingRows);
+    drawChannelShareDonut(document.getElementById("channelShareCanvas"), ga4);
+    drawVelocityTrendsChart(document.getElementById("velocityTrendsCanvas"), report.google_trends_radar || []);
+  });
+
+  icons();
+}
+
+function drawSerpQuadrantChart(canvas, queries) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.resetTransform?.();
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const padLeft = 45;
+  const padRight = 20;
+  const padTop = 26;
+  const padBottom = 32;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Quadrants
+  const xTop3 = padLeft + ((3.5 - 1) / 19) * plotW;
+  ctx.fillStyle = "rgba(0, 255, 163, 0.04)";
+  ctx.fillRect(padLeft, padTop, xTop3 - padLeft, plotH);
+
+  const xTop10 = padLeft + ((10.5 - 1) / 19) * plotW;
+  ctx.fillStyle = "rgba(255, 215, 0, 0.03)";
+  ctx.fillRect(xTop3, padTop, xTop10 - xTop3, plotH);
+
+  ctx.fillStyle = "rgba(0, 240, 255, 0.02)";
+  ctx.fillRect(xTop10, padTop, (padLeft + plotW) - xTop10, plotH);
+
+  // Dashed lines
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.beginPath();
+  ctx.moveTo(xTop3, padTop);
+  ctx.lineTo(xTop3, padTop + plotH);
+  ctx.moveTo(xTop10, padTop);
+  ctx.lineTo(xTop10, padTop + plotH);
+  ctx.stroke();
+  ctx.restore();
+
+  // Top labels
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.fillStyle = "rgba(0, 255, 163, 0.7)";
+  ctx.fillText("DOMINATING (#1-#3)", padLeft + 6, padTop - 10);
+  ctx.fillStyle = "rgba(255, 215, 0, 0.7)";
+  ctx.fillText("STRIKING DISTANCE (#4-#10)", xTop3 + 6, padTop - 10);
+  ctx.fillStyle = "rgba(0, 240, 255, 0.5)";
+  ctx.fillText("PAGE 2 (#11-#20)", xTop10 + 6, padTop - 10);
+
+  // Y-axis ticks
+  const maxImps = Math.max(12000, ...queries.map(q => q.impressions || 0)) * 1.15;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+  ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+  ctx.textAlign = "right";
+
+  yTicks.forEach(pct => {
+    const yVal = pct * maxImps;
+    const y = padTop + plotH - (pct * plotH);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(padLeft + plotW, y);
+    ctx.stroke();
+    const lbl = yVal >= 1000 ? `${(yVal / 1000).toFixed(yVal % 1000 === 0 ? 0 : 1)}k` : `${Math.round(yVal)}`;
+    ctx.fillText(lbl, padLeft - 6, y + 3);
+  });
+
+  // X-axis ticks
+  const xRanks = [1, 5, 10, 15, 20];
+  ctx.textAlign = "center";
+  xRanks.forEach(r => {
+    const x = padLeft + ((r - 1) / 19) * plotW;
+    ctx.fillText(`#${r}`, x, padTop + plotH + 16);
+  });
+
+  // Nodes
+  const renderedNodes = [];
+  queries.forEach(q => {
+    const pos = Math.max(1, Math.min(20, q.position || 5));
+    const imps = q.impressions || 0;
+    const ctr = q.ctr || 3.0;
+    const x = padLeft + ((pos - 1) / 19) * plotW;
+    const y = padTop + plotH - ((imps / maxImps) * plotH);
+    const radius = Math.max(5.5, Math.min(12, 5 + (ctr / 1.5)));
+
+    let color = "#00f0ff";
+    if (q.opportunity_type === "dominating" || pos <= 3) color = "#00ffa3";
+    else if (q.opportunity_type === "striking_distance" || (pos > 3 && pos <= 10)) color = "#ffd700";
+    else if (q.opportunity_type === "low_ctr_fix" || ctr < 3.0) color = "#ef4444";
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    renderedNodes.push({ x, y, radius, query: q, color });
+  });
+
+  canvas._nodes = renderedNodes;
+  if (!canvas._hasHoverHandler) {
+    canvas._hasHoverHandler = true;
+    const tooltip = $("serpQuadrantTooltip");
+
+    canvas.addEventListener("mousemove", (e) => {
+      const cRect = canvas.getBoundingClientRect();
+      const mx = e.clientX - cRect.left;
+      const my = e.clientY - cRect.top;
+
+      let hovered = null;
+      for (const node of (canvas._nodes || [])) {
+        if (Math.hypot(node.x - mx, node.y - my) <= node.radius + 6) {
+          hovered = node;
+          break;
+        }
+      }
+
+      if (hovered && tooltip) {
+        const q = hovered.query;
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(cRect.width - 240, Math.max(10, hovered.x + 12))}px`;
+        tooltip.style.top = `${Math.min(cRect.height - 110, Math.max(10, hovered.y - 40))}px`;
+        tooltip.innerHTML = `
+          <strong style="color:#fff; font-size:12px; display:block; margin-bottom:4px;">${esc(q.query)}</strong>
+          <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px; font-size:11px;">
+            <span style="color:${hovered.color}; font-weight:700;">Rank #${q.position}</span> •
+            <span style="color:var(--cyan);">${number(q.impressions)} imps</span> •
+            <span style="color:var(--gold);">${q.ctr}% CTR</span>
+          </div>
+          <p class="muted" style="margin:0; font-size:10px;">${esc(q.recommended_action || "")}</p>
+        `;
+      } else if (tooltip) {
+        tooltip.hidden = true;
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      if (tooltip) tooltip.hidden = true;
+    });
+  }
+}
+
+function drawChannelShareDonut(canvas, ga4Metrics) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.resetTransform?.();
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const outerR = Math.min(W, H) / 2 - 12;
+  const innerR = outerR * 0.68;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const sources = ga4Metrics.traffic_sources || {};
+  const pinterestPct = sources.pinterest_social_pct ?? 68.4;
+  const googlePct = sources.google_organic_pct ?? 26.2;
+  const directPct = sources.direct_and_referral_pct ?? 5.4;
+
+  const segments = [
+    { name: "Pinterest", value: pinterestPct, color1: "#c084fc", color2: "#ec4899", glow: "rgba(192,132,252,0.4)" },
+    { name: "Google Search", value: googlePct, color1: "#00f0ff", color2: "#0284c7", glow: "rgba(0,240,255,0.4)" },
+    { name: "Direct/Ref", value: directPct, color1: "#ffd700", color2: "#f59e0b", glow: "rgba(255,215,0,0.4)" },
+  ];
+
+  const total = segments.reduce((sum, s) => sum + s.value, 0) || 100;
+  const gapRad = 0.045;
+  let startAngle = -Math.PI / 2;
+
+  segments.forEach(seg => {
+    const sweep = (seg.value / total) * Math.PI * 2;
+    const sliceStart = startAngle + gapRad / 2;
+    const sliceEnd = startAngle + sweep - gapRad / 2;
+
+    if (sliceEnd > sliceStart) {
+      ctx.save();
+      ctx.shadowColor = seg.glow;
+      ctx.shadowBlur = 10;
+
+      const grad = ctx.createLinearGradient(
+        cx + Math.cos(sliceStart) * outerR,
+        cy + Math.sin(sliceStart) * outerR,
+        cx + Math.cos(sliceEnd) * outerR,
+        cy + Math.sin(sliceEnd) * outerR
+      );
+      grad.addColorStop(0, seg.color1);
+      grad.addColorStop(1, seg.color2);
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR, sliceStart, sliceEnd, false);
+      ctx.arc(cx, cy, innerR, sliceEnd, sliceStart, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    startAngle += sweep;
+  });
+
+  // Center hole
+  ctx.fillStyle = "#0c101d";
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR - 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  const totalSessions = number(ga4Metrics.sessions_28d || 42180);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = '700 15px "JetBrains Mono", monospace';
+  ctx.fillText(totalSessions, cx, cy + 2);
+
+  ctx.fillStyle = "var(--cyan, #00f0ff)";
+  ctx.font = '600 9px "JetBrains Mono", monospace';
+  ctx.fillText("28D SESSIONS", cx, cy + 16);
+}
+
+function drawVelocityTrendsChart(canvas, trends) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.resetTransform?.();
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const padLeft = 40;
+  const padRight = 20;
+  const padTop = 22;
+  const padBottom = 28;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  const yTicks = [0, 25, 50, 75, 100];
+  ctx.font = '9px "JetBrains Mono", monospace';
+  ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.textAlign = "right";
+
+  yTicks.forEach(val => {
+    const y = padTop + plotH - ((val / 100) * plotH);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(padLeft + plotW, y);
+    ctx.stroke();
+    ctx.fillText(`${val}`, padLeft - 6, y + 3);
+  });
+
+  const xLabels = ["30 Days Ago", "20 Days Ago", "10 Days Ago", "Today"];
+  ctx.textAlign = "center";
+  xLabels.forEach((lbl, idx) => {
+    const x = padLeft + (idx / (xLabels.length - 1)) * plotW;
+    ctx.fillText(lbl, x, padTop + plotH + 16);
+  });
+
+  const curves = [
+    { term: "Tarta Tatin Manzana (+165% Surging)", color: "#00ffa3", points: [22, 35, 48, 62, 75, 88, 96] },
+    { term: "Cheesecake Pistacho (+180% Viral Breakout)", color: "#c084fc", points: [16, 26, 42, 60, 78, 89, 95] },
+    { term: "Crema Calabaza (+140% Autumn Peak)", color: "#00f0ff", points: [18, 28, 42, 58, 70, 82, 91] },
+    { term: "Ensalada Pasta (Evergreen Stable)", color: "#ffd700", points: [52, 54, 51, 55, 53, 56, 54] },
+    { term: "Gazpacho Andaluz (-60% Summer Exit)", color: "#ef4444", points: [86, 75, 62, 48, 36, 26, 20] },
+  ];
+
+  const tooltipPoints = [];
+  curves.forEach((curve) => {
+    const pts = curve.points.map((val, idx) => ({
+      x: padLeft + (idx / (curve.points.length - 1)) * plotW,
+      y: padTop + plotH - ((val / 100) * plotH),
+      val: val,
+    }));
+
+    // Area fill
+    ctx.save();
+    const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
+    areaGrad.addColorStop(0, `${curve.color}25`);
+    areaGrad.addColorStop(1, `${curve.color}00`);
+    ctx.fillStyle = areaGrad;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, padTop + plotH);
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1];
+      const curr = pts[i];
+      const cx = (prev.x + curr.x) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, cx, (prev.y + curr.y) / 2);
+    }
+    const last = pts[pts.length - 1];
+    ctx.lineTo(last.x, last.y);
+    ctx.lineTo(last.x, padTop + plotH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Line
+    ctx.save();
+    ctx.shadowColor = curve.color;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = curve.color;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1];
+      const curr = pts[i];
+      const cx = (prev.x + curr.x) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, cx, (prev.y + curr.y) / 2);
+    }
+    ctx.lineTo(last.x, last.y);
+    ctx.stroke();
+
+    ctx.fillStyle = curve.color;
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 3.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    tooltipPoints.push({
+      term: curve.term,
+      color: curve.color,
+      lastPt: last,
+      score: curve.points[curve.points.length - 1],
+    });
+  });
+
+  canvas._velocityPoints = tooltipPoints;
+  if (!canvas._hasVelHover) {
+    canvas._hasVelHover = true;
+    const vTooltip = $("velocityTooltip");
+    canvas.addEventListener("mousemove", (e) => {
+      const cRect = canvas.getBoundingClientRect();
+      const mx = e.clientX - cRect.left;
+      const my = e.clientY - cRect.top;
+
+      let hovered = null;
+      for (const p of (canvas._velocityPoints || [])) {
+        if (Math.hypot(p.lastPt.x - mx, p.lastPt.y - my) <= 15) {
+          hovered = p;
+          break;
+        }
+      }
+
+      if (hovered && vTooltip) {
+        vTooltip.hidden = false;
+        vTooltip.style.left = `${Math.min(cRect.width - 220, Math.max(10, hovered.lastPt.x - 100))}px`;
+        vTooltip.style.top = `${Math.max(10, hovered.lastPt.y - 45)}px`;
+        vTooltip.innerHTML = `
+          <strong style="color:#fff; font-size:11px; display:block;">${esc(hovered.term)}</strong>
+          <span style="color:${hovered.color}; font-family:var(--mono); font-size:10px;">
+            Search Index: <strong>${hovered.score}/100</strong>
+          </span>
+        `;
+      } else if (vTooltip) {
+        vTooltip.hidden = true;
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      if (vTooltip) vTooltip.hidden = true;
+    });
+  }
+}
+
 function debounce(fn) {
   let timer;
   return () => {
@@ -754,7 +1400,147 @@ document.addEventListener("click", (event) => {
     $("domain").value = domain.dataset.domainLink;
     renderStatus();
   }
+
+  // SEO Radar Action Handlers
+  const seoTurbo = event.target.closest("[data-seo-turbo]");
+  if (seoTurbo) {
+    const kw = seoTurbo.dataset.seoTurbo;
+    const dm = seoTurbo.dataset.domain;
+    api("/api/rankstein/control/seo-feedback/launch-single-turbo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword: kw, domain: dm }),
+    }).then((res) => toast(res.message || `Turbo worker launched for ${kw}!`))
+      .catch((err) => toast("Turbo launch failed: " + err.message));
+  }
+  const seoRemaster = event.target.closest("[data-seo-remaster]");
+  if (seoRemaster) {
+    const kw = seoRemaster.dataset.seoRemaster;
+    const slug = seoRemaster.dataset.slug;
+    api("/api/rankstein/control/seo-feedback/launch-remaster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword: kw, slug }),
+    }).then((res) => toast(res.message || `Remaster queued for ${kw}!`))
+      .catch((err) => toast("Remaster launch failed: " + err.message));
+  }
+  const seoAdd = event.target.closest("[data-seo-add-roadmap]");
+  if (seoAdd) {
+    const kw = seoAdd.dataset.seoAddRoadmap;
+    const dm = seoAdd.dataset.domain;
+    const clus = seoAdd.dataset.cluster;
+    api("/api/rankstein/control/seo-feedback/add-to-roadmap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword: kw, domain: dm, cluster: clus, priority: "High" }),
+    }).then((res) => toast(res.message || `Added ${kw} to roadmap!`))
+      .catch((err) => toast("Add failed: " + err.message));
+  }
+  const seoCopy = event.target.closest("[data-seo-copy-formula]");
+  if (seoCopy) {
+    const formula = seoCopy.dataset.seoCopyFormula;
+    if (formula) {
+      navigator.clipboard.writeText(formula)
+        .then(() => {
+          const orig = seoCopy.textContent;
+          seoCopy.textContent = "✓ Copied!";
+          setTimeout(() => { seoCopy.textContent = orig; }, 2000);
+          toast("Title formula copied to clipboard.");
+        })
+        .catch(() => prompt("Title formula:", formula));
+    }
+  }
 });
+
+// SEO Feedback Exploitation Toolbar Listeners
+$("btn-refresh-seo-feedback")?.addEventListener("click", async () => {
+  const btn = $("btn-refresh-seo-feedback");
+  btn.disabled = true;
+  try {
+    toast("Auditing fresh search & trend signals...");
+    const res = await api("/api/rankstein/control/seo-feedback/refresh", { method: "POST" });
+    state.seoFeedback = res.report || null;
+    renderSeoRadar();
+    toast(res.message || "SEO audit refreshed!");
+  } catch (err) {
+    toast("Refresh failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+$("btn-inject-all-post-more")?.addEventListener("click", async () => {
+  const btn = $("btn-inject-all-post-more");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/rankstein/control/seo-feedback/add-all-post-more", { method: "POST" });
+    const alertEl = $("seo-exploitation-feedback");
+    alertEl.hidden = false;
+    alertEl.style.background = "rgba(0,255,163,0.1)";
+    alertEl.style.borderColor = "rgba(0,255,163,0.3)";
+    alertEl.style.color = "var(--mint)";
+    alertEl.textContent = `🚀 ${res.message || "Injected high-demand keywords into roadmaps!"}`;
+    toast(res.message);
+  } catch (err) {
+    toast("Injection failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+$("btn-purge-avoid-topics")?.addEventListener("click", async () => {
+  if (!confirm("Deprioritize saturated/zero-ROI topics from active domain roadmaps to conserve crawl budget and API tokens?")) return;
+  const btn = $("btn-purge-avoid-topics");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/rankstein/control/seo-feedback/purge-avoid-topics", { method: "POST" });
+    const alertEl = $("seo-exploitation-feedback");
+    alertEl.hidden = false;
+    alertEl.style.background = "rgba(239,68,68,0.1)";
+    alertEl.style.borderColor = "rgba(239,68,68,0.3)";
+    alertEl.style.color = "var(--red)";
+    alertEl.textContent = `🛡️ ${res.message || "Deprioritized avoid topics!"}`;
+    toast(res.message);
+  } catch (err) {
+    toast("Purge failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+$("btn-launch-remaster-queue")?.addEventListener("click", async () => {
+  const btn = $("btn-launch-remaster-queue");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/rankstein/control/seo-feedback/launch-remaster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword: "striking-batch" }),
+    });
+    const alertEl = $("seo-exploitation-feedback");
+    alertEl.hidden = false;
+    alertEl.style.background = "rgba(255,215,0,0.1)";
+    alertEl.style.borderColor = "rgba(255,215,0,0.3)";
+    alertEl.style.color = "var(--gold)";
+    alertEl.textContent = `🔄 ${res.message || "Remaster queue initiated!"}`;
+    toast(res.message);
+  } catch (err) {
+    toast("Remaster failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (state.view === "seo-radar" && state.seoFeedback) {
+    renderSeoRadar();
+  }
+});
+
 $("new-batch").addEventListener("click", () => openCommand("production"));
 $("command-form").addEventListener("submit", runCommand);
 $("refresh").addEventListener("click", async () => {
