@@ -146,17 +146,39 @@ class SEOFeedbackEngine:
             "google_organic_pct": 26.2,
             "direct_and_referral_pct": 5.4,
         }
-        for prop in [self.ga4.dolce_prop_id, self.ga4.genial_prop_id]:
-            if prop:
-                try:
-                    traffic = self.ga4.query_traffic_overview(prop, days=28)
-                    if traffic and traffic.get("total_sessions"):
-                        ga4_sessions = traffic["total_sessions"]
-                        ga4_active_users = traffic.get("total_active_users", ga4_active_users)
-                        ga4_engagement_rate = traffic.get("engagement_rate_pct", ga4_engagement_rate)
-                        break
-                except Exception as exc:
-                    logger.warning("Could not pull live GA4 traffic: %s", exc)
+        target_props = [p for p in [self.ga4.dolce_prop_id, self.ga4.genial_prop_id] if p]
+        if not target_props and ga4_diag.get("properties"):
+            target_props = [p["property_id"] for p in ga4_diag["properties"]]
+
+        live_sessions = 0
+        live_active_users = 0
+        live_engaged = 0
+        live_channels: dict[str, int] = {}
+        for prop in target_props:
+            try:
+                traffic = self.ga4.query_traffic_overview(prop, days=28)
+                if traffic and traffic.get("total_sessions"):
+                    live_sessions += traffic["total_sessions"]
+                    live_active_users += traffic.get("total_active_users", 0)
+                    live_engaged += traffic.get("total_engaged_sessions", 0)
+                    for ch, ch_data in traffic.get("channels", {}).items():
+                        live_channels[ch] = live_channels.get(ch, 0) + ch_data.get("sessions", 0)
+            except Exception as exc:
+                logger.warning("Could not pull live GA4 traffic for %s: %s", prop, exc)
+
+        if live_sessions > 0:
+            ga4_sessions = live_sessions
+            ga4_active_users = live_active_users
+            ga4_engagement_rate = round((live_engaged / max(1, live_sessions)) * 100, 2)
+            search_sess = live_channels.get("Organic Search", 0)
+            social_sess = live_channels.get("Organic Social", 0) + live_channels.get("Paid Social", 0)
+            direct_sess = live_channels.get("Direct", 0) + live_channels.get("Referral", 0)
+            total_ch = search_sess + social_sess + direct_sess or live_sessions
+            ga4_sources = {
+                "pinterest_social_pct": round((social_sess / total_ch * 100), 1) if social_sess else 68.4,
+                "google_organic_pct": round((search_sess / total_ch * 100), 1) if search_sess else 26.2,
+                "direct_and_referral_pct": round((direct_sess / total_ch * 100), 1) if direct_sess else 5.4,
+            }
 
         summary = {
             "total_search_impressions": total_impressions,

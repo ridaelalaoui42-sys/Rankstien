@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T10:02:26.561878+00:00",
+  "generated_at": "2026-10-08T10:23:39.385037+00:00",
   "domain": "recetadolce",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -129,7 +129,7 @@
       "domain": "recetadolce",
       "cluster": "fresas-y-nata",
       "priority": "Medium",
-      "score": 114.0,
+      "score": 112.0,
       "pinterest_score": 45.0,
       "google_news_hits": 5,
       "google_news_titles": [
@@ -141,8 +141,8 @@
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
+      "search_volume_score": 18.0,
+      "search_demand_score": 18.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true

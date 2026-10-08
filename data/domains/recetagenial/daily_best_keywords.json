@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T10:05:08.711861+00:00",
+  "generated_at": "2026-10-08T10:26:48.929742+00:00",
   "domain": "recetagenial",
   "methodology": {
     "candidate_origin": "Pinterest Trends/Search only",
@@ -171,29 +171,6 @@
       "qualified": true
     },
     {
-      "keyword": "tortilla española gourmet",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "High",
-      "score": 129.0,
-      "pinterest_score": 74.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "La clave de la mejor tortilla de patata de especialidad: \"El AOVE tiene que ser el director de orquesta\"",
-        "La tortilla de patatas perfecta, según el chef Carlos Gómez: \"Si tiene esta cantidad de huevo, queda más cremosa y menos mazacote\"",
-        "La tortilla murciana escala a la élite nacional: Cucú Food Experience, entre las diez mejores de España",
-        "Karlos Arguiñano reinventa la tortilla con una versión alemana",
-        "Las 35 mejores tortillas de patata de Madrid: dónde comerlas"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 4.0,
-      "search_volume_score": 6.0,
-      "search_demand_score": 6.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
       "keyword": "ensalada de garbanzos pepino",
       "domain": "recetagenial",
       "cluster": "Ensaladas",
@@ -235,6 +212,29 @@
       "specificity_score": 3.0,
       "search_volume_score": 20.0,
       "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "tortilla española gourmet",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 127.0,
+      "pinterest_score": 74.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La clave de la mejor tortilla de patata de especialidad: \"El AOVE tiene que ser el director de orquesta\"",
+        "La tortilla de patatas perfecta, según el chef Carlos Gómez: \"Si tiene esta cantidad de huevo, queda más cremosa y menos mazacote\"",
+        "La tortilla murciana escala a la élite nacional: Cucú Food Experience, entre las diez mejores de España",
+        "Karlos Arguiñano reinventa la tortilla con una versión alemana",
+        "Las 35 mejores tortillas de patata de Madrid: dónde comerlas"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
       "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
       "qualified": true
@@ -295,10 +295,10 @@
       "google_news_hits": 5,
       "google_news_titles": [
         "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
-        "12 restaurantes en Valencia para comer paella auténtica",
         "Dosier de arroces",
         "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
-        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri"
+        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri",
+        "Las 31 mejores recetas con langostinos de Directo al Paladar: cocina fácil y casera para todo el año"
       ],
       "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
       "specificity_score": 4.0,

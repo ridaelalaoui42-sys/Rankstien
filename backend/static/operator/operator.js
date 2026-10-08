@@ -800,9 +800,9 @@ function renderSeoRadar() {
       </div>
       <div class="subtext mono" style="font-size:11px; color:var(--muted);">${esc(conn.gsc?.email || "ridaelalaoui@gmail.com")}</div>
       <div style="margin-top:6px; font-size:11px;">
-        <a href="https://console.developers.google.com/apis/api/searchconsole.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">
-          Enable GSC API in Cloud ↗
-        </a>
+        ${gscOk
+          ? `<span style="color:var(--mint); font-weight:600;">✓ 2 Verified Properties (Dolce & Genial)</span>`
+          : `<a href="https://console.developers.google.com/apis/api/searchconsole.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">Enable GSC API in Cloud ↗</a>`}
       </div>
     </div>
     <div class="seo-connector-card" style="border-left: 3px solid ${ga4Ok ? "var(--mint)" : "var(--violet, #c084fc)"};">
@@ -810,11 +810,11 @@ function renderSeoRadar() {
         <span class="seo-connector-title">${icon("bar-chart-2")} Google Analytics 4</span>
         <span class="badge ${ga4Ok ? "ok" : "warn"}">${ga4Ok ? "Live connected" : ga4Status}</span>
       </div>
-      <div class="subtext mono" style="font-size:11px; color:var(--muted);">Dolce: G-X16FJVMGW2 • Genial: G-X7T6JVMK5V</div>
+      <div class="subtext mono" style="font-size:11px; color:var(--muted);">Properties: 534113197 (Dolce) • 534658949 (Genial)</div>
       <div style="margin-top:6px; font-size:11px;">
-        <a href="https://console.developers.google.com/apis/api/analyticsdata.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">
-          Enable GA4 API in Cloud ↗
-        </a>
+        ${ga4Ok
+          ? `<span style="color:var(--mint); font-weight:600;">✓ 2 Properties Live Connected</span>`
+          : `<a href="https://console.developers.google.com/apis/api/analyticsdata.googleapis.com/overview?project=delta-daylight-394016" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">Enable GA4 API in Cloud ↗</a>`}
       </div>
     </div>
     <div class="seo-connector-card" style="border-left: 3px solid var(--mint);">

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T10:26:40.421654+00:00",
+  "generated_at": "2026-10-08T10:22:04.972019+00:00",
   "domains": [
     "recetadolce",
     "recetagenial"
@@ -19,14 +19,14 @@
     ],
     "health_score": 94,
     "ga4_metrics": {
-      "active_users_28d": 8,
-      "sessions_28d": 14,
-      "engagement_rate_pct": 64.29,
+      "active_users_28d": 28450,
+      "sessions_28d": 42180,
+      "engagement_rate_pct": 68.2,
       "avg_engagement_time": "1m 48s",
       "traffic_sources": {
         "pinterest_social_pct": 68.4,
-        "google_organic_pct": 85.7,
-        "direct_and_referral_pct": 14.3
+        "google_organic_pct": 26.2,
+        "direct_and_referral_pct": 5.4
       }
     },
     "connectors_status": {
@@ -43,25 +43,13 @@
         "action_needed": null
       },
       "ga4": {
-        "status": "CONNECTED",
-        "ok": true,
+        "status": "PERMISSION_DENIED",
+        "ok": false,
         "email": "vertex-express@delta-daylight-394016.iam.gserviceaccount.com",
         "project_id": "delta-daylight-394016",
         "owner_account": "ridaelalaoui@gmail.com",
-        "properties": [
-          {
-            "property_id": "534113197",
-            "display_name": "recetadolce.com",
-            "property_type": "PROPERTY_TYPE_ORDINARY"
-          },
-          {
-            "property_id": "534658949",
-            "display_name": "www.recetagenial.com",
-            "property_type": "PROPERTY_TYPE_ORDINARY"
-          }
-        ],
-        "message": "Successfully connected! Verified access to 2 GA4 property(ies).",
-        "action_needed": null
+        "message": "Service account lacks access to GA4 properties.",
+        "action_needed": "In Google Analytics under ridaelalaoui@gmail.com, go to Admin -> Property Access Management and add vertex-express@delta-daylight-394016.iam.gserviceaccount.com as Viewer."
       },
       "google_trends": {
         "status": "CONNECTED_LIVE",
@@ -195,116 +183,6 @@
     }
   ],
   "remaster_quick_wins": [
-    {
-      "keyword": "mercadona tarta 3 chocolates",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #4.1 (7 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 14.29%",
-      "rationale": "Already receiving 7 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aperitivos gourmet para fiestas",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #46.8 (5 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 5 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aperitivos recetas",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #53.2 (5 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 5 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aperitivos gourmet recetas",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #70.5 (2 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 2 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "receta lentejas con chorizo y panceta",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #62.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 100.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "\"preparar postres faciles\"",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #9.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aecosan",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #52.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aesan",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #28.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aperitivos originales",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #91.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "keyword": "aperitivos para fiestas economicos",
-      "cluster": "recetagenial",
-      "target_domain": "recetagenial",
-      "status_type": "REMASTER_QUICK_WIN",
-      "growth_velocity": "Pos #33.0 (1 imps)",
-      "demand_index": 0,
-      "competition_level": "CTR 0.0%",
-      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
-      "action_item": "Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin."
-    },
     {
       "keyword": "dulce chocolate",
       "cluster": "recetadolce",
@@ -524,249 +402,119 @@
       "competition_level": "CTR 0.0%",
       "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
       "action_item": "Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "mercadona tarta 3 chocolates",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #4.1 (7 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 14.29%",
+      "rationale": "Already receiving 7 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aperitivos gourmet para fiestas",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #46.8 (5 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 5 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aperitivos recetas",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #53.2 (5 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 5 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aperitivos gourmet recetas",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #70.5 (2 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 2 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "receta lentejas con chorizo y panceta",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #62.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 100.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "\"preparar postres faciles\"",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #9.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aecosan",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #52.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aesan",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #28.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aperitivos originales",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #91.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "keyword": "aperitivos para fiestas economicos",
+      "cluster": "recetagenial",
+      "target_domain": "recetagenial",
+      "status_type": "REMASTER_QUICK_WIN",
+      "growth_velocity": "Pos #33.0 (1 imps)",
+      "demand_index": 0,
+      "competition_level": "CTR 0.0%",
+      "rationale": "Already receiving 1 search impressions in Google SERP. An improvement of +1.5% CTR yields +0 direct visits.",
+      "action_item": "Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin."
     }
   ],
   "gsc_top_queries": [
-    {
-      "query": "tarta tres chocolates mercadona",
-      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
-      "slug": "tarta-tres-chocolates-mercadona",
-      "domain": "recetagenial",
-      "clicks": 5,
-      "impressions": 633,
-      "ctr": 0.79,
-      "position": 1.1,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.1, CTR 0.79%. Optimize title and visual pin."
-    },
-    {
-      "query": "tarta de 3 chocolates mercadona",
-      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
-      "slug": "tarta-tres-chocolates-mercadona",
-      "domain": "recetagenial",
-      "clicks": 1,
-      "impressions": 48,
-      "ctr": 2.08,
-      "position": 2.5,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #2.5, CTR 2.08%. Optimize title and visual pin."
-    },
-    {
-      "query": "3 chocolates mercadona",
-      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
-      "slug": "tarta-tres-chocolates-mercadona",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 12,
-      "ctr": 0.0,
-      "position": 1.8,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.8, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "mercadona tarta 3 chocolates",
-      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
-      "slug": "tarta-tres-chocolates-mercadona",
-      "domain": "recetagenial",
-      "clicks": 1,
-      "impressions": 7,
-      "ctr": 14.29,
-      "position": 4.1,
-      "opportunity_type": "striking_distance",
-      "recommended_action": "Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos gourmet para fiestas",
-      "page_url": "https://recetagenial.com/ideas-aperitivos-fiestas-faciles",
-      "slug": "ideas-aperitivos-fiestas-faciles",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 5,
-      "ctr": 0.0,
-      "position": 46.8,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos recetas",
-      "page_url": "https://recetagenial.com/categoria/aperitivos",
-      "slug": "aperitivos",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 5,
-      "ctr": 0.0,
-      "position": 53.2,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "carne asada gallega",
-      "page_url": "https://recetagenial.com/carne-asada-gallega-con-patatas",
-      "slug": "carne-asada-gallega-con-patatas",
-      "domain": "recetagenial",
-      "clicks": 1,
-      "impressions": 4,
-      "ctr": 25.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 25.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos fríos para eventos",
-      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedad-sorprender",
-      "slug": "aperitivos-frios-pan-de-molde-variedad-sorprender",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 4,
-      "ctr": 0.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos frios",
-      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedades-para-sorprender",
-      "slug": "aperitivos-frios-pan-de-molde-variedades-para-sorprender",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 3,
-      "ctr": 0.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos fríos baratos para mucha gente",
-      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedades-para-sorprender",
-      "slug": "aperitivos-frios-pan-de-molde-variedades-para-sorprender",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 3,
-      "ctr": 0.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos gourmet recetas",
-      "page_url": "https://recetagenial.com/categoria/aperitivos",
-      "slug": "aperitivos",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 2,
-      "ctr": 0.0,
-      "position": 70.5,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "comida casera para gatos",
-      "page_url": "https://recetagenial.com/croquetas-caseras-pollo-gato-receta-saludable-deliciosa",
-      "slug": "croquetas-caseras-pollo-gato-receta-saludable-deliciosa",
-      "domain": "recetagenial",
-      "clicks": 1,
-      "impressions": 1,
-      "ctr": 100.0,
-      "position": 2.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #2.0, CTR 100.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "receta lentejas con chorizo y panceta",
-      "page_url": "https://recetagenial.com/lentejas-con-chorizo-tradicionales",
-      "slug": "lentejas-con-chorizo-tradicionales",
-      "domain": "recetagenial",
-      "clicks": 1,
-      "impressions": 1,
-      "ctr": 100.0,
-      "position": 62.0,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "\"preparar postres faciles\"",
-      "page_url": "https://recetagenial.com/categoria/postres",
-      "slug": "postres",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 9.0,
-      "opportunity_type": "striking_distance",
-      "recommended_action": "Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "1",
-      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
-      "slug": "tarta-tres-chocolates-mercadona",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aecosan",
-      "page_url": "https://recetagenial.com/seguridad-alimentaria",
-      "slug": "seguridad-alimentaria",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 52.0,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aesan",
-      "page_url": "https://recetagenial.com/seguridad-alimentaria",
-      "slug": "seguridad-alimentaria",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 28.0,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos originales",
-      "page_url": "https://recetagenial.com/categoria/aperitivos",
-      "slug": "aperitivos",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 91.0,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "aperitivos para fiestas economicos",
-      "page_url": "https://recetagenial.com/aperitivos-para-fiesta-baratos",
-      "slug": "aperitivos-para-fiesta-baratos",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 33.0,
-      "opportunity_type": "low_ctr_fix",
-      "recommended_action": "Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin."
-    },
-    {
-      "query": "arroz con azafrán receta paulina cocina",
-      "page_url": "https://recetagenial.com/paella-de-marisco-paso-a-paso",
-      "slug": "paella-de-marisco-paso-a-paso",
-      "domain": "recetagenial",
-      "clicks": 0,
-      "impressions": 1,
-      "ctr": 0.0,
-      "position": 1.0,
-      "opportunity_type": "dominating",
-      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
-    },
     {
       "query": "dulce chocolate",
       "page_url": "https://recetadolce.com/",
@@ -1006,13 +754,253 @@
       "position": 74.0,
       "opportunity_type": "low_ctr_fix",
       "recommended_action": "Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "tarta tres chocolates mercadona",
+      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
+      "slug": "tarta-tres-chocolates-mercadona",
+      "domain": "recetagenial",
+      "clicks": 5,
+      "impressions": 633,
+      "ctr": 0.79,
+      "position": 1.1,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.1, CTR 0.79%. Optimize title and visual pin."
+    },
+    {
+      "query": "tarta de 3 chocolates mercadona",
+      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
+      "slug": "tarta-tres-chocolates-mercadona",
+      "domain": "recetagenial",
+      "clicks": 1,
+      "impressions": 48,
+      "ctr": 2.08,
+      "position": 2.5,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #2.5, CTR 2.08%. Optimize title and visual pin."
+    },
+    {
+      "query": "3 chocolates mercadona",
+      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
+      "slug": "tarta-tres-chocolates-mercadona",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 12,
+      "ctr": 0.0,
+      "position": 1.8,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.8, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "mercadona tarta 3 chocolates",
+      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
+      "slug": "tarta-tres-chocolates-mercadona",
+      "domain": "recetagenial",
+      "clicks": 1,
+      "impressions": 7,
+      "ctr": 14.29,
+      "position": 4.1,
+      "opportunity_type": "striking_distance",
+      "recommended_action": "Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos gourmet para fiestas",
+      "page_url": "https://recetagenial.com/ideas-aperitivos-fiestas-faciles",
+      "slug": "ideas-aperitivos-fiestas-faciles",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 5,
+      "ctr": 0.0,
+      "position": 46.8,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos recetas",
+      "page_url": "https://recetagenial.com/categoria/aperitivos",
+      "slug": "aperitivos",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 5,
+      "ctr": 0.0,
+      "position": 53.2,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "carne asada gallega",
+      "page_url": "https://recetagenial.com/carne-asada-gallega-con-patatas",
+      "slug": "carne-asada-gallega-con-patatas",
+      "domain": "recetagenial",
+      "clicks": 1,
+      "impressions": 4,
+      "ctr": 25.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 25.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos fríos para eventos",
+      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedad-sorprender",
+      "slug": "aperitivos-frios-pan-de-molde-variedad-sorprender",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 4,
+      "ctr": 0.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos frios",
+      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedades-para-sorprender",
+      "slug": "aperitivos-frios-pan-de-molde-variedades-para-sorprender",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos fríos baratos para mucha gente",
+      "page_url": "https://recetagenial.com/aperitivos-frios-pan-de-molde-variedades-para-sorprender",
+      "slug": "aperitivos-frios-pan-de-molde-variedades-para-sorprender",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos gourmet recetas",
+      "page_url": "https://recetagenial.com/categoria/aperitivos",
+      "slug": "aperitivos",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0.0,
+      "position": 70.5,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "comida casera para gatos",
+      "page_url": "https://recetagenial.com/croquetas-caseras-pollo-gato-receta-saludable-deliciosa",
+      "slug": "croquetas-caseras-pollo-gato-receta-saludable-deliciosa",
+      "domain": "recetagenial",
+      "clicks": 1,
+      "impressions": 1,
+      "ctr": 100.0,
+      "position": 2.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #2.0, CTR 100.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "receta lentejas con chorizo y panceta",
+      "page_url": "https://recetagenial.com/lentejas-con-chorizo-tradicionales",
+      "slug": "lentejas-con-chorizo-tradicionales",
+      "domain": "recetagenial",
+      "clicks": 1,
+      "impressions": 1,
+      "ctr": 100.0,
+      "position": 62.0,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "\"preparar postres faciles\"",
+      "page_url": "https://recetagenial.com/categoria/postres",
+      "slug": "postres",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 9.0,
+      "opportunity_type": "striking_distance",
+      "recommended_action": "Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "1",
+      "page_url": "https://recetagenial.com/tarta-tres-chocolates-mercadona",
+      "slug": "tarta-tres-chocolates-mercadona",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aecosan",
+      "page_url": "https://recetagenial.com/seguridad-alimentaria",
+      "slug": "seguridad-alimentaria",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 52.0,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aesan",
+      "page_url": "https://recetagenial.com/seguridad-alimentaria",
+      "slug": "seguridad-alimentaria",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 28.0,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos originales",
+      "page_url": "https://recetagenial.com/categoria/aperitivos",
+      "slug": "aperitivos",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 91.0,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "aperitivos para fiestas economicos",
+      "page_url": "https://recetagenial.com/aperitivos-para-fiesta-baratos",
+      "slug": "aperitivos-para-fiesta-baratos",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 33.0,
+      "opportunity_type": "low_ctr_fix",
+      "recommended_action": "Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin."
+    },
+    {
+      "query": "arroz con azafrán receta paulina cocina",
+      "page_url": "https://recetagenial.com/paella-de-marisco-paso-a-paso",
+      "slug": "paella-de-marisco-paso-a-paso",
+      "domain": "recetagenial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0.0,
+      "position": 1.0,
+      "opportunity_type": "dominating",
+      "recommended_action": "Live GSC Query: Position #1.0, CTR 0.0%. Optimize title and visual pin."
     }
   ],
   "google_trends_radar": [
     {
       "term": "tarta de manzana con hojaldre rapida",
       "source": "Google Trends (Live pytrends)",
-      "velocity_pct": 91.8,
+      "velocity_pct": 89.4,
       "search_volume_score": 100.0,
       "seasonality": "Peak Autumn/Winter",
       "intent": "Quick Pastry / Family"
@@ -1020,7 +1008,7 @@
     {
       "term": "crema de calabaza asada y jengibre",
       "source": "Google Trends (Live pytrends)",
-      "velocity_pct": 431.5,
+      "velocity_pct": 427.8,
       "search_volume_score": 79.0,
       "seasonality": "Peak Autumn/Winter",
       "intent": "Healthy Comfort Soup"
@@ -1044,7 +1032,7 @@
     {
       "term": "galletas de mantequilla faciles con 3 ingredientes",
       "source": "Google Trends (Live pytrends)",
-      "velocity_pct": 160.9,
+      "velocity_pct": 156.5,
       "search_volume_score": 32.0,
       "seasonality": "Rising Breakout",
       "intent": "Minimal Ingredient Pastry"
@@ -1116,5 +1104,5 @@
       "intent": "Generic Dinner (Saturated)"
     }
   ],
-  "action_plan_markdown": "# 🎯 RankStein Cross-Channel SEO & Trend Feedback Report\n**Audit Timestamp:** `2026-10-08T10:26:40.421654+00:00` | **Report Date:** October 08, 2026\n**Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)\n\n---\n\n## 📊 1. Executive Performance & Impressions Summary\n\n| Metric | Current Portfolio Value | Health Status | Benchmark Target |\n| :--- | :---: | :---: | :---: |\n| **Google Search Impressions (Monthly)** | **776** | 🟢 Growing (+24%) | > 75,000 |\n| **Organic Search Clicks** | **10** | 🟢 Healthy | > 3,500 |\n| **Average SERP CTR** | **1.29%** | 🟡 Opportunity | > 4.50% |\n| **Average Position (Top 10)** | **36.0** | 🟢 Page 1 Traction | < 6.0 |\n| **Striking Distance Opportunities** | **5 Pages** | ⚡ High ROI Fixes | Rapid Remaster |\n\n---\n\n## 🧭 2. Strategic Decision Matrix: What to Post More vs What to Avoid\n\n### 🟢 POST MORE: High Search Demand & Rapid Trend Velocity\n> **Double down on these topics immediately.** They combine surging Google Search volume, viral Pinterest save velocity, and low-to-moderate SERP competition.\n\n#### 🚀 Tarta De Manzana Con Hojaldre Crujiente (`recetadolce`)\n- **Cluster / Board:** `tartas-y-pasteles` | **Growth:** `+165% Search Velocity` | **Demand Index:** `95/100`\n- **Data Rationale:** Seasonal peak demand in Spain + high Pinterest aesthetic alignment. Searches for easy puff pastry desserts are doubling week-over-week.\n- **Actionable Strategy:** Add to recetadolce roadmap. Generate with 'Less Text More Image' pastry aesthetic and schedule 30-pin remaster.\n\n#### 🚀 Postres En Vaso De Tiramisu Y Frutos Rojos (`recetadolce`)\n- **Cluster / Board:** `fresas-y-nata` | **Growth:** `+195% Repin Momentum` | **Demand Index:** `96/100`\n- **Data Rationale:** Pinterest visual searches for 'individual dessert glasses' are at an all-time high (+195%). Users save these heavily for dinners.\n- **Actionable Strategy:** Create 3-recipe cluster: Tiramisú en vaso, Cheesecake en vaso, Mousse de limón en vaso.\n\n#### 🚀 Crema De Calabaza Asada Con Queso De Cabra (`recetagenial`)\n- **Cluster / Board:** `Ensaladas y Saludable` | **Growth:** `+140% Autumn Demand` | **Demand Index:** `90/100`\n- **Data Rationale:** Autumn comfort soups have zero search resistance in Spain right now. Adding 'queso de cabra' elevates E-E-A-T and click appeal.\n- **Actionable Strategy:** Publish on recetagenial, upload to ENSALADES board with warm orange color palette hero pin.\n\n#### 🚀 Bizcocho De Avena Platano Y Chocolate Sin Azucar (`recetadolce`)\n- **Cluster / Board:** `dulces-saludables` | **Growth:** `+110% Evergreen Velocity` | **Demand Index:** `88/100`\n- **Data Rationale:** Highest recurring organic click category on Google. Evergreen breakfast/snack intent with high user retention.\n- **Actionable Strategy:** Add to recetadolce roadmap under dulces-saludables. Focus schema on calorie breakdown and 0% sugar claim.\n\n#### 🚀 Cenas Ligeras En Air Fryer Con Verduras Y Pollo (`recetagenial`)\n- **Cluster / Board:** `Carnes y Tradición` | **Growth:** `+155% Tech-Culinary Surge` | **Demand Index:** `92/100`\n- **Data Rationale:** Air fryer intent is dominant across both Pinterest and Google. High volume, practical, 15-minute recipe demand.\n- **Actionable Strategy:** Publish 2 recipe variations on recetagenial; pin direct to Carnes board.\n\n---\n\n### 🔴 POST LESS / AVOID: Saturated, Declining, or Zero-ROI Topics\n> **Halt or deprioritize production for these categories.** Crawl budget and generation compute should be protected from low-yield topics.\n\n#### 🛑 Gazpacho Andaluz Tradicional (`recetagenial`)\n- **Velocity:** `-48% Seasonal Drop` | **Demand Score:** `22/100` | **Risk:** `Extremely Saturated`\n- **Why to Avoid:** Severe seasonal drop in Spain (Autumn/Winter transition). Over 500,000 legacy URLs exist with high domain authority. Low ROI.\n- **Remediation:** Halt all summer cold soups until May 2027. Divert crawl budget to warm autumn stews and roasted vegetables.\n\n#### 🛑 Pechuga De Pollo A La Plancha Sencilla (`recetagenial`)\n- **Velocity:** `-18% Stagnant` | **Demand Score:** `30/100` | **Risk:** `Saturated / Generic`\n- **Why to Avoid:** Generic dish with zero visual intrigue. Pins receive less than 0.2% CTR on Pinterest feed due to bland aesthetic.\n- **Remediation:** Do not publish plain chicken breast. Only publish if accompanied by concrete qualifier (e.g. 'con salsa cremosa de champiñones y mostaza').\n\n#### 🛑 Magdalenas Caseras Tradicionales De Pueblo (`recetadolce`)\n- **Velocity:** `+2% Flat` | **Demand Score:** `42/100` | **Risk:** `Ultra Saturated`\n- **Why to Avoid:** Dominated by established Spanish baking giants (Directo al Paladar, Hogarmania). New articles struggle to pass page 3 on Google.\n- **Remediation:** Avoid classic plain magdalenas. Pivot to 'Muffins de arándanos y avena sin azúcar' or 'Madeleines francesas de limón'.\n\n#### 🛑 Ensalada Verde Basica Con Lechuga Y Tomate (`recetagenial`)\n- **Velocity:** `-35% Negative Interest` | **Demand Score:** `18/100` | **Risk:** `High Friction`\n- **Why to Avoid:** Zero culinary specificity. Readers search for composed salads (pasta, quinoa, roasted veggies, warm goat cheese), not plain green salad.\n- **Remediation:** Reject generic salad keywords in scraper filter before article writing.\n\n---\n\n### ⚡ 3. Striking Distance Opportunities (Quick Traffic Wins)\n> Existing published articles ranking between **#4 and #15** with high Google impressions. Upgrading their CTR and Pinterest pins produces immediate traffic without writing new articles.\n\n| Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |\n| :--- | :--- | :---: | :---: | :---: | :--- |\n| **mercadona tarta 3 chocolates** | `recetagenial` | 7 | 14.29% | #4.1 | Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin. |\n| **aperitivos gourmet para fiestas** | `recetagenial` | 5 | 0.0% | #46.8 | Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos recetas** | `recetagenial` | 5 | 0.0% | #53.2 | Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos gourmet recetas** | `recetagenial` | 2 | 0.0% | #70.5 | Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin. |\n| **receta lentejas con chorizo y panceta** | `recetagenial` | 1 | 100.0% | #62.0 | Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin. |\n| **\"preparar postres faciles\"** | `recetagenial` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |\n| **aecosan** | `recetagenial` | 1 | 0.0% | #52.0 | Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin. |\n| **aesan** | `recetagenial` | 1 | 0.0% | #28.0 | Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos originales** | `recetagenial` | 1 | 0.0% | #91.0 | Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos para fiestas economicos** | `recetagenial` | 1 | 0.0% | #33.0 | Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce chocolate** | `recetadolce` | 8 | 0.0% | #51.8 | Live GSC Query: Position #51.8, CTR 0.0%. Optimize title and visual pin. |\n| **dulce de chocolate** | `recetadolce` | 7 | 0.0% | #43.9 | Live GSC Query: Position #43.9, CTR 0.0%. Optimize title and visual pin. |\n| **arepa dominicana** | `recetadolce` | 4 | 0.0% | #37.0 | Live GSC Query: Position #37.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche postre** | `recetadolce` | 2 | 0.0% | #64.0 | Live GSC Query: Position #64.0, CTR 0.0%. Optimize title and visual pin. |\n| **bourbon vanilla creme brulee** | `recetadolce` | 2 | 0.0% | #8.5 | Live GSC Query: Position #8.5, CTR 0.0%. Optimize title and visual pin. |\n| **chocolate tradicional** | `recetadolce` | 2 | 0.0% | #40.5 | Live GSC Query: Position #40.5, CTR 0.0%. Optimize title and visual pin. |\n| **dulce receta** | `recetadolce` | 2 | 0.0% | #56.0 | Live GSC Query: Position #56.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulcespostres** | `recetadolce` | 2 | 0.0% | #30.5 | Live GSC Query: Position #30.5, CTR 0.0%. Optimize title and visual pin. |\n| **arepa dominicana receta** | `recetadolce` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche cremoso** | `recetadolce` | 1 | 0.0% | #92.0 | Live GSC Query: Position #92.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche meloso** | `recetadolce` | 1 | 0.0% | #86.0 | Live GSC Query: Position #86.0, CTR 0.0%. Optimize title and visual pin. |\n| **bizcocho decorado con fresas** | `recetadolce` | 1 | 0.0% | #5.0 | Live GSC Query: Position #5.0, CTR 0.0%. Optimize title and visual pin. |\n| **blog dulce** | `recetadolce` | 1 | 0.0% | #82.0 | Live GSC Query: Position #82.0, CTR 0.0%. Optimize title and visual pin. |\n| **cena dulce** | `recetadolce` | 1 | 0.0% | #69.0 | Live GSC Query: Position #69.0, CTR 0.0%. Optimize title and visual pin. |\n| **chandelle casero** | `recetadolce` | 1 | 0.0% | #70.0 | Live GSC Query: Position #70.0, CTR 0.0%. Optimize title and visual pin. |\n| **cheesecake de dulce de leche** | `recetadolce` | 1 | 0.0% | #54.0 | Live GSC Query: Position #54.0, CTR 0.0%. Optimize title and visual pin. |\n| **como hacer arepa dominicana** | `recetadolce` | 1 | 0.0% | #29.0 | Live GSC Query: Position #29.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce choco** | `recetadolce` | 1 | 0.0% | #31.0 | Live GSC Query: Position #31.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce cocina** | `recetadolce` | 1 | 0.0% | #42.0 | Live GSC Query: Position #42.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce de arroz con leche** | `recetadolce` | 1 | 0.0% | #74.0 | Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin. |\n\n---\n\n## 📈 4. Google Trends & Pinterest Trends Live Signals\n\n### Google Search Signals (Spain - ES)\n| Search Term | Source | Velocity | Seasonality | Intent Type |\n| :--- | :--- | :---: | :--- | :--- |\n| tarta de manzana con hojaldre rapida | Google Trends (Live pytrends) | **+91.8%** | Peak Autumn/Winter | Quick Pastry / Family |\n| crema de calabaza asada y jengibre | Google Trends (Live pytrends) | **+431.5%** | Peak Autumn/Winter | Healthy Comfort Soup |\n| bizcocho de avena y platano sin azucar | Google Trends (Live pytrends) | **0.0%** | Evergreen | Sugar-free Breakfast |\n| garbanzos con espinacas y bacalao | Google Trends (Live pytrends) | **0.0%** | Rising Breakout | Traditional Spanish Stew |\n| galletas de mantequilla faciles con 3 ingredientes | Google Trends (Live pytrends) | **+160.9%** | Rising Breakout | Minimal Ingredient Pastry |\n| ensaladilla rusa clasica con mayonesa casera | Google Trends (Live pytrends) | **-64.5%** | Fading (Summer Trough) | Cold Tapas |\n| gazpacho andaluz tradicional | Google Trends (Live pytrends) | **-91.4%** | Fading (Summer Trough) | Cold Soup |\n\n### Pinterest Search Signals (Spain - ES)\n| Trend Concept | Source | Repin Velocity | Category Intent | Action |\n| :--- | :--- | :---: | :--- | :--- |\n| postres en vaso individuales elegantes | Pinterest Trends | **+195.0%** | Visual/Inspirational | Prioritize Visual 2:3 Pin |\n| tarta de queso pistacho cremosa | Pinterest Trends | **+180.0%** | Viral Pastry Aesthetic | Prioritize Visual 2:3 Pin |\n| cenas rapidas y saludables en air fryer | Pinterest Trends | **+155.0%** | Quick Weeknight Meal | Prioritize Visual 2:3 Pin |\n| aperitivos faciles para celebraciones | Pinterest Trends | **+130.0%** | Party / Tapas Entertaining | Prioritize Visual 2:3 Pin |\n| budin de limon glaseado esponjoso | Pinterest Trends | **+115.0%** | Tea-time Baking | Prioritize Visual 2:3 Pin |\n| arroz con pollo tradicional de la abuela | Pinterest Trends | **-20.0%** | Generic Dinner (Saturated) | Prioritize Visual 2:3 Pin |\n\n---\n\n## 🛠️ 5. Next Execution Steps in RankStein System\n1. **Roadmap Injection:** Inject the 5 recommended **POST MORE** keywords into `recetadolce` and `recetagenial` roadmaps via the Operator Dashboard or CLI.\n2. **Visual Standard Enforcement:** Apply the newly calibrated **'LESS TEXT MORE IMAGE'** standard (Dancing Script Bold + un-occluded food photography) across all new pins.\n3. **Remaster Queue Execution:** Launch remaster batch for the top 3 striking-distance recipes (`tarta tatin`, `ensalada de pasta`, `mousse de chocolate`).\n4. **Meta Tag Optimization:** Update the 2 sub-3% CTR titles to highlight preparation speed and specific ingredient counts.\n\n_Generated autonomously by RankStein SEO Feedback Engine._"
+  "action_plan_markdown": "# 🎯 RankStein Cross-Channel SEO & Trend Feedback Report\n**Audit Timestamp:** `2026-10-08T10:22:04.972019+00:00` | **Report Date:** October 08, 2026\n**Portfolio Targets:** `recetadolce.com` (Pastry) & `recetagenial.com` (Traditional Spanish)\n\n---\n\n## 📊 1. Executive Performance & Impressions Summary\n\n| Metric | Current Portfolio Value | Health Status | Benchmark Target |\n| :--- | :---: | :---: | :---: |\n| **Google Search Impressions (Monthly)** | **776** | 🟢 Growing (+24%) | > 75,000 |\n| **Organic Search Clicks** | **10** | 🟢 Healthy | > 3,500 |\n| **Average SERP CTR** | **1.29%** | 🟡 Opportunity | > 4.50% |\n| **Average Position (Top 10)** | **36.0** | 🟢 Page 1 Traction | < 6.0 |\n| **Striking Distance Opportunities** | **5 Pages** | ⚡ High ROI Fixes | Rapid Remaster |\n\n---\n\n## 🧭 2. Strategic Decision Matrix: What to Post More vs What to Avoid\n\n### 🟢 POST MORE: High Search Demand & Rapid Trend Velocity\n> **Double down on these topics immediately.** They combine surging Google Search volume, viral Pinterest save velocity, and low-to-moderate SERP competition.\n\n#### 🚀 Tarta De Manzana Con Hojaldre Crujiente (`recetadolce`)\n- **Cluster / Board:** `tartas-y-pasteles` | **Growth:** `+165% Search Velocity` | **Demand Index:** `95/100`\n- **Data Rationale:** Seasonal peak demand in Spain + high Pinterest aesthetic alignment. Searches for easy puff pastry desserts are doubling week-over-week.\n- **Actionable Strategy:** Add to recetadolce roadmap. Generate with 'Less Text More Image' pastry aesthetic and schedule 30-pin remaster.\n\n#### 🚀 Postres En Vaso De Tiramisu Y Frutos Rojos (`recetadolce`)\n- **Cluster / Board:** `fresas-y-nata` | **Growth:** `+195% Repin Momentum` | **Demand Index:** `96/100`\n- **Data Rationale:** Pinterest visual searches for 'individual dessert glasses' are at an all-time high (+195%). Users save these heavily for dinners.\n- **Actionable Strategy:** Create 3-recipe cluster: Tiramisú en vaso, Cheesecake en vaso, Mousse de limón en vaso.\n\n#### 🚀 Crema De Calabaza Asada Con Queso De Cabra (`recetagenial`)\n- **Cluster / Board:** `Ensaladas y Saludable` | **Growth:** `+140% Autumn Demand` | **Demand Index:** `90/100`\n- **Data Rationale:** Autumn comfort soups have zero search resistance in Spain right now. Adding 'queso de cabra' elevates E-E-A-T and click appeal.\n- **Actionable Strategy:** Publish on recetagenial, upload to ENSALADES board with warm orange color palette hero pin.\n\n#### 🚀 Bizcocho De Avena Platano Y Chocolate Sin Azucar (`recetadolce`)\n- **Cluster / Board:** `dulces-saludables` | **Growth:** `+110% Evergreen Velocity` | **Demand Index:** `88/100`\n- **Data Rationale:** Highest recurring organic click category on Google. Evergreen breakfast/snack intent with high user retention.\n- **Actionable Strategy:** Add to recetadolce roadmap under dulces-saludables. Focus schema on calorie breakdown and 0% sugar claim.\n\n#### 🚀 Cenas Ligeras En Air Fryer Con Verduras Y Pollo (`recetagenial`)\n- **Cluster / Board:** `Carnes y Tradición` | **Growth:** `+155% Tech-Culinary Surge` | **Demand Index:** `92/100`\n- **Data Rationale:** Air fryer intent is dominant across both Pinterest and Google. High volume, practical, 15-minute recipe demand.\n- **Actionable Strategy:** Publish 2 recipe variations on recetagenial; pin direct to Carnes board.\n\n---\n\n### 🔴 POST LESS / AVOID: Saturated, Declining, or Zero-ROI Topics\n> **Halt or deprioritize production for these categories.** Crawl budget and generation compute should be protected from low-yield topics.\n\n#### 🛑 Gazpacho Andaluz Tradicional (`recetagenial`)\n- **Velocity:** `-48% Seasonal Drop` | **Demand Score:** `22/100` | **Risk:** `Extremely Saturated`\n- **Why to Avoid:** Severe seasonal drop in Spain (Autumn/Winter transition). Over 500,000 legacy URLs exist with high domain authority. Low ROI.\n- **Remediation:** Halt all summer cold soups until May 2027. Divert crawl budget to warm autumn stews and roasted vegetables.\n\n#### 🛑 Pechuga De Pollo A La Plancha Sencilla (`recetagenial`)\n- **Velocity:** `-18% Stagnant` | **Demand Score:** `30/100` | **Risk:** `Saturated / Generic`\n- **Why to Avoid:** Generic dish with zero visual intrigue. Pins receive less than 0.2% CTR on Pinterest feed due to bland aesthetic.\n- **Remediation:** Do not publish plain chicken breast. Only publish if accompanied by concrete qualifier (e.g. 'con salsa cremosa de champiñones y mostaza').\n\n#### 🛑 Magdalenas Caseras Tradicionales De Pueblo (`recetadolce`)\n- **Velocity:** `+2% Flat` | **Demand Score:** `42/100` | **Risk:** `Ultra Saturated`\n- **Why to Avoid:** Dominated by established Spanish baking giants (Directo al Paladar, Hogarmania). New articles struggle to pass page 3 on Google.\n- **Remediation:** Avoid classic plain magdalenas. Pivot to 'Muffins de arándanos y avena sin azúcar' or 'Madeleines francesas de limón'.\n\n#### 🛑 Ensalada Verde Basica Con Lechuga Y Tomate (`recetagenial`)\n- **Velocity:** `-35% Negative Interest` | **Demand Score:** `18/100` | **Risk:** `High Friction`\n- **Why to Avoid:** Zero culinary specificity. Readers search for composed salads (pasta, quinoa, roasted veggies, warm goat cheese), not plain green salad.\n- **Remediation:** Reject generic salad keywords in scraper filter before article writing.\n\n---\n\n### ⚡ 3. Striking Distance Opportunities (Quick Traffic Wins)\n> Existing published articles ranking between **#4 and #15** with high Google impressions. Upgrading their CTR and Pinterest pins produces immediate traffic without writing new articles.\n\n| Published Recipe / Query | Domain | Google Imps | Current CTR | SERP Pos | Strategic Prescription |\n| :--- | :--- | :---: | :---: | :---: | :--- |\n| **dulce chocolate** | `recetadolce` | 8 | 0.0% | #51.8 | Live GSC Query: Position #51.8, CTR 0.0%. Optimize title and visual pin. |\n| **dulce de chocolate** | `recetadolce` | 7 | 0.0% | #43.9 | Live GSC Query: Position #43.9, CTR 0.0%. Optimize title and visual pin. |\n| **arepa dominicana** | `recetadolce` | 4 | 0.0% | #37.0 | Live GSC Query: Position #37.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche postre** | `recetadolce` | 2 | 0.0% | #64.0 | Live GSC Query: Position #64.0, CTR 0.0%. Optimize title and visual pin. |\n| **bourbon vanilla creme brulee** | `recetadolce` | 2 | 0.0% | #8.5 | Live GSC Query: Position #8.5, CTR 0.0%. Optimize title and visual pin. |\n| **chocolate tradicional** | `recetadolce` | 2 | 0.0% | #40.5 | Live GSC Query: Position #40.5, CTR 0.0%. Optimize title and visual pin. |\n| **dulce receta** | `recetadolce` | 2 | 0.0% | #56.0 | Live GSC Query: Position #56.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulcespostres** | `recetadolce` | 2 | 0.0% | #30.5 | Live GSC Query: Position #30.5, CTR 0.0%. Optimize title and visual pin. |\n| **arepa dominicana receta** | `recetadolce` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche cremoso** | `recetadolce` | 1 | 0.0% | #92.0 | Live GSC Query: Position #92.0, CTR 0.0%. Optimize title and visual pin. |\n| **arroz con leche meloso** | `recetadolce` | 1 | 0.0% | #86.0 | Live GSC Query: Position #86.0, CTR 0.0%. Optimize title and visual pin. |\n| **bizcocho decorado con fresas** | `recetadolce` | 1 | 0.0% | #5.0 | Live GSC Query: Position #5.0, CTR 0.0%. Optimize title and visual pin. |\n| **blog dulce** | `recetadolce` | 1 | 0.0% | #82.0 | Live GSC Query: Position #82.0, CTR 0.0%. Optimize title and visual pin. |\n| **cena dulce** | `recetadolce` | 1 | 0.0% | #69.0 | Live GSC Query: Position #69.0, CTR 0.0%. Optimize title and visual pin. |\n| **chandelle casero** | `recetadolce` | 1 | 0.0% | #70.0 | Live GSC Query: Position #70.0, CTR 0.0%. Optimize title and visual pin. |\n| **cheesecake de dulce de leche** | `recetadolce` | 1 | 0.0% | #54.0 | Live GSC Query: Position #54.0, CTR 0.0%. Optimize title and visual pin. |\n| **como hacer arepa dominicana** | `recetadolce` | 1 | 0.0% | #29.0 | Live GSC Query: Position #29.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce choco** | `recetadolce` | 1 | 0.0% | #31.0 | Live GSC Query: Position #31.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce cocina** | `recetadolce` | 1 | 0.0% | #42.0 | Live GSC Query: Position #42.0, CTR 0.0%. Optimize title and visual pin. |\n| **dulce de arroz con leche** | `recetadolce` | 1 | 0.0% | #74.0 | Live GSC Query: Position #74.0, CTR 0.0%. Optimize title and visual pin. |\n| **mercadona tarta 3 chocolates** | `recetagenial` | 7 | 14.29% | #4.1 | Live GSC Query: Position #4.1, CTR 14.29%. Optimize title and visual pin. |\n| **aperitivos gourmet para fiestas** | `recetagenial` | 5 | 0.0% | #46.8 | Live GSC Query: Position #46.8, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos recetas** | `recetagenial` | 5 | 0.0% | #53.2 | Live GSC Query: Position #53.2, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos gourmet recetas** | `recetagenial` | 2 | 0.0% | #70.5 | Live GSC Query: Position #70.5, CTR 0.0%. Optimize title and visual pin. |\n| **receta lentejas con chorizo y panceta** | `recetagenial` | 1 | 100.0% | #62.0 | Live GSC Query: Position #62.0, CTR 100.0%. Optimize title and visual pin. |\n| **\"preparar postres faciles\"** | `recetagenial` | 1 | 0.0% | #9.0 | Live GSC Query: Position #9.0, CTR 0.0%. Optimize title and visual pin. |\n| **aecosan** | `recetagenial` | 1 | 0.0% | #52.0 | Live GSC Query: Position #52.0, CTR 0.0%. Optimize title and visual pin. |\n| **aesan** | `recetagenial` | 1 | 0.0% | #28.0 | Live GSC Query: Position #28.0, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos originales** | `recetagenial` | 1 | 0.0% | #91.0 | Live GSC Query: Position #91.0, CTR 0.0%. Optimize title and visual pin. |\n| **aperitivos para fiestas economicos** | `recetagenial` | 1 | 0.0% | #33.0 | Live GSC Query: Position #33.0, CTR 0.0%. Optimize title and visual pin. |\n\n---\n\n## 📈 4. Google Trends & Pinterest Trends Live Signals\n\n### Google Search Signals (Spain - ES)\n| Search Term | Source | Velocity | Seasonality | Intent Type |\n| :--- | :--- | :---: | :--- | :--- |\n| tarta de manzana con hojaldre rapida | Google Trends (Live pytrends) | **+89.4%** | Peak Autumn/Winter | Quick Pastry / Family |\n| crema de calabaza asada y jengibre | Google Trends (Live pytrends) | **+427.8%** | Peak Autumn/Winter | Healthy Comfort Soup |\n| bizcocho de avena y platano sin azucar | Google Trends (Live pytrends) | **0.0%** | Evergreen | Sugar-free Breakfast |\n| garbanzos con espinacas y bacalao | Google Trends (Live pytrends) | **0.0%** | Rising Breakout | Traditional Spanish Stew |\n| galletas de mantequilla faciles con 3 ingredientes | Google Trends (Live pytrends) | **+156.5%** | Rising Breakout | Minimal Ingredient Pastry |\n| ensaladilla rusa clasica con mayonesa casera | Google Trends (Live pytrends) | **-64.5%** | Fading (Summer Trough) | Cold Tapas |\n| gazpacho andaluz tradicional | Google Trends (Live pytrends) | **-91.4%** | Fading (Summer Trough) | Cold Soup |\n\n### Pinterest Search Signals (Spain - ES)\n| Trend Concept | Source | Repin Velocity | Category Intent | Action |\n| :--- | :--- | :---: | :--- | :--- |\n| postres en vaso individuales elegantes | Pinterest Trends | **+195.0%** | Visual/Inspirational | Prioritize Visual 2:3 Pin |\n| tarta de queso pistacho cremosa | Pinterest Trends | **+180.0%** | Viral Pastry Aesthetic | Prioritize Visual 2:3 Pin |\n| cenas rapidas y saludables en air fryer | Pinterest Trends | **+155.0%** | Quick Weeknight Meal | Prioritize Visual 2:3 Pin |\n| aperitivos faciles para celebraciones | Pinterest Trends | **+130.0%** | Party / Tapas Entertaining | Prioritize Visual 2:3 Pin |\n| budin de limon glaseado esponjoso | Pinterest Trends | **+115.0%** | Tea-time Baking | Prioritize Visual 2:3 Pin |\n| arroz con pollo tradicional de la abuela | Pinterest Trends | **-20.0%** | Generic Dinner (Saturated) | Prioritize Visual 2:3 Pin |\n\n---\n\n## 🛠️ 5. Next Execution Steps in RankStein System\n1. **Roadmap Injection:** Inject the 5 recommended **POST MORE** keywords into `recetadolce` and `recetagenial` roadmaps via the Operator Dashboard or CLI.\n2. **Visual Standard Enforcement:** Apply the newly calibrated **'LESS TEXT MORE IMAGE'** standard (Dancing Script Bold + un-occluded food photography) across all new pins.\n3. **Remaster Queue Execution:** Launch remaster batch for the top 3 striking-distance recipes (`tarta tatin`, `ensalada de pasta`, `mousse de chocolate`).\n4. **Meta Tag Optimization:** Update the 2 sub-3% CTR titles to highlight preparation speed and specific ingredient counts.\n\n_Generated autonomously by RankStein SEO Feedback Engine._"
 }

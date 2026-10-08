@@ -279,3 +279,6 @@ class GA4Connector:
         except Exception as exc:
             logger.error("GA4 traffic query exception: %s", exc)
             return {}
+
+    query_traffic_overview = query_traffic_summary
+
