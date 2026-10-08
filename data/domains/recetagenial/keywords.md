@@ -444,7 +444,7 @@
 | pollo al horno tiempo y temperatura | Carnes | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
 | pollo al horno con patatas y cebolla | Carnes | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
 | tarta de queso mercadona | Postres | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Needs Verification |
-| salmón al horno recetas faciles | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| salmón al horno recetas faciles | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
 | croquetas caseras para gato | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | arroz con leche receta tradicional | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
 | arroz con leche receta de la abuela | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
@@ -463,7 +463,7 @@
 | tarta de queso en air fryer | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
 | tarta de queso al horno casera | Postres | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Needs Verification |
 | Carnes de res | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Low | Failed |
-| arroz con leche para vender publicidad | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con leche para vender publicidad | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | ensalada de garbanzos con queso feta | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Low | Needs Verification |
 | salmón al horno como preparar | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Low | Live |
 | salmón al horno con miel y mostaza | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Low | Failed |
@@ -487,11 +487,11 @@
 | croquetas caseras de la abuela | Aperitivos | Google Autocomplete Demand + Google Suggestions | Receta Genial | Low | Needs Verification |
 | croquetas caseras de jamón | Aperitivos | Google Autocomplete Demand + Google Suggestions | Receta Genial | Low | Needs Verification |
 | croquetas caseras con harina | Aperitivos | Google Autocomplete Demand + Google Suggestions | Receta Genial | Low | Needs Verification |
-| arroz con leche en vaso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con leche en vaso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | In Progress |
 | tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | tarta de queso mascarpone | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | In Progress |
 | croquetas caseras recetas para hacer | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | In Progress |
-| tarta de queso saludable | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tarta de queso saludable | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | paella de marisco casera | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
 | ensalada de garbanzos pollo | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
 | ensalada de garbanzos pepino | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
@@ -508,3 +508,13 @@
 | cenas ligeras en air fryer con verduras y pollo | Carnes y Tradición | SEO Feedback Radar | Receta Genial | High | Pending |
 | salmón al horno con patatas | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
 | tarta tres chocolates mercadona | General | SEO Feedback Radar | Receta Genial | Urgent | Pending |
+| Carnes de cerdo | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas saludables faciles | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de garbanzos | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de manzana | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de lentejas | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de mango | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de zanahoria | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con leche animado | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| salmón al horno como cocinar | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con leche de coco | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |

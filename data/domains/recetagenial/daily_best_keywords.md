@@ -1,21 +1,21 @@
 # Daily Best Keywords - Receta Genial
 
-Generated: 2026-10-08T12:22:34.279695+00:00
+Generated: 2026-10-08T19:46:58.295821+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|
-| croquetas caseras para gato | Aperitivos | High | 152.00 | 5.0 | 4.0 | 5 |
-| paella de marisco video | Aperitivos | High | 140.00 | 4.0 | 6.0 | 5 |
-| tarta de queso de pistacho | Postres | High | 139.00 | 4.0 | 20.0 | 5 |
-| ensalada de garbanzos pollo | Carnes | High | 135.00 | 3.0 | 20.0 | 5 |
-| croquetas caseras recetas para hacer | Aperitivos | High | 134.00 | 4.0 | 4.0 | 5 |
-| pollo al horno con ensalada rusa | Carnes | High | 134.00 | 4.0 | 20.0 | 5 |
-| tarta de queso mascarpone | Postres | High | 133.00 | 4.0 | 20.0 | 5 |
-| tortilla española gourmet | Aperitivos | High | 129.00 | 4.0 | 6.0 | 5 |
-| ensalada de garbanzos pepino | Ensaladas | High | 129.00 | 4.0 | 20.0 | 5 |
-| pollo al horno recetas faciles | Carnes | High | 128.00 | 3.0 | 20.0 | 5 |
-| ensalada de garbanzos crujientes | Ensaladas | High | 127.00 | 4.0 | 12.0 | 5 |
-| paella de marisco restaurante | Aperitivos | High | 126.00 | 4.0 | 4.0 | 5 |
-| paella de marisco casera | Aperitivos | High | 126.00 | 4.0 | 10.0 | 5 |
-| tarta de queso saludable | Postres | High | 125.00 | 4.0 | 18.0 | 5 |
-| pollo al horno con arroz | Carnes | High | 122.00 | 3.0 | 20.0 | 5 |
+| Carnes de cerdo | Carnes | High | 171.00 | 3.0 | 20.0 | 5 |
+| Ensaladas saludables faciles | Ensaladas | High | 171.00 | 3.0 | 16.0 | 5 |
+| Ensaladas de garbanzos | Ensaladas | High | 170.00 | 3.0 | 20.0 | 5 |
+| Ensaladas de manzana | Ensaladas | High | 167.00 | 3.0 | 20.0 | 5 |
+| salmón al horno recetas faciles | Aperitivos | High | 161.00 | 3.0 | 8.0 | 5 |
+| salmón al horno con patatas | Aperitivos | High | 159.00 | 4.0 | 20.0 | 5 |
+| Ensaladas de lentejas | Ensaladas | High | 159.00 | 3.0 | 20.0 | 5 |
+| arroz con leche en vaso | Aperitivos | High | 156.00 | 3.0 | 20.0 | 5 |
+| Ensaladas de mango | Ensaladas | High | 155.00 | 3.0 | 20.0 | 5 |
+| Ensaladas de zanahoria | Ensaladas | High | 151.00 | 3.0 | 20.0 | 5 |
+| arroz con leche animado | Aperitivos | High | 148.00 | 3.0 | 20.0 | 5 |
+| salmón al horno como cocinar | Aperitivos | High | 145.00 | 3.0 | 16.0 | 5 |
+| arroz con leche de coco | Aperitivos | High | 144.00 | 3.0 | 20.0 | 5 |
+| tarta de queso fría | Postres | High | 144.00 | 4.0 | 20.0 | 5 |
+| arroz con leche para vender publicidad | Aperitivos | High | 142.00 | 3.0 | 2.0 | 5 |
