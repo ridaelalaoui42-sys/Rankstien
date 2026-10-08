@@ -102,7 +102,7 @@ class Settings(BaseSettings):
         default=SecretStr(""),
         alias="GOOGLE_API_KEY",
     )
-    adk_model: str = Field(default="auto")
+    adk_model: str = Field(default="gemini-3.1-flash-lite-preview")
     adk_fallback_model: str = Field(default="gemini-3.1-pro-preview", alias="RANKSTEIN_FALLBACK_MODEL")
     adk_temperature: Annotated[float, Field(ge=0, le=2)] = 0.7
     gemini_cli_path: str = Field(default="", alias="GEMINI_CLI_PATH")

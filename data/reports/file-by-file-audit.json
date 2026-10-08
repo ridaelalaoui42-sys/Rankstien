@@ -1,40 +1,38 @@
 {
-  "generated_at": "2026-05-15T05:03:43.101930+00:00",
+  "generated_at": "2026-10-07T01:29:57.273989+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 483,
+  "files_audited": 370,
   "status_counts": {
-    "ok": 456,
-    "review": 26,
-    "fail": 1
+    "ok": 345,
+    "review": 25,
+    "fail": 0
   },
   "kind_counts": {
     "agent-config": 1,
-    "backend": 53,
-    "core": 28,
-    "docs": 26,
+    "backend": 56,
+    "core": 42,
+    "docs": 27,
     "domain-data": 4,
-    "frontend": 296,
+    "frontend": 130,
     "project": 8,
-    "scripts": 40,
-    "tests": 27
+    "scripts": 52,
+    "tests": 50
   },
   "files": [
     {
       "path": ".gemini/settings.json",
       "kind": "agent-config",
-      "status": "fail",
-      "bytes": 1970,
-      "lines": 67,
-      "findings": [
-        "possible API key or API-key workflow reference"
-      ]
+      "status": "ok",
+      "bytes": 1824,
+      "lines": 65,
+      "findings": []
     },
     {
       "path": "README.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 6630,
-      "lines": 107,
+      "bytes": 10378,
+      "lines": 133,
       "findings": []
     },
     {
@@ -57,8 +55,8 @@
       "path": "backend/agents/author.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 3024,
-      "lines": 64,
+      "bytes": 3633,
+      "lines": 72,
       "findings": []
     },
     {
@@ -121,16 +119,16 @@
       "path": "backend/agents/pinterest_uploader_v4.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 12560,
-      "lines": 326,
+      "bytes": 15199,
+      "lines": 389,
       "findings": []
     },
     {
       "path": "backend/agents/production_contract.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 1519,
-      "lines": 17,
+      "bytes": 2042,
+      "lines": 20,
       "findings": []
     },
     {
@@ -185,8 +183,8 @@
       "path": "backend/api/routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 16892,
-      "lines": 418,
+      "bytes": 17098,
+      "lines": 435,
       "findings": []
     },
     {
@@ -209,7 +207,7 @@
       "path": "backend/core/config.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 3074,
+      "bytes": 3099,
       "lines": 81,
       "findings": []
     },
@@ -249,7 +247,7 @@
       "path": "backend/requirements.txt",
       "kind": "backend",
       "status": "ok",
-      "bytes": 420,
+      "bytes": 432,
       "lines": 23,
       "findings": []
     },
@@ -257,16 +255,16 @@
       "path": "backend/scripts/batch_upload_all_remastered.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 6467,
-      "lines": 177,
+      "bytes": 6471,
+      "lines": 179,
       "findings": []
     },
     {
       "path": "backend/scripts/batch_upload_remastered.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22362,
-      "lines": 653,
+      "bytes": 24074,
+      "lines": 695,
       "findings": []
     },
     {
@@ -289,16 +287,16 @@
       "path": "backend/scripts/clear_pinterest_drafts.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 11025,
-      "lines": 290,
+      "bytes": 11065,
+      "lines": 298,
       "findings": []
     },
     {
       "path": "backend/scripts/daily_engine.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 17727,
-      "lines": 410,
+      "bytes": 2632,
+      "lines": 82,
       "findings": []
     },
     {
@@ -313,7 +311,7 @@
       "path": "backend/scripts/deploy_generic.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 4390,
+      "bytes": 4381,
       "lines": 116,
       "findings": []
     },
@@ -337,8 +335,8 @@
       "path": "backend/scripts/fix_post.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 4120,
-      "lines": 129,
+      "bytes": 1405,
+      "lines": 48,
       "findings": []
     },
     {
@@ -350,19 +348,35 @@
       "findings": []
     },
     {
+      "path": "backend/scripts/gemini_token_rotator.py",
+      "kind": "backend",
+      "status": "ok",
+      "bytes": 2872,
+      "lines": 106,
+      "findings": []
+    },
+    {
+      "path": "backend/scripts/hero_image_pipeline.py",
+      "kind": "backend",
+      "status": "ok",
+      "bytes": 18365,
+      "lines": 591,
+      "findings": []
+    },
+    {
       "path": "backend/scripts/pinterest_batch_core.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 71755,
-      "lines": 1751,
+      "bytes": 63458,
+      "lines": 1615,
       "findings": []
     },
     {
       "path": "backend/scripts/pinterest_uploader_v4.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22424,
-      "lines": 582,
+      "bytes": 25121,
+      "lines": 656,
       "findings": []
     },
     {
@@ -377,8 +391,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22699,
-      "lines": 431,
+      "bytes": 148316,
+      "lines": 3699,
       "findings": []
     },
     {
@@ -401,7 +415,7 @@
       "path": "backend/services/harvester.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 5319,
+      "bytes": 5324,
       "lines": 140,
       "findings": []
     },
@@ -417,24 +431,32 @@
       "path": "backend/services/memory_service.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 5791,
-      "lines": 151,
+      "bytes": 6215,
+      "lines": 161,
       "findings": []
     },
     {
       "path": "backend/services/news_scraper.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 19455,
-      "lines": 534,
+      "bytes": 24384,
+      "lines": 642,
+      "findings": []
+    },
+    {
+      "path": "backend/services/nvidia_client.py",
+      "kind": "backend",
+      "status": "ok",
+      "bytes": 3017,
+      "lines": 89,
       "findings": []
     },
     {
       "path": "backend/services/remasterer.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 25797,
-      "lines": 599,
+      "bytes": 84093,
+      "lines": 2067,
       "findings": []
     },
     {
@@ -513,15 +535,15 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 8334,
-      "lines": 176,
+      "bytes": 11765,
+      "lines": 243,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 761,
+      "bytes": 1036,
       "lines": 17,
       "findings": []
     },
@@ -529,31 +551,31 @@
       "path": "data/domains/recetadolce/domain.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 1209,
-      "lines": 39,
+      "bytes": 1138,
+      "lines": 36,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 3355,
-      "lines": 35,
+      "bytes": 84091,
+      "lines": 733,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 8497,
-      "lines": 176,
+      "bytes": 11690,
+      "lines": 243,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 764,
+      "bytes": 956,
       "lines": 17,
       "findings": []
     },
@@ -561,48 +583,72 @@
       "path": "data/domains/recetagenial/domain.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 594,
-      "lines": 22,
+      "bytes": 1174,
+      "lines": 40,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 2188,
-      "lines": 25,
+      "bytes": 55865,
+      "lines": 496,
       "findings": []
     },
     {
       "path": "docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 4968,
+      "bytes": 4883,
       "lines": 96,
+      "findings": []
+    },
+    {
+      "path": "docs/system/CAMPAIGN_PIPELINE.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 10589,
+      "lines": 109,
+      "findings": []
+    },
+    {
+      "path": "docs/system/HERMES_SOUL.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 0,
+      "lines": 0,
+      "findings": []
+    },
+    {
+      "path": "docs/system/PRODUCTION_RUNTIME_PLAN.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 9578,
+      "lines": 200,
       "findings": []
     },
     {
       "path": "docs/system/PROJECT_HYGIENE.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 2170,
-      "lines": 69,
+      "bytes": 2201,
+      "lines": 70,
       "findings": []
     },
     {
       "path": "docs/system/PROJECT_MAP.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 3186,
-      "lines": 66,
+      "bytes": 4083,
+      "lines": 73,
       "findings": []
     },
     {
       "path": "docs/system/SYSTEM_ARCHITECTURE.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 4024,
-      "lines": 94,
+      "bytes": 16048,
+      "lines": 325,
       "findings": []
     },
     {
@@ -617,8 +663,8 @@
       "path": "docs/templates/IMAGE_GENERATION_CONTRACT.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 3117,
-      "lines": 67,
+      "bytes": 6682,
+      "lines": 94,
       "findings": []
     },
     {
@@ -633,528 +679,32 @@
       "path": "docs/templates/UPCOMING_DOMAIN_SYSTEM_PROMPT.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 2693,
-      "lines": 69,
+      "bytes": 0,
+      "lines": 0,
       "findings": []
     },
     {
-      "path": "frontend/.graphify_temp_corpus/scratch/advanced_recipe_factory.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5404,
-      "lines": 143,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/ai_recipe_publisher.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4153,
-      "lines": 114,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/apply_correct_constraint.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1577,
-      "lines": 48,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/apply_links.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3498,
-      "lines": 98,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/audit_supabase.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3948,
-      "lines": 128,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/check_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 900,
-      "lines": 33,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/check_db_categories_actual.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 713,
-      "lines": 26,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/check_invalid_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1172,
-      "lines": 47,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/check_posts_columns.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 579,
-      "lines": 20,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/check_schema.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 605,
-      "lines": 25,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/cleanup_supabase.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3021,
-      "lines": 96,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/cleanup_supabase_v2.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3386,
-      "lines": 107,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/cleanup_supabase_v3.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4027,
-      "lines": 128,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/cloudinary_upload.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1509,
-      "lines": 52,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/create_listicles.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3740,
-      "lines": 90,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/final_audit.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1366,
-      "lines": 42,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/finalize_batch_processing.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3671,
-      "lines": 87,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/find_listicles.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1413,
-      "lines": 54,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/find_unsplash.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 758,
-      "lines": 30,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/fix-db-data.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1890,
-      "lines": 54,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/fix_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2555,
-      "lines": 65,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/fix_database_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1732,
-      "lines": 54,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/fix_db_constraint.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1821,
-      "lines": 47,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/full_automation_pipeline.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6020,
-      "lines": 166,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/image-urls.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1646,
-      "lines": 16,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/listicle_ideas.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 9611,
-      "lines": 276,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-crema-catalana.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 7270,
-      "lines": 137,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-direct.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6851,
-      "lines": 131,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-helado-pistacho.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 12834,
-      "lines": 301,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-paella.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6639,
-      "lines": 124,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-pistachio.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4368,
-      "lines": 94,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish-tortilla.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6886,
-      "lines": 132,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish_batch_icecreams.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 13440,
-      "lines": 257,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish_helados.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 23312,
-      "lines": 440,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish_icecream.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6245,
-      "lines": 150,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish_strawberry.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5597,
-      "lines": 121,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/publish_variety_batch.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 23337,
-      "lines": 407,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/rebuild_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4162,
-      "lines": 122,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/repair_list.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1479,
-      "lines": 41,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/repair_queue.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5210,
-      "lines": 201,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/replace_images.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2061,
-      "lines": 65,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/run_migrations.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1693,
-      "lines": 37,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/seo_analysis.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2480,
-      "lines": 76,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/seo_analysis.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 185236,
-      "lines": 3935,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/seo_bulk_repair.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3430,
-      "lines": 100,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/test-publish.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3051,
-      "lines": 96,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/test_gemini.js",
+      "path": "frontend/.vercel/README.txt",
       "kind": "frontend",
       "status": "ok",
       "bytes": 520,
-      "lines": 19,
+      "lines": 12,
       "findings": []
     },
     {
-      "path": "frontend/.graphify_temp_corpus/scratch/test_lowercase_allowed.js",
+      "path": "frontend/.vercel/project.json",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1171,
-      "lines": 40,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/tortilla-urls.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 400,
-      "lines": 6,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/upload-image.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1073,
-      "lines": 34,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/upload-images-to-supabase.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3647,
-      "lines": 95,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scratch/upload-tortilla-images.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1786,
-      "lines": 50,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/batch_publish.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1157,
-      "lines": 40,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/campaign_manager.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 21480,
-      "lines": 494,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/campaigns/fresas_campaign.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3703,
-      "lines": 138,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/content_wizard.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 12864,
-      "lines": 329,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/debug_db.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1749,
-      "lines": 50,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/generate_pins.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 10009,
-      "lines": 211,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/publish_fresas.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 19202,
-      "lines": 134,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/publish_tapas.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 22530,
-      "lines": 130,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/seed_admin.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2574,
-      "lines": 60,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/sync_nexus.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1738,
-      "lines": 51,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/update_analytics.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1401,
-      "lines": 46,
-      "findings": []
-    },
-    {
-      "path": "frontend/.graphify_temp_corpus/scripts/update_head_code.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1589,
-      "lines": 49,
+      "bytes": 122,
+      "lines": 1,
       "findings": []
     },
     {
       "path": "frontend/AGENTS.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1220,
-      "lines": 16,
+      "bytes": 1805,
+      "lines": 18,
       "findings": []
     },
     {
@@ -1187,14 +737,6 @@
       "status": "ok",
       "bytes": 1055,
       "lines": 42,
-      "findings": []
-    },
-    {
-      "path": "frontend/add_chef_tip.sql",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 344,
-      "lines": 6,
       "findings": []
     },
     {
@@ -1502,94 +1044,6 @@
       "findings": []
     },
     {
-      "path": "frontend/check_legacy_migrated.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 791,
-      "lines": 23,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_macarons.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 657,
-      "lines": 23,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_new_posts_sample.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 862,
-      "lines": 28,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_old_db.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1181,
-      "lines": 25,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_pins_db.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 849,
-      "lines": 25,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_post_diff.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1311,
-      "lines": 27,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_posts.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 583,
-      "lines": 19,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_settings_cols.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 690,
-      "lines": 22,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_subs_table.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 699,
-      "lines": 21,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_tables.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1409,
-      "lines": 35,
-      "findings": []
-    },
-    {
-      "path": "frontend/check_tables_existence.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 796,
-      "lines": 21,
-      "findings": []
-    },
-    {
       "path": "frontend/components/AdUnit.tsx",
       "kind": "frontend",
       "status": "ok",
@@ -1881,8 +1335,8 @@
       "path": "frontend/components/StandardRecipeCard.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 3225,
-      "lines": 72,
+      "bytes": 3025,
+      "lines": 68,
       "findings": []
     },
     {
@@ -1974,723 +1428,43 @@
       "findings": []
     },
     {
-      "path": "frontend/fix_categories_and_constraints.sql",
+      "path": "frontend/fetch_slug.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1517,
-      "lines": 42,
+      "bytes": 692,
+      "lines": 16,
       "findings": []
     },
     {
-      "path": "frontend/graphify-out/.graphify_analysis.json",
+      "path": "frontend/fetch_slug_genial.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 16893,
-      "lines": 506,
+      "bytes": 671,
+      "lines": 16,
       "findings": []
     },
     {
-      "path": "frontend/graphify-out/.graphify_ast.json",
+      "path": "frontend/fix_db_content.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 113819,
-      "lines": 3212,
+      "bytes": 1226,
+      "lines": 33,
       "findings": []
     },
     {
-      "path": "frontend/graphify-out/.graphify_cached.json",
+      "path": "frontend/fix_db_content2.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 88696,
-      "lines": 2,
+      "bytes": 1407,
+      "lines": 36,
       "findings": []
     },
     {
-      "path": "frontend/graphify-out/.graphify_chunk_01.json",
+      "path": "frontend/fix_recetagenial_db.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1265,
-      "lines": 42,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_02.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 978,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_03.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2962,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_04.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2580,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_05.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1026,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_06.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4128,
-      "lines": 119,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_07.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1322,
-      "lines": 42,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_08.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1611,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_09.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1559,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_chunk_10.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1004,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_detect.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4452,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_extract.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 131290,
-      "lines": 3643,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_semantic.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 17559,
-      "lines": 440,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/.graphify_uncached.txt",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 788,
-      "lines": 11,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/GRAPH_REPORT.md",
-      "kind": "docs",
-      "status": "ok",
-      "bytes": 18179,
-      "lines": 405,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/02ba78cc7811f3960cab0d1fbb90006e33b91bba34b78f508d6dd4f4c1e65bbe.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 11876,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/038be5cae692c575b6f20d71305a7201aa9475f63268e0f4ce8adcb3bb4cce9d.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2075,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/039b9e714f14f5a0c64d805eab7ab152d4d12582419364aa3f09e13515bf92e6.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4855,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/062f4ede650299fd44d73ea7f4515628fbc74219a9e940ef79b973ddbc7e74c1.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4276,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/07e63532732a343e3016ffe966637eb9d31abacfda7d7ede9f4a5748fb9c33c9.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3237,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/0f4eac58e9852d06e2bbcea8afc30d2cda0f4e7596dded7f71101df887d5f7f5.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5322,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/0fc928e45c0ea494058d187dc2f5166f2131cc5ff72d28d56997cbd7548352b5.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1816,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/13280804c7ac5a3f9ea7cc0d9a1347e3530dba67ef197caf6698117b8da45fbc.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3475,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/1797c227888e3f0f971a34e6ef0db6f607b1500cf2e68f0e8136754442ccb9ba.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3348,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/1c152181a729874dcdc5c76ba04778e916c2a7465671589ad13e20dfa02b2cb9.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5578,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/1d55a63a8f6b748581f1840bc11302029ec239d15f5b331bb42bc1686f1970e1.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3913,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/220dad91c04fcbae497a0b26e3e6d712201b01f2a1595dcbee35e98b9cd330f0.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1742,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/221e0c12b7ad78e60128b1787abbd1a1af4c18a867eecbc988d9b8ef826290ec.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2998,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/267e61c3ae167e4c683f42701fda3d108b77878c0eaf9626de894935b5a476b5.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1589,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/33344c2bd3dd09238e1f09e1e53c148b1716180c3f0401f7b8c8c5ac5b23811e.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1721,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/34240524f38b5d4c3db2ccd8cb9bc51053d80c0967c48fad681a9df2118163a0.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6218,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/384617e15bcc43de8b8cbebdbaf0bd4798ab85b4e7e85b8c9027b449d14f9121.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5925,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/45fd31cb95e4695ca52dba89e5bfc74cd6be69f657036b47637574038cd46655.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2769,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/4629539d787e37df8c0843f698d58dd1345da451719b9a0d8567ef0cae2e5f87.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3235,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/47470ffc46a6a480d3eb9687ba4944600a1bac0dbb2e758865afd1c885af8286.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3046,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/4d55b029ace45c91feb212cb345b411d8cef3afc418e2703f3cf1f35ee79ed6d.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5909,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/4e32d5489a7382b1a19c208744a65b00fb808d335ce57f34a134722181de5738.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3198,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/50dc1c8e69b9f7fdeaf75c04b39963264a8277ba9f91dd418f52911dc1ee1fa6.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1507,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/5aed2e14bf93a1849e83f7bda11320a23f7f7ca5d49fb06b8812f0fbbe279c96.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1561,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/5d46a61d437645a77ce4f7a9989b7d11dd298aa91d65270a5803762fab713fc1.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5778,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/6590b345840e5fba39e63fb1e3f338c39f8930c422691844f466f71dee84e616.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2231,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/73aacde4ed7d74f00045cd3f7c9968098c71cf174e62e34d49d42aeb5de5801f.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 38224,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/7659061b3c9043c2c41551d9983188b7f8e590f1412ec01618ae93901a90af06.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2203,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/7d4d72a20ba0536d850cc4c1db15a5a7d3694494b8e034cc560e0f743a3d2396.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4523,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/8060c589e43856f5b84943522be6329a7dc9836ed0bab98a06c0ac080490cf0a.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3132,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/83265aa5f89e2bdca5b59382069ca277ffcfe3e81d2a1b4a53f0c84b995f9c67.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4059,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/84965fad11bf37ef28b29996ad63f631f1262687e52c9f02a5cde178c01de319.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1871,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/858de5d063584f288be204d7576ce103784ee4feb977fe6d310ee1a08d0ac6ef.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4612,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/8c43eb9d5e6b1f9f67145071f9dbedcfdb612b7422fd579797de6a330a0bea35.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3358,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/907c1cc097e0f4120e7b37ecfb877ef48a0b6a2877d2d3620fa2eb8574d7bbc4.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3809,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/9286d26c5191a2a793976defaee77b25095eef97f9931b352c47a916f067b63d.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 10731,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/92d5680967262e7c271fbde66c5823a6cdea5ae91cb9565f267abba41e702005.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2992,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/a08bdb1e4e848553a0fb377f6f5a99a30833e955ab3a39488d25a9718a1c8b95.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3515,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/a6244b507b9626a16048bb2c19742fdf67ca09a28da83142fd7c751058e0e815.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 15533,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/b20af0a333c6ee61641e7b09ccf2dece2e5c1ef27842b0a0c298ec056be8d849.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2371,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/b2ed65e7dbb04f471b6e5b479d3e53f372d85e6a97bf71e1314768a3f567c441.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2580,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/b3f787047b32247c33c18a0ddabd3299d55812ee97c2e000da0ad9032468faf5.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1944,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/bd197894a5535d779cc38511b311a65ccec8fdcc2ac24c20c1184430f792d53b.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6327,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/bd43e82ce95ab40b097257452178ebaabdd34e2d78a651521c1cf834ffb136f7.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1689,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/bea1e33b93df5ad81df9c7fc25469e0847afe7101093280c3b4bb0287b9701f3.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3027,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/c0c123817b4c16b422beb04a3f38cf0d14306b43bc54dbc8c94f928f9930a706.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2054,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/cb624e1d3ca34525e0388185df3479d8850a78176bb5ae91676464935ffe5331.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 4408,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/cc14984f718074d4f9858c8c6edf0f90eb8a7e44437f809d84e9ef8e25f867bb.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1643,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/dc663a73fe9fc8bcf550e2ab7997d8f098ca60049b756f6d504da318a3ec9b92.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1385,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/dda7d3dd3d6d72fe79f491d6d493f4de1a306d29d2bf03a9123211eb29b5f3bb.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 6375,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/df53589af121495eace1e196adc129e928598ff5fa3a96effed50960e1170d9f.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1917,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/e363bbf22556ed83c3dd511cf9c58f8d0595987f7ec7712f8e8debfd32851719.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1785,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/e41a288030b46451a57f41f39ac15bc49d28769274835b5cc8cc238b119cddbd.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 14271,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/e955cb7932f07a9254b1d93c7ecf71465ff941a50c9d91b543700e181e87455a.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1833,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/ec70a8f6140b35eaec0c8086e871efa3805b9c48503572e17ac79ac125bc879a.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3499,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/faa599ebb6588c1f807785e9c8900f1bd3039a0082209289bd692ab0d9a0bd75.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2129,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/fb082861d84fde259e32ba4b56715b9e54cbaf6101a27a9d9eeaaf2e94603b0f.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 3762,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/cache/fd722c527a76bb98c868221663fa652a831b8ecc8a16b2145675458768a59b15.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 14335,
-      "lines": 2,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify-out/graph.json",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 152531,
-      "lines": 4033,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify_query.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1960,
-      "lines": 56,
-      "findings": []
-    },
-    {
-      "path": "frontend/graphify_step4.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1590,
-      "lines": 34,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_migrated_post.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 729,
-      "lines": 23,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_new_sample.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 748,
-      "lines": 20,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_new_settings.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 667,
-      "lines": 18,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 726,
-      "lines": 19,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_sample.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 631,
-      "lines": 15,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_sample_links.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1146,
-      "lines": 25,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_schema.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1290,
-      "lines": 28,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_settings.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 642,
-      "lines": 18,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_old_subs.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 648,
-      "lines": 18,
-      "findings": []
-    },
-    {
-      "path": "frontend/inspect_schema.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 822,
-      "lines": 26,
+      "bytes": 1341,
+      "lines": 36,
       "findings": []
     },
     {
@@ -2699,6 +1473,14 @@
       "status": "ok",
       "bytes": 2421,
       "lines": 63,
+      "findings": []
+    },
+    {
+      "path": "frontend/lib/imageHelper.ts",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 2174,
+      "lines": 74,
       "findings": []
     },
     {
@@ -2742,43 +1524,11 @@
       "findings": []
     },
     {
-      "path": "frontend/list_all_tables.js",
+      "path": "frontend/migrate_post.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1657,
-      "lines": 41,
-      "findings": []
-    },
-    {
-      "path": "frontend/list_categories.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 589,
-      "lines": 19,
-      "findings": []
-    },
-    {
-      "path": "frontend/list_more_slugs.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 711,
-      "lines": 23,
-      "findings": []
-    },
-    {
-      "path": "frontend/list_rpcs.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 655,
-      "lines": 18,
-      "findings": []
-    },
-    {
-      "path": "frontend/merge_graphify.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 15861,
-      "lines": 62,
+      "bytes": 2200,
+      "lines": 50,
       "findings": []
     },
     {
@@ -2830,35 +1580,27 @@
       "findings": []
     },
     {
+      "path": "frontend/post_content.txt",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 7727,
+      "lines": 62,
+      "findings": []
+    },
+    {
+      "path": "frontend/post_content_recetagenial.txt",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 7727,
+      "lines": 62,
+      "findings": []
+    },
+    {
       "path": "frontend/postcss.config.mjs",
       "kind": "frontend",
       "status": "ok",
       "bytes": 101,
       "lines": 8,
-      "findings": []
-    },
-    {
-      "path": "frontend/premium_migration.sql",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1247,
-      "lines": 27,
-      "findings": []
-    },
-    {
-      "path": "frontend/probe_old_tables.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 807,
-      "lines": 21,
-      "findings": []
-    },
-    {
-      "path": "frontend/probe_tables.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 969,
-      "lines": 27,
       "findings": []
     },
     {
@@ -2875,14 +1617,6 @@
       "status": "ok",
       "bytes": 1002,
       "lines": 27,
-      "findings": []
-    },
-    {
-      "path": "frontend/run_graphify_part_ab.py",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 1572,
-      "lines": 32,
       "findings": []
     },
     {
@@ -2990,35 +1724,19 @@
       "findings": []
     },
     {
-      "path": "frontend/settings_migration.sql",
+      "path": "frontend/test_marked.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1158,
-      "lines": 45,
+      "bytes": 622,
+      "lines": 22,
       "findings": []
     },
     {
-      "path": "frontend/sync_discovery.js",
+      "path": "frontend/test_marked2.js",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1652,
-      "lines": 39,
-      "findings": []
-    },
-    {
-      "path": "frontend/sync_settings.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 2566,
-      "lines": 64,
-      "findings": []
-    },
-    {
-      "path": "frontend/test_supabase.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 709,
-      "lines": 21,
+      "bytes": 872,
+      "lines": 23,
       "findings": []
     },
     {
@@ -3038,19 +1756,19 @@
       "findings": []
     },
     {
-      "path": "frontend/unify_supabase.js",
-      "kind": "frontend",
-      "status": "ok",
-      "bytes": 5650,
-      "lines": 135,
-      "findings": []
-    },
-    {
       "path": "frontend/vercel.json",
       "kind": "frontend",
       "status": "ok",
       "bytes": 419,
       "lines": 17,
+      "findings": []
+    },
+    {
+      "path": "memory/gold_config.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 1898,
+      "lines": 32,
       "findings": []
     },
     {
@@ -3065,16 +1783,16 @@
       "path": "memory/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 22406,
-      "lines": 203,
+      "bytes": 23347,
+      "lines": 214,
       "findings": []
     },
     {
       "path": "memory/pinterest_backlog.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 3295,
-      "lines": 34,
+      "bytes": 1615,
+      "lines": 22,
       "findings": []
     },
     {
@@ -3089,128 +1807,152 @@
       "path": "pinterest_automation/browser_utils.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 8213,
-      "lines": 221,
+      "bytes": 8588,
+      "lines": 233,
       "findings": []
     },
     {
       "path": "pinterest_automation/campaign.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 8784,
-      "lines": 262,
+      "bytes": 30296,
+      "lines": 840,
       "findings": []
     },
     {
       "path": "pinterest_automation/circuit_breaker.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 8572,
-      "lines": 218,
+      "bytes": 9752,
+      "lines": 246,
       "findings": []
     },
     {
       "path": "pinterest_automation/config.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 13685,
-      "lines": 386,
+      "bytes": 16502,
+      "lines": 457,
       "findings": []
     },
     {
       "path": "pinterest_automation/health_monitor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 9119,
-      "lines": 234,
+      "bytes": 11121,
+      "lines": 281,
       "findings": []
     },
     {
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 21843,
-      "lines": 558,
+      "bytes": 51878,
+      "lines": 1269,
       "findings": []
     },
     {
       "path": "pinterest_automation/mcp_bridge.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 10869,
-      "lines": 255,
+      "bytes": 11776,
+      "lines": 282,
       "findings": []
     },
     {
       "path": "pinterest_automation/mcp_client.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 4675,
-      "lines": 146,
+      "bytes": 6217,
+      "lines": 172,
       "findings": []
     },
     {
       "path": "pinterest_automation/mcp_integration.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 4204,
-      "lines": 141,
+      "bytes": 12661,
+      "lines": 343,
       "findings": []
     },
     {
       "path": "pinterest_automation/pinterest_driver.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 36908,
-      "lines": 864,
+      "bytes": 58562,
+      "lines": 1317,
       "findings": []
     },
     {
       "path": "pinterest_automation/rate_limiter.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 6838,
-      "lines": 179,
+      "bytes": 12081,
+      "lines": 289,
+      "findings": []
+    },
+    {
+      "path": "pinterest_automation/routing.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 1742,
+      "lines": 53,
+      "findings": []
+    },
+    {
+      "path": "pinterest_automation/runtime_state.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 5309,
+      "lines": 152,
       "findings": []
     },
     {
       "path": "pinterest_automation/self_healing.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 21727,
-      "lines": 560,
+      "bytes": 22061,
+      "lines": 568,
       "findings": []
     },
     {
       "path": "pinterest_automation/session_pool.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 13036,
-      "lines": 324,
+      "bytes": 20430,
+      "lines": 485,
       "findings": []
     },
     {
       "path": "pinterest_automation/supervisor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 26515,
-      "lines": 588,
+      "bytes": 38205,
+      "lines": 815,
+      "findings": []
+    },
+    {
+      "path": "pinterest_automation/utils.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 1897,
+      "lines": 61,
       "findings": []
     },
     {
       "path": "pyproject.toml",
       "kind": "project",
       "status": "ok",
-      "bytes": 8163,
-      "lines": 247,
+      "bytes": 8197,
+      "lines": 249,
       "findings": []
     },
     {
       "path": "rankstein.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 569,
-      "lines": 22,
+      "bytes": 1405,
+      "lines": 39,
       "findings": []
     },
     {
@@ -3238,18 +1980,26 @@
       "findings": []
     },
     {
+      "path": "rankstein/category_policy.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 8188,
+      "lines": 200,
+      "findings": []
+    },
+    {
       "path": "rankstein/cli.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 15308,
-      "lines": 355,
+      "bytes": 34231,
+      "lines": 811,
       "findings": []
     },
     {
       "path": "rankstein/config.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 9895,
+      "bytes": 9920,
       "lines": 214,
       "findings": []
     },
@@ -3257,16 +2007,32 @@
       "path": "rankstein/domain.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 13217,
-      "lines": 315,
+      "bytes": 13160,
+      "lines": 313,
       "findings": []
     },
     {
       "path": "rankstein/keyword_roadmap.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 5049,
-      "lines": 162,
+      "bytes": 10561,
+      "lines": 303,
+      "findings": []
+    },
+    {
+      "path": "rankstein/launcher.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 23792,
+      "lines": 681,
+      "findings": []
+    },
+    {
+      "path": "rankstein/log_manager.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 4515,
+      "lines": 118,
       "findings": []
     },
     {
@@ -3278,27 +2044,83 @@
       "findings": []
     },
     {
+      "path": "rankstein/pipeline_events.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 6522,
+      "lines": 230,
+      "findings": []
+    },
+    {
+      "path": "rankstein/production_batch.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 15366,
+      "lines": 395,
+      "findings": []
+    },
+    {
+      "path": "rankstein/production_reconcile.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 20832,
+      "lines": 566,
+      "findings": []
+    },
+    {
+      "path": "rankstein/prompts.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 14818,
+      "lines": 482,
+      "findings": []
+    },
+    {
       "path": "rankstein/provisioner.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 16327,
+      "bytes": 16413,
       "lines": 383,
+      "findings": []
+    },
+    {
+      "path": "rankstein/recipe_pin_generator.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 27641,
+      "lines": 817,
+      "findings": []
+    },
+    {
+      "path": "rankstein/remaster_variants.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 28883,
+      "lines": 822,
+      "findings": []
+    },
+    {
+      "path": "rankstein/runtime_env.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 1295,
+      "lines": 36,
       "findings": []
     },
     {
       "path": "rankstein/site_factory.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 24033,
-      "lines": 694,
+      "bytes": 24047,
+      "lines": 697,
       "findings": []
     },
     {
       "path": "rankstein/startup.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 11464,
-      "lines": 309,
+      "bytes": 15004,
+      "lines": 400,
       "findings": []
     },
     {
@@ -3310,245 +2132,283 @@
       "findings": []
     },
     {
+      "path": "rankstein/suite_controller.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 21230,
+      "lines": 570,
+      "findings": []
+    },
+    {
       "path": "rankstein/trend_intelligence.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 22496,
-      "lines": 651,
+      "bytes": 57746,
+      "lines": 1669,
       "findings": []
     },
     {
       "path": "rankstein_mcp_server.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 159599,
-      "lines": 3728,
+      "bytes": 224684,
+      "lines": 5325,
       "findings": []
     },
     {
       "path": "requirements.txt",
       "kind": "project",
       "status": "ok",
-      "bytes": 4082,
-      "lines": 190,
+      "bytes": 4109,
+      "lines": 192,
       "findings": []
     },
     {
-      "path": "scripts/adsense_audit.py",
+      "path": "scripts/debug/check_articles.py",
       "kind": "scripts",
-      "status": "ok",
-      "bytes": 4565,
-      "lines": 114,
-      "findings": []
+      "status": "review",
+      "bytes": 1608,
+      "lines": 45,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
     },
     {
-      "path": "scripts/adsense_repair.py",
+      "path": "scripts/debug/check_models.py",
       "kind": "scripts",
-      "status": "ok",
-      "bytes": 8031,
-      "lines": 179,
-      "findings": []
+      "status": "review",
+      "bytes": 1677,
+      "lines": 45,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
     },
     {
-      "path": "scripts/audit_single.js",
+      "path": "scripts/debug/check_nvidia_log.py",
       "kind": "scripts",
-      "status": "ok",
-      "bytes": 1253,
-      "lines": 41,
-      "findings": []
+      "status": "review",
+      "bytes": 407,
+      "lines": 11,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
     },
     {
-      "path": "scripts/check_categories.py",
+      "path": "scripts/debug/check_proof.py",
       "kind": "scripts",
-      "status": "ok",
-      "bytes": 1155,
-      "lines": 26,
-      "findings": []
+      "status": "review",
+      "bytes": 875,
+      "lines": 19,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
     },
     {
-      "path": "scripts/check_columns.py",
+      "path": "scripts/debug/check_published_today.py",
       "kind": "scripts",
-      "status": "ok",
-      "bytes": 1237,
+      "status": "review",
+      "bytes": 1682,
+      "lines": 45,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/dump_posts.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1173,
+      "lines": 32,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/fetch_urls.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1651,
+      "lines": 39,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/find_recent.ps1",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 522,
+      "lines": 6,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/find_tables.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 469,
+      "lines": 15,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_pinterest_remaster_dom.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2431,
+      "lines": 70,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/publish_test_article.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 721,
+      "lines": 23,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_article_slug.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1226,
       "lines": 28,
-      "findings": []
-    },
-    {
-      "path": "scripts/debug/README.md",
-      "kind": "docs",
-      "status": "review",
-      "bytes": 1218,
-      "lines": 27,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/audit_repair_logic.py",
+      "path": "scripts/debug/test_full_nemotron_article.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2208,
-      "lines": 60,
+      "bytes": 4006,
+      "lines": 96,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/check_dotenv_load.py",
+      "path": "scripts/debug/test_gemini_api.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 893,
-      "lines": 26,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/check_duplicates.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 1813,
-      "lines": 56,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/check_pin_status.js",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 621,
+      "bytes": 700,
       "lines": 22,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/check_supabase_columns.py",
+      "path": "scripts/debug/test_gemini_rest.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 640,
-      "lines": 25,
+      "bytes": 1867,
+      "lines": 45,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/cleanup_backlog.py",
+      "path": "scripts/debug/test_nemotron_stream.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2364,
-      "lines": 81,
+      "bytes": 2363,
+      "lines": 72,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/cleanup_env.py",
+      "path": "scripts/debug/test_nvidia_fast.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 986,
-      "lines": 34,
+      "bytes": 1397,
+      "lines": 40,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/delete_uploaded_images.py",
+      "path": "scripts/debug/test_nvidia_live_gen.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1491,
+      "bytes": 2002,
+      "lines": 47,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_nvidia_module.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1162,
+      "lines": 33,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_nvidia_nemotron.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2262,
+      "lines": 53,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_primp_gemini.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 834,
+      "lines": 23,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/verify_20.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 778,
+      "lines": 17,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/verify_dashboard.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1769,
+      "lines": 43,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/verify_live_sites.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2453,
       "lines": 52,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
-      "path": "scripts/debug/direct_upload.py",
+      "path": "scripts/debug/verify_nemotron_json.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2107,
-      "lines": 60,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/fix_cross_save.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 2900,
-      "lines": 73,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/full_queue_cleanup.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 2850,
-      "lines": 91,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/gen_article.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 8661,
-      "lines": 134,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/inspect_processing_jobs.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 793,
-      "lines": 28,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/publish_milhojas.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 10870,
-      "lines": 147,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/queue_stats.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 956,
-      "lines": 26,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/quick_cloudinary_upload.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 1012,
-      "lines": 29,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/reset_queue.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 1445,
-      "lines": 41,
+      "bytes": 2829,
+      "lines": 79,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -3567,6 +2427,14 @@
       "status": "ok",
       "bytes": 5608,
       "lines": 162,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/live_logs.ps1",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 697,
+      "lines": 11,
       "findings": []
     },
     {
@@ -3589,32 +2457,40 @@
       "path": "scripts/dev/run_production_validation.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 11520,
-      "lines": 322,
+      "bytes": 11493,
+      "lines": 323,
       "findings": []
     },
     {
       "path": "scripts/dev/self_clean.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 5719,
-      "lines": 205,
+      "bytes": 6028,
+      "lines": 212,
       "findings": []
     },
     {
       "path": "scripts/dev/start_agentmemory.ps1",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 4604,
-      "lines": 126,
+      "bytes": 4868,
+      "lines": 130,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/start_all_mcp.ps1",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 4182,
+      "lines": 105,
       "findings": []
     },
     {
       "path": "scripts/dev/validate_automation.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 6334,
-      "lines": 206,
+      "bytes": 7399,
+      "lines": 222,
       "findings": []
     },
     {
@@ -3626,99 +2502,131 @@
       "findings": []
     },
     {
-      "path": "scripts/fix_links_only.py",
+      "path": "scripts/ops/backfill_images.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 3435,
-      "lines": 70,
+      "bytes": 3447,
+      "lines": 112,
       "findings": []
     },
     {
-      "path": "scripts/oneoff/README.md",
-      "kind": "docs",
-      "status": "review",
-      "bytes": 2098,
-      "lines": 42,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/download_image.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 849,
-      "lines": 21,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/enqueue_all_remasters.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 3359,
-      "lines": 103,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/publish_cocido.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 11894,
-      "lines": 124,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/publish_gambas.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 11582,
-      "lines": 124,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/publish_lentejas.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 11703,
-      "lines": 124,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/publish_pisto.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 11625,
-      "lines": 120,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/oneoff/publish_pollo.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 11677,
-      "lines": 124,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/test_keys.py",
+      "path": "scripts/ops/check_pins.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 916,
-      "lines": 17,
+      "bytes": 2658,
+      "lines": 78,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/clear_pinterest_drafts.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3613,
+      "lines": 94,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/force_chromium_env.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 1432,
+      "lines": 46,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/force_chromium_login.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 6551,
+      "lines": 174,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/generate_campaign_pins.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 8020,
+      "lines": 223,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/kill_all_processes.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 4192,
+      "lines": 141,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/reenqueue_dlq.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 2437,
+      "lines": 79,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/reset_and_verify_dashboard.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3658,
+      "lines": 88,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/reset_dashboard_and_roadmaps.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 4839,
+      "lines": 128,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/restore_gold_config.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3173,
+      "lines": 96,
+      "findings": []
+    },
+    {
+      "path": "scripts/publish_pending_batch.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 2008,
+      "lines": 59,
+      "findings": []
+    },
+    {
+      "path": "scripts/recover_keywords.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 5177,
+      "lines": 169,
+      "findings": []
+    },
+    {
+      "path": "scripts/start_workers.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 988,
+      "lines": 37,
+      "findings": []
+    },
+    {
+      "path": "scripts/sweep_failed.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 2197,
+      "lines": 59,
+      "findings": []
+    },
+    {
+      "path": "scripts/test_specificity.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 1955,
+      "lines": 55,
       "findings": []
     },
     {
@@ -3773,8 +2681,24 @@
       "path": "tests/unit/test_ai_engine.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 2884,
-      "lines": 92,
+      "bytes": 3087,
+      "lines": 94,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_article_quality_policy.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 4025,
+      "lines": 100,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_article_remaster_queue.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 9197,
+      "lines": 251,
       "findings": []
     },
     {
@@ -3789,8 +2713,24 @@
       "path": "tests/unit/test_browser_utils.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 8162,
-      "lines": 189,
+      "bytes": 8719,
+      "lines": 201,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_campaign_prompts.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 4795,
+      "lines": 138,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_category_policy.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2483,
+      "lines": 90,
       "findings": []
     },
     {
@@ -3813,16 +2753,16 @@
       "path": "tests/unit/test_config.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9365,
-      "lines": 214,
+      "bytes": 11044,
+      "lines": 247,
       "findings": []
     },
     {
       "path": "tests/unit/test_create_hero_image_pollinations.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 6491,
-      "lines": 172,
+      "bytes": 9208,
+      "lines": 249,
       "findings": []
     },
     {
@@ -3834,10 +2774,18 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_direct_upload_cross_save.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 3518,
+      "lines": 110,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_domain.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9157,
+      "bytes": 9163,
       "lines": 199,
       "findings": []
     },
@@ -3845,32 +2793,56 @@
       "path": "tests/unit/test_domain_isolation.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 3651,
-      "lines": 93,
+      "bytes": 4084,
+      "lines": 110,
       "findings": []
     },
     {
       "path": "tests/unit/test_health_monitor.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 894,
-      "lines": 26,
+      "bytes": 1652,
+      "lines": 50,
       "findings": []
     },
     {
       "path": "tests/unit/test_job_queue_sqlite.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9657,
-      "lines": 256,
+      "bytes": 18123,
+      "lines": 475,
       "findings": []
     },
     {
       "path": "tests/unit/test_keyword_roadmap.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 3718,
-      "lines": 115,
+      "bytes": 11976,
+      "lines": 357,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_legacy_article_entrypoints.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2858,
+      "lines": 88,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_log_manager.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 3028,
+      "lines": 100,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_mcp_remaster_campaign.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 6325,
+      "lines": 187,
       "findings": []
     },
     {
@@ -3882,11 +2854,91 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_news_scraper.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 1210,
+      "lines": 37,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_nvidia_fallback.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 581,
+      "lines": 18,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_production_runtime.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 22362,
+      "lines": 642,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_public_verification.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2335,
+      "lines": 77,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pipeline_events.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2156,
+      "lines": 78,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_production_batch.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 11233,
+      "lines": 307,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_production_reconcile.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 15788,
+      "lines": 454,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_provisioner.py",
       "kind": "tests",
       "status": "ok",
       "bytes": 11022,
       "lines": 253,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_native_fallback.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 6902,
+      "lines": 209,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_relevance.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 4369,
+      "lines": 131,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_variants.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 10036,
+      "lines": 281,
       "findings": []
     },
     {
@@ -3906,6 +2958,14 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_self_clean.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 678,
+      "lines": 25,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_site_factory.py",
       "kind": "tests",
       "status": "ok",
@@ -3917,8 +2977,8 @@
       "path": "tests/unit/test_startup.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 5119,
-      "lines": 142,
+      "bytes": 10275,
+      "lines": 287,
       "findings": []
     },
     {
@@ -3930,11 +2990,43 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_suite_controller.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 4154,
+      "lines": 110,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_supabase_headers.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 768,
+      "lines": 32,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_supabase_image_upload.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 6050,
+      "lines": 174,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_trend_intelligence.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 2471,
-      "lines": 70,
+      "bytes": 22324,
+      "lines": 623,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_turbo_articles.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 37943,
+      "lines": 1185,
       "findings": []
     }
   ]

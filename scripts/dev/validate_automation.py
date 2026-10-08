@@ -4,20 +4,28 @@ Tests all core infrastructure components without requiring a live browser.
 Run: python validate_automation.py
 """
 
+import os
 import sys
 import time
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+_VALIDATION_TMP = TemporaryDirectory()
+_VALIDATION_DIR = Path(_VALIDATION_TMP.name)
+os.environ["PINTEREST_QUEUE_DB_FILE"] = str(_VALIDATION_DIR / "jobs.db")
+os.environ["PINTEREST_RATE_LIMIT_DB_FILE"] = str(_VALIDATION_DIR / "rate_limiter.db")
+os.environ["PINTEREST_CIRCUIT_STATE_FILE"] = str(_VALIDATION_DIR / "circuit_state.json")
+os.environ["PINTEREST_HEALTH_STATE_FILE"] = str(_VALIDATION_DIR / "health_state.json")
+os.environ["PINTEREST_HEALING_CACHE_FILE"] = str(_VALIDATION_DIR / "selector_cache.json")
+
 from pinterest_automation import (
-    get_circuit_breaker,
     get_config,
     get_healing_cache,
     get_health_monitor,
     get_job_queue,
-    get_rate_limiter,
 )
 
 
@@ -44,8 +52,10 @@ def test_health_monitor():
 
 def test_circuit_breaker():
     print("\n[3/7] Testing Circuit Breaker...")
-    cb = get_circuit_breaker()
-    op = "test_op"
+    from pinterest_automation.circuit_breaker import CircuitBreaker
+
+    cb = CircuitBreaker()
+    op = f"test_op_{int(time.time() * 1000)}"
     assert cb.can_execute(op)
 
     # Simulate failures
@@ -73,56 +83,62 @@ def test_circuit_breaker():
 
 def test_rate_limiter():
     print("\n[4/7] Testing Rate Limiter...")
-    rl = get_rate_limiter()
-    op = "test_pin"
-    assert rl.can_execute(op)
+    from pinterest_automation.rate_limiter import RateLimiter
 
-    delay = rl.get_delay(op)
-    assert delay >= 0
-    print(f"   [INFO] Initial delay: {delay:.1f}s")
+    with TemporaryDirectory() as tmpdir:
+        rl = RateLimiter(db_file=Path(tmpdir) / "rate_limiter.db")
+        op = "test_pin"
+        assert rl.can_execute(op)
 
-    # Simulate execution
-    rl.record_execution(op)
-    status = rl.get_status()
-    assert status["daily_counts"][op] == 1
-    print(f"   [INFO] Daily count after 1 execution: {status['daily_counts'][op]}")
+        delay = rl.get_delay(op)
+        assert delay >= 0
+        print(f"   [INFO] Initial delay: {delay:.1f}s")
 
-    # Simulate failures leading to cooldown
-    for i in range(rl.config.cooldown_after_failures):
-        rl.record_failure(op)
-    assert not rl.can_execute(op)
+        # Simulate execution
+        rl.record_execution(op)
+        status = rl.get_status()
+        assert status["daily_counts"][op] == 1
+        print(f"   [INFO] Daily count after 1 execution: {status['daily_counts'][op]}")
+
+        # Simulate failures leading to cooldown
+        for i in range(rl.config.cooldown_after_failures):
+            rl.record_failure(op)
+        assert not rl.can_execute(op)
     print("   [OK] Rate limiter entered cooldown as expected")
 
 
 def test_job_queue():
     print("\n[5/7] Testing Job Queue...")
-    jq = get_job_queue()
-    before_total = jq.get_stats()["total"]
+    from pinterest_automation.job_queue import JobQueue
 
-    # Enqueue
-    job_id = jq.enqueue_pin_upload(
-        image_path="test.jpg",
-        title="Test Pin",
-        description="Test description",
-        link="https://example.com",
-        priority=1,
-    )
-    assert job_id is not None
-    print(f"   [INFO] Enqueued job: {job_id}")
+    with TemporaryDirectory() as tmpdir:
+        jq = JobQueue(db_file=Path(tmpdir) / "jobs.db")
+        before_total = jq.get_stats()["total"]
 
-    stats = jq.get_stats()
-    print(f"   [INFO] Queue stats: {stats}")
+        # Enqueue
+        job_id = jq.enqueue_pin_upload(
+            image_path="test.jpg",
+            title="Test Pin",
+            description="Test description",
+            link="https://example.com",
+            priority=1,
+        )
+        assert job_id is not None
+        print(f"   [INFO] Enqueued job: {job_id}")
 
-    # Dequeue
-    job = jq.dequeue()
-    assert job is not None
-    assert job.id == job_id
-    print(f"   [INFO] Dequeued job: {job.id} (attempt={job.attempt})")
+        stats = jq.get_stats()
+        print(f"   [INFO] Queue stats: {stats}")
 
-    # Complete
-    jq.complete(job_id, {"pin_id": "12345"})
-    stats = jq.get_stats()
-    assert stats["total"] == before_total
+        # Dequeue
+        job = jq.dequeue()
+        assert job is not None
+        assert job.id == job_id
+        print(f"   [INFO] Dequeued job: {job.id} (attempt={job.attempt})")
+
+        # Complete
+        jq.complete(job_id, {"pin_id": "12345"})
+        stats = jq.get_stats()
+        assert stats["total"] == before_total
     print("   [OK] Job queue working correctly")
 
 
@@ -162,7 +178,7 @@ def test_queue_accounts():
             handles.add(str(handle))
 
     missing = sorted(handle for handle in handles if handle not in cfg.accounts)
-    print(f"   [INFO] Queued account handles: {sorted(handles) or ['none']}")
+    print(f"   [INFO] Queued account handles in isolated validation queue: {sorted(handles) or ['none']}")
     if missing:
         raise AssertionError(f"Queued account handles missing from config: {missing}")
     print("   [OK] Queue account handles are configured")

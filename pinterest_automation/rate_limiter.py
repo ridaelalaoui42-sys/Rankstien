@@ -9,10 +9,11 @@ updated atomically.  A fresh row is inserted automatically if one doesn't exist.
 """
 
 import logging
+import os
 import random
 import sqlite3
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Lock
 
@@ -21,7 +22,7 @@ from .config import DATA_DIR, get_config
 logger = logging.getLogger("rankstein.rate_limiter")
 
 # ── Persistent state DB ───────────────────────────────────────────────────────
-_RL_DB_FILE = DATA_DIR / "queue" / "rate_limiter.db"
+_RL_DB_FILE = Path(os.environ.get("PINTEREST_RATE_LIMIT_DB_FILE") or DATA_DIR / "queue" / "rate_limiter.db")
 
 _RL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS rl_counters (
@@ -162,6 +163,24 @@ class RateLimiter:
                 return False
 
             return True
+
+    def retry_after_seconds(self, operation: str = "pin_post") -> float:
+        """Return the next useful retry delay when an operation is rate limited."""
+        with self._lock:
+            self._reset_if_needed()
+            now_epoch = time.time()
+            delays = [max(0.0, self._cooldown_until.get(operation, 0) - now_epoch)]
+            now = datetime.now(UTC)
+
+            if self._daily_counts.get(operation, 0) >= self.config.daily_pin_limit:
+                next_day = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                delays.append((next_day - now).total_seconds())
+
+            if self._hourly_counts.get(operation, 0) >= self.config.hourly_pin_limit:
+                next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+                delays.append((next_hour - now).total_seconds())
+
+            return max(delays, default=0.0)
 
     def record_execution(self, operation: str = "pin_post"):
         with self._lock:

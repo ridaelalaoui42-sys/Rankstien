@@ -13,8 +13,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright
-from playwright_stealth import Stealth
 
 load_dotenv()
 
@@ -65,7 +63,9 @@ class BattleHardenedUploader:
                 create_turbo_browser,
             )
 
-            browser = DEFAULT_BROWSER_MAP.get(SESSION_DIR.name, os.environ.get("PINTEREST_BROWSER", "firefox"))
+            browser = DEFAULT_BROWSER_MAP.get(
+                SESSION_DIR.name, os.environ.get("PINTEREST_BROWSER", "firefox")
+            )
             account = PinterestAccount(
                 name=SESSION_DIR.name,
                 session_dir=SESSION_DIR,
@@ -101,18 +101,81 @@ class BattleHardenedUploader:
             return False
 
         try:
-            await self.page.goto(f"{PINTEREST_BASE}/login/", wait_until="networkidle")
-            # Using robust typing
-            for sel, val in [('input#email, input[name="id"]', email), ("input#password", password)]:
-                el = await self.page.wait_for_selector(sel, timeout=10000)
-                await el.click(force=True)
-                await self.page.keyboard.down("Control")
-                await self.page.keyboard.press("a")
-                await self.page.keyboard.up("Control")
-                await self.page.keyboard.press("Backspace")
-                await self.page.keyboard.type(val)
+            await self.page.goto(f"{PINTEREST_BASE}/login/", wait_until="domcontentloaded")
+            await asyncio.sleep(2)
 
-            await self.page.click('button[type="submit"]')
+            # Dismiss overlays and wait for input visibility
+            found = False
+            for _ in range(12):
+                email_loc = self.page.locator('input[type="email"], input#email, input[name="id"]').first
+                password_loc = self.page.locator(
+                    'input[type="password"], input#password, input[name="password"]'
+                ).first
+
+                if await email_loc.count() > 0 and await password_loc.count() > 0:
+                    if await email_loc.is_visible() and await password_loc.is_visible():
+                        found = True
+                        break
+
+                # Evaluate JS to hide Google One Tap overlays
+                try:
+                    await self.page.evaluate("""
+                        () => {
+                            const selectors = [
+                                '#credential_picker_container',
+                                '.L5Fo6c-PQbLGe',
+                                '[title="Sign in with Google Dialog"]'
+                            ];
+                            selectors.forEach(sel => {
+                                const el = document.querySelector(sel);
+                                if (el) el.style.display = 'none';
+                            });
+                        }
+                    """)
+                except Exception:
+                    pass
+
+                # Try clicking Log in button overlay if visible
+                try:
+                    btn = self.page.locator(
+                        'div[data-test-id="login-button"], button:has-text("Log in"), button:has-text("Iniciar sesión"), a:has-text("Log in"), a:has-text("Iniciar sesión")'
+                    ).first
+                    if await btn.count() > 0 and await btn.is_visible():
+                        await btn.click(timeout=1000)
+                        await asyncio.sleep(1)
+                        continue
+                except Exception:
+                    pass
+
+                await asyncio.sleep(1)
+
+            if not found:
+                logger.error("❌ Pinterest login form inputs not located.")
+                return False
+
+            # Fill credentials using human type
+            await self.human_type('input[type="email"], input#email, input[name="id"]', email)
+            await self.human_type('input[type="password"], input#password, input[name="password"]', password)
+
+            # Click submit
+            submit_clicked = False
+            for selector in [
+                'button[type="submit"]',
+                'button:has-text("Log in")',
+                'button:has-text("Iniciar sesión")',
+            ]:
+                try:
+                    btn = self.page.locator(selector).first
+                    if await btn.count() > 0 and await btn.is_visible():
+                        await btn.click(force=True, timeout=3000)
+                        submit_clicked = True
+                        break
+                except Exception:
+                    continue
+
+            if not submit_clicked:
+                await self.page.keyboard.press("Enter")
+
             await self.page.wait_for_timeout(10000)
             logger.info("✅ Login attempt completed.")
             return True

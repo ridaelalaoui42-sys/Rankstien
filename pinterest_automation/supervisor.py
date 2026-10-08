@@ -12,11 +12,13 @@ from datetime import datetime
 from pathlib import Path
 
 from .circuit_breaker import CircuitBreakerOpenError, get_circuit_breaker
-from .config import get_config
+from .config import get_config, normalize_board_name
 from .health_monitor import get_health_monitor
 from .job_queue import Job, get_job_queue
 from .pinterest_driver import PinterestDriver
 from .rate_limiter import get_rate_limiter
+from .routing import cross_save_targets
+from .runtime_state import SupervisorLease
 from .session_pool import get_session_pool
 
 logger = logging.getLogger("rankstein.supervisor")
@@ -32,6 +34,13 @@ def _int_env(name: str, default: int) -> int:
 PIN_UPLOAD_JOB_TIMEOUT_SECONDS = max(60, _int_env("PINTEREST_PIN_UPLOAD_JOB_TIMEOUT_SECONDS", 210))
 PIN_SAVE_JOB_TIMEOUT_SECONDS = max(45, _int_env("PINTEREST_PIN_SAVE_JOB_TIMEOUT_SECONDS", 120))
 STALE_REQUEUE_INTERVAL_SECONDS = max(30, _int_env("PINTEREST_STALE_REQUEUE_INTERVAL_SECONDS", 60))
+ACCOUNT_LOCK_TIMEOUT_SECONDS = max(
+    5,
+    _int_env(
+        "PINTEREST_ACCOUNT_LOCK_TIMEOUT_SECONDS",
+        _int_env("PINTEREST_ACCOUNT_BOARD_LOCK_TIMEOUT_SECONDS", 30),
+    ),
+)
 
 
 class AutonomousSupervisor:
@@ -65,6 +74,10 @@ class AutonomousSupervisor:
         self._driver: PinterestDriver | None = None
         self._last_stale_requeue = 0.0
         self._account_locks: dict[str, asyncio.Lock] = {}
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._session_generation = 0
+        self._last_rotation_request = 0.0
+        self._lease = SupervisorLease(self.config.worker_count)
 
         # Register recovery handler
         self.health.register_recovery_handler(self._on_health_issue)
@@ -100,12 +113,18 @@ class AutonomousSupervisor:
     def _on_health_issue(self, check_name: str, check_data: dict):
         logger.warning(f"Health issue detected: {check_name} = {check_data}")
         if check_name == "session_freshness" and not check_data.get("ok"):
-            logger.info("Recovery: Session stale, will force session rotation on next job")
-            # Force close current driver so next acquire gets fresh session
-            asyncio.create_task(self._rotate_session())
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._request_session_rotation)
         elif check_name == "disk_space" and not check_data.get("ok"):
-            logger.critical("Recovery: Disk space critical! Purging old logs...")
-            # Could trigger log cleanup here
+            logger.critical("Recovery: Disk space critical; queue workers will pause")
+
+    def _request_session_rotation(self) -> None:
+        now = time.monotonic()
+        if now - self._last_rotation_request < 300:
+            return
+        self._last_rotation_request = now
+        self._session_generation += 1
+        logger.info("Session rotation requested; workers will rotate between jobs")
 
     def _on_circuit_change(self, operation: str, state):
         logger.warning(f"Circuit '{operation}' changed to {state.value}")
@@ -130,7 +149,8 @@ class AutonomousSupervisor:
         payload = job.payload or {}
         handle = payload.get("account_handle") or payload.get("extra", {}).get("account_handle")
         if not handle:
-            return self._default_account_handle()
+            logger.error("Job %s has no Pinterest account handle", job.id)
+            return "__unknown__"
         handle = str(handle).strip()
         if not handle:
             return None
@@ -153,22 +173,60 @@ class AutonomousSupervisor:
             return "__unknown__"
         return handle
 
+    @staticmethod
+    def _domain_handle_for_job(job: Job) -> str | None:
+        payload = job.payload or {}
+        handle = payload.get("domain_handle") or payload.get("extra", {}).get("domain_handle")
+        return str(handle).strip() if handle else None
+
     def _lock_for_account(self, account_handle: str | None, board_name: str | None = None) -> asyncio.Lock:
-        """Get or create an async lock for a specific account-board combination.
-        
-        Using (handle, board) as the lock key allows parallel uploads for the same 
-        account to DIFFERENT boards, increasing throughput while respecting 
-        Pinterest's likely per-board session constraints.
-        """
-        handle_key = account_handle or "default"
-        board_key = board_name or "default_board"
-        key = f"{handle_key}:{board_key}"
-        
+        """Get the single create/save lock for an account."""
+        key = account_handle or "default"
+
         lock = self._account_locks.get(key)
         if lock is None:
             lock = asyncio.Lock()
             self._account_locks[key] = lock
         return lock
+
+    @staticmethod
+    async def _release_driver_before_account_unlock(
+        driver: PinterestDriver,
+        account_lock: asyncio.Lock,
+        *,
+        lock_acquired: bool,
+        healthy: bool,
+    ) -> bool:
+        """Return a worker lease before another worker can enter the account.
+
+        A driver may already have been rotated by an error branch. Calling
+        ``close`` on that empty replacement is intentionally harmless. The lock
+        must still be released if session cleanup itself raises.
+        """
+        released = True
+        try:
+            await driver.close(healthy=healthy)
+        except Exception as exc:
+            released = False
+            logger.warning("Worker session release failed before account unlock: %s", exc)
+        finally:
+            if lock_acquired and account_lock.locked():
+                account_lock.release()
+        return released
+
+    @staticmethod
+    def _blocking_health_issues(snapshot) -> dict[str, dict]:
+        """Return health issues severe enough to pause workers.
+
+        A large queue or DLQ backlog is operationally important, but pausing
+        workers because the queue is large prevents the system from draining it.
+        Only critical checks should stop queue consumers.
+        """
+        return {
+            name: check
+            for name, check in snapshot.checks.items()
+            if not check.get("ok") and check.get("severity") == "critical"
+        }
 
     async def _process_job(self, job: Job) -> bool:
         """Process a single job. Returns True if successful."""
@@ -190,35 +248,41 @@ class AutonomousSupervisor:
                     description=payload["description"],
                     link=payload.get("link", ""),
                     alt_text=payload.get("alt_text", ""),
-                    board_name=payload.get("board_name") or get_config().default_board,
+                    board_name=normalize_board_name(payload.get("board_name") or get_config().default_board),
                 )
 
                 if result.get("success"):
                     elapsed = time.time() - start
                     logger.info(f"Job {job.id} succeeded in {elapsed:.1f}s")
                     await self.queue.complete_async(job.id, result)
-                    
+
                     # Delete local image to free space after successful upload
                     image_path = payload.get("image_path")
                     if image_path:
-                        if os.path.exists(image_path):
+                        if await self.queue.image_path_already_queued_async(image_path):
+                            logger.info(
+                                f"Skipping deletion of {image_path} because other jobs are still queued"
+                            )
+                        elif os.path.exists(image_path):
                             try:
                                 os.remove(image_path)
                                 logger.info(f"Deleted uploaded image {image_path}")
                             except Exception as e:
                                 logger.warning(f"Failed to delete {image_path}: {e}")
-                        
+
                         # Also try to delete from remaster_raw if it exists
                         _raw_dir = Path(__file__).resolve().parent.parent / "data" / "media" / "remaster_raw"
                         filename = os.path.basename(image_path)
                         raw_path = str(_raw_dir / filename)
-                        if os.path.exists(raw_path):
+                        if os.path.exists(raw_path) and not await self.queue.image_path_already_queued_async(
+                            image_path
+                        ):
                             try:
                                 os.remove(raw_path)
                                 logger.info(f"Deleted raw image {raw_path}")
                             except Exception as e:
                                 logger.warning(f"Failed to delete raw image {raw_path}: {e}")
-                    
+
                     return True
                 else:
                     error = result.get("error", "Unknown error")
@@ -244,24 +308,36 @@ class AutonomousSupervisor:
 
         # Each worker gets its own driver instance
         driver = PinterestDriver()
+        session_generation = self._session_generation
 
         try:
             while not self._shutdown_event.is_set():
                 try:
+                    if session_generation != self._session_generation:
+                        await driver.close()
+                        driver = PinterestDriver()
+                        session_generation = self._session_generation
+
                     # 1. Health Guard (Fix #17)
                     # Non-blocking check. If system health is degraded (e.g. disk full),
                     # this worker pauses independently. Other workers and the reporter continue.
                     snap = self.health.get_snapshot()
-                    if not snap.all_ok:
-                        logger.warning(f"Worker {worker_id} pausing: System health DEGRADED")
+                    blocking_issues = self._blocking_health_issues(snap)
+                    if blocking_issues:
+                        logger.warning(
+                            "Worker %s pausing: blocking health issue(s): %s",
+                            worker_id,
+                            ", ".join(sorted(blocking_issues)),
+                        )
                         await asyncio.sleep(self.config.watch_interval_seconds * 2)
                         continue
 
-                    # 2. Rate limit wait (non-blocking)
-                    await self.rate_limiter.wait_async("pin_upload")
-
-                    # 3. Dequeue
-                    job = await self.queue.dequeue_async()
+                    # 2. Dequeue
+                    locked_keys = {k for k, l in self._account_locks.items() if l.locked()}
+                    default_account = self._default_account_handle() or "rida"
+                    job = await self.queue.dequeue_async(
+                        locked_keys=locked_keys, default_account=default_account
+                    )
                     if job is None:
                         await asyncio.sleep(self.config.watch_interval_seconds)
                         continue
@@ -272,26 +348,75 @@ class AutonomousSupervisor:
                         payload = job.payload
                         account_handle = self._account_handle_for_job(job)
                         if account_handle == "__unknown__":
-                            await self.queue.retry_or_fail_async(job.id, "Unknown Pinterest account handle")
+                            await self.queue.retry_or_fail_async(
+                                job.id, "Missing or unknown Pinterest account handle"
+                            )
+                            continue
+                        domain_handle = self._domain_handle_for_job(job)
+                        if not domain_handle:
+                            await self.queue.retry_or_fail_async(
+                                job.id, "Missing domain_handle; production jobs fail closed"
+                            )
                             continue
 
-                        # Extract board name for finer-grained locking (Fix #16)
-                        board_name = payload.get("board_name") or get_config().default_board
-                        
+                        board_name = normalize_board_name(
+                            payload.get("board_name") or get_config().default_board
+                        )
+
                         account_lock = self._lock_for_account(account_handle, board_name)
                         if account_lock.locked():
                             logger.info(
-                                "Worker %s waiting for lock: %s:%s",
+                                "Worker %s waiting for account lock: %s",
                                 worker_id,
                                 account_handle or "default",
-                                board_name
                             )
 
-                        async with account_lock:
+                        lock_acquired = False
+                        session_healthy = True
+                        try:
+                            await asyncio.wait_for(
+                                account_lock.acquire(),
+                                timeout=ACCOUNT_LOCK_TIMEOUT_SECONDS,
+                            )
+                            lock_acquired = True
+                        except TimeoutError:
+                            logger.warning(
+                                "Worker %s: Account lock timed out after %ss for %s. Releasing job %s.",
+                                worker_id,
+                                ACCOUNT_LOCK_TIMEOUT_SECONDS,
+                                account_handle or "default",
+                                job.id,
+                            )
+                            await self.queue.release_async(job.id, delay_seconds=60.0)
+                            continue
+
+                        try:
+                            limiter = get_rate_limiter(domain_handle=domain_handle)
+                            rate_operation = f"{job.type}:{domain_handle}:{account_handle}"
+                            if not limiter.can_execute(rate_operation):
+                                retry_after = max(
+                                    30.0,
+                                    limiter.retry_after_seconds(rate_operation) + 5.0,
+                                )
+                                logger.info(
+                                    "Worker %s: Rate budget reached for %s; releasing job %s for %.1fs",
+                                    worker_id,
+                                    rate_operation,
+                                    job.id,
+                                    retry_after,
+                                )
+                                await self.queue.release_async(
+                                    job.id,
+                                    delay_seconds=retry_after,
+                                )
+                                continue
+                            await limiter.wait_async(rate_operation)
+
                             if job.type == "pin_upload":
                                 # Ensure logged in
                                 if not await driver.ensure_logged_in(account_handle):
-                                    await driver.close()
+                                    await driver.close(healthy=False)
+                                    driver = PinterestDriver()
                                     await self.queue.retry_or_fail_async(job.id, "Login failed")
                                     continue
 
@@ -304,8 +429,11 @@ class AutonomousSupervisor:
                                         description=payload["description"],
                                         link=payload.get("link", ""),
                                         alt_text=payload.get("alt_text", ""),
-                                        board_name=payload.get("board_name") or get_config().default_board,
+                                        board_name=normalize_board_name(
+                                            payload.get("board_name") or get_config().default_board
+                                        ),
                                         account_handle=account_handle,
+                                        domain_handle=domain_handle,
                                     ),
                                     timeout=PIN_UPLOAD_JOB_TIMEOUT_SECONDS,
                                 )
@@ -323,35 +451,69 @@ class AutonomousSupervisor:
                                     # Cross-save automation
                                     if result.get("pin_url"):
                                         await self._enqueue_cross_save(job, result["pin_url"])
-                                        
+
                                     # Delete local image to free space after successful upload
                                     image_path = payload.get("image_path")
                                     if image_path:
-                                        if os.path.exists(image_path):
+                                        if await self.queue.image_path_already_queued_async(image_path):
+                                            logger.info(
+                                                f"Worker {worker_id}: Skipping deletion of {image_path} "
+                                                "because other jobs are still queued"
+                                            )
+                                        elif os.path.exists(image_path):
                                             try:
                                                 os.remove(image_path)
-                                                logger.info(f"Worker {worker_id}: Deleted uploaded image {image_path}")
+                                                logger.info(
+                                                    f"Worker {worker_id}: Deleted uploaded image {image_path}"
+                                                )
                                             except Exception as e:
-                                                logger.warning(f"Worker {worker_id}: Failed to delete {image_path}: {e}")
-                                                
+                                                logger.warning(
+                                                    f"Worker {worker_id}: Failed to delete {image_path}: {e}"
+                                                )
+
                                         # Also try to delete from remaster_raw if it exists
-                                        _raw_dir = Path(__file__).resolve().parent.parent / "data" / "media" / "remaster_raw"
+                                        _raw_dir = (
+                                            Path(__file__).resolve().parent.parent
+                                            / "data"
+                                            / "media"
+                                            / "remaster_raw"
+                                        )
                                         filename = os.path.basename(image_path)
                                         raw_path = str(_raw_dir / filename)
-                                        if os.path.exists(raw_path):
+                                        if os.path.exists(
+                                            raw_path
+                                        ) and not await self.queue.image_path_already_queued_async(
+                                            image_path
+                                        ):
                                             try:
                                                 os.remove(raw_path)
-                                                logger.info(f"Worker {worker_id}: Deleted raw image {raw_path}")
+                                                logger.info(
+                                                    f"Worker {worker_id}: Deleted raw image {raw_path}"
+                                                )
                                             except Exception as e:
-                                                logger.warning(f"Worker {worker_id}: Failed to delete raw image {raw_path}: {e}")
+                                                logger.warning(
+                                                    f"Worker {worker_id}: Failed to delete raw image {raw_path}: {e}"
+                                                )
                                 else:
                                     error = result.get("error", "Unknown error")
-                                    await self.queue.retry_or_fail_async(job.id, error)
+                                    if error == "Rate limit exceeded":
+                                        await self.queue.release_async(
+                                            job.id,
+                                            delay_seconds=max(
+                                                30.0,
+                                                limiter.retry_after_seconds(rate_operation) + 5.0,
+                                            ),
+                                        )
+                                    else:
+                                        await driver.close(healthy=False)
+                                        driver = PinterestDriver()
+                                        await self.queue.retry_or_fail_async(job.id, error)
 
                             elif job.type == "pin_save":
                                 # Ensure logged in
                                 if not await driver.ensure_logged_in(account_handle):
-                                    await driver.close()
+                                    await driver.close(healthy=False)
+                                    driver = PinterestDriver()
                                     await self.queue.retry_or_fail_async(job.id, "Login failed")
                                     continue
 
@@ -360,8 +522,11 @@ class AutonomousSupervisor:
                                 result = await asyncio.wait_for(
                                     driver.save_pin(
                                         pin_url=payload["pin_url"],
-                                        board_name=payload.get("board_name") or get_config().default_board,
+                                        board_name=normalize_board_name(
+                                            payload.get("board_name") or get_config().default_board
+                                        ),
                                         account_handle=account_handle,
+                                        domain_handle=domain_handle,
                                     ),
                                     timeout=PIN_SAVE_JOB_TIMEOUT_SECONDS,
                                 )
@@ -377,9 +542,32 @@ class AutonomousSupervisor:
                                     self._log_success(account_handle, "save", result, payload.get("pin_url"))
                                 else:
                                     error = result.get("error", "Unknown error")
-                                    await self.queue.retry_or_fail_async(job.id, error)
+                                    if error == "Rate limit exceeded":
+                                        await self.queue.release_async(
+                                            job.id,
+                                            delay_seconds=max(
+                                                30.0,
+                                                limiter.retry_after_seconds(rate_operation) + 5.0,
+                                            ),
+                                        )
+                                    else:
+                                        await driver.close(healthy=False)
+                                        driver = PinterestDriver()
+                                        await self.queue.retry_or_fail_async(job.id, error)
                             else:
                                 await self.queue.retry_or_fail_async(job.id, f"Unknown job type: {job.type}")
+                        except BaseException:
+                            session_healthy = False
+                            raise
+                        finally:
+                            released = await self._release_driver_before_account_unlock(
+                                driver,
+                                account_lock,
+                                lock_acquired=lock_acquired,
+                                healthy=session_healthy,
+                            )
+                            if not released:
+                                driver = PinterestDriver()
 
                     except CircuitBreakerOpenError as e:
                         logger.warning(f"Worker {worker_id}: Job {job.id} blocked by circuit breaker: {e}")
@@ -393,7 +581,7 @@ class AutonomousSupervisor:
                             if job.type == "pin_upload"
                             else PIN_SAVE_JOB_TIMEOUT_SECONDS,
                         )
-                        await driver.close()
+                        await driver.close(healthy=False)
                         driver = PinterestDriver()
                         await self.queue.retry_or_fail_async(job.id, f"Timed out: {e}")
                     except Exception as e:
@@ -407,7 +595,7 @@ class AutonomousSupervisor:
                                 "login",
                             )
                         ):
-                            await driver.close()
+                            await driver.close(healthy=False)
                             driver = PinterestDriver()
                         await self.queue.retry_or_fail_async(job.id, str(e))
 
@@ -443,8 +631,8 @@ class AutonomousSupervisor:
             elif current_handle.startswith("m") and "media" in cfg.accounts:
                 current_handle = "media"
 
-        all_handles = sorted(cfg.accounts.keys())
-        targets = [h for h in all_handles if h != current_handle]
+        domain_handle = self._domain_handle_for_job(job) or ""
+        targets = cross_save_targets(domain_handle, current_handle, config=cfg)
 
         for target_handle in targets:
             logger.info(f"Auto-enqueuing cross-save for {target_handle} from {current_handle}")
@@ -454,7 +642,8 @@ class AutonomousSupervisor:
                     payload={
                         "pin_url": pin_url,
                         "account_handle": target_handle,
-                        "board_name": job.payload.get("board_name", ""),
+                        "board_name": normalize_board_name(job.payload.get("board_name", "")),
+                        "domain_handle": domain_handle,
                         "source_job_id": job.id,
                     },
                     # Cross-saves run just after new uploads (priority + 1 = lower urgency),
@@ -501,11 +690,16 @@ class AutonomousSupervisor:
                 pool_stats = self.pool.get_stats()
                 rate_status = self.rate_limiter.get_status()
 
+                daily_pins = sum(
+                    count
+                    for operation, count in rate_status["daily_counts"].items()
+                    if operation.startswith("pin_upload")
+                )
                 status_line = (
                     f"[STATUS] health={'OK' if snap.all_ok else 'DEGRADED'} "
                     f"queue={queue_stats['total']} "
                     f"sessions={pool_stats['active_sessions']} "
-                    f"daily_pins={rate_status['daily_counts'].get('pin_upload', 0)}"
+                    f"daily_pins={daily_pins}"
                 )
                 logger.info(status_line)
 
@@ -527,6 +721,18 @@ class AutonomousSupervisor:
                 logger.error(f"Health reporter error: {e}")
                 await asyncio.sleep(self.config.watch_interval_seconds)
 
+    async def _control_loop(self):
+        while not self._shutdown_event.is_set():
+            try:
+                self._lease.heartbeat()
+                if self._lease.stop_requested():
+                    logger.info("External shutdown request received")
+                    self._shutdown_event.set()
+                    return
+            except Exception as exc:
+                logger.warning("Supervisor control heartbeat failed; retrying: %s", exc)
+            await asyncio.sleep(1)
+
     async def run(self):
         """Start the autonomous supervisor."""
         logger.info("=" * 60)
@@ -535,34 +741,35 @@ class AutonomousSupervisor:
         )
         logger.info("=" * 60)
 
+        self._lease.acquire()
         self._running = True
         self._shutdown_event.clear()
+        self._loop = asyncio.get_running_loop()
 
-        # Setup signal handlers
         try:
-            loop = asyncio.get_running_loop()
             for sig in (signal.SIGINT, signal.SIGTERM):
-                loop.add_signal_handler(sig, self._request_shutdown)
+                self._loop.add_signal_handler(sig, self._request_shutdown)
         except (NotImplementedError, ValueError):
             pass  # Windows or no signals
 
-        # Initial health check
-        snap = self.health.heartbeat()
-        if not snap.all_ok:
-            logger.warning("Initial health check found issues, starting anyway...")
-
-        # Start tasks
-        tasks = [
-            asyncio.create_task(self._health_reporter()),
-            asyncio.create_task(self.health.start_monitoring(self.health.config.heartbeat_interval_seconds)),
-        ]
-
-        for i in range(self.config.worker_count):
-            tasks.append(asyncio.create_task(self._queue_worker(i)))
-            # Stagger startup to prevent resource spikes
-            await asyncio.sleep(2)
-
+        tasks: list[asyncio.Task] = []
         try:
+            snap = self.health.heartbeat()
+            if not snap.all_ok:
+                logger.warning("Initial health check found issues, starting anyway...")
+
+            tasks = [
+                asyncio.create_task(self._control_loop()),
+                asyncio.create_task(self._health_reporter()),
+                asyncio.create_task(
+                    self.health.start_monitoring(self.health.config.heartbeat_interval_seconds)
+                ),
+            ]
+
+            for i in range(self.config.worker_count):
+                tasks.append(asyncio.create_task(self._queue_worker(i)))
+                await asyncio.sleep(2)
+
             await self._shutdown_event.wait()
         finally:
             logger.info("Shutdown requested, stopping workers...")
@@ -571,6 +778,8 @@ class AutonomousSupervisor:
             await asyncio.gather(*tasks, return_exceptions=True)
             await self._cleanup()
             self._running = False
+            self._loop = None
+            self._lease.release()
             logger.info("Supervisor stopped")
 
     def _request_shutdown(self):

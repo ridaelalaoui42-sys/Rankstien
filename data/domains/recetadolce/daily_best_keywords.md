@@ -1,16 +1,20 @@
 # Daily Best Keywords - Receta Dolce
 
-Generated: 2026-05-15T17:51:07.766748+00:00
+Generated: 2026-10-08T03:51:09.636449+00:00
 
-| Keyword | Cluster | Priority | Score | Google News Hits |
-|---|---|---|---:|---:|
-| Delicious Pastel Relleno de Chocolate Recipe You | Pasteles | High | 123.00 | 5 |
-| Pastel de Betabel y Chocolate | Pasteles | High | 120.00 | 5 |
-| Recetas del Día | Pasteles | Medium | 118.00 | 5 |
-| Pastel de Naranja Mandarina | Pasteles | Medium | 117.00 | 5 |
-| Cítrico y el Postre Perfecto | Postres | Medium | 115.00 | 5 |
-| Pastel Alemán de Chocolate | Pasteles | Medium | 112.00 | 5 |
-| El Secreto del Pastel de Limón Perfecto Revelado | Pasteles | Medium | 103.00 | 3 |
-| Recetas del Día pin page | Pasteles | Medium | 94.00 | 0 |
-| Mint Chocolate Dream Dessert pin page | Chocolates | Low | 84.00 | 0 |
-| Mint Chocolate Dream Dessert | Chocolates | Low | 83.00 | 0 |
+| Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
+|---|---|---|---:|---:|---:|---:|
+| galletas de avena coco | fresas-y-nata | High | 125.00 | 4.0 | 20.0 | 5 |
+| bizcocho de chocolate saludable | fresas-y-nata | High | 120.00 | 4.0 | 20.0 | 5 |
+| helado de pistacho vegano | fresas-y-nata | Medium | 119.00 | 4.0 | 10.0 | 5 |
+| bizcocho de chocolate para hombre | fresas-y-nata | Medium | 114.00 | 3.0 | 2.0 | 5 |
+| bizcocho de chocolate con dulce de leche | fresas-y-nata | Medium | 114.00 | 4.0 | 8.0 | 5 |
+| bizcocho de chocolate en taza | fresas-y-nata | Medium | 112.00 | 4.0 | 18.0 | 5 |
+| mousse de chocolate saudável | fresas-y-nata | Medium | 109.00 | 4.0 | 20.0 | 0 |
+| pastel de zanahoria con cheesecake | fresas-y-nata | Medium | 108.00 | 3.0 | 10.0 | 5 |
+| helado de pistacho con fresa | fresas-y-nata | Medium | 105.00 | 4.0 | 2.0 | 5 |
+| helado de pistacho con yogurt | fresas-y-nata | Medium | 103.00 | 4.0 | 6.0 | 5 |
+| mousse de chocolate como fazer | fresas-y-nata | Medium | 97.00 | 4.0 | 20.0 | 0 |
+| pastel de zanahoria navideño | fresas-y-nata | Medium | 96.00 | 4.0 | 4.0 | 5 |
+| mousse de chocolate para recheio de bolo | fresas-y-nata | Medium | 91.00 | 5.0 | 20.0 | 0 |
+| helado de pistacho sarita | fresas-y-nata | Low | 70.00 | 4.0 | 4.0 | 0 |

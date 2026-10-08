@@ -15,16 +15,19 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger("rankstein.news")
 _SESSION = None
 
+
 def _get_session():
     """Get or create a requests.Session with connection pooling."""
     global _SESSION
     if _SESSION is None:
         from requests.adapters import HTTPAdapter
+
         _SESSION = requests.Session()
         adapter = HTTPAdapter(pool_connections=5, pool_maxsize=10)
         _SESSION.mount("http://", adapter)
         _SESSION.mount("https://", adapter)
     return _SESSION
+
 
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 _SKIP_DOMAINS = {
@@ -71,7 +74,13 @@ def scrape_google_news(keyword: str, lang: str = "es", country: str = "ES", coun
     # Strategy 3: Google News RSS (titles only, may not have direct URLs)
     logger.warning("DDG lite returned %d total, trying Google News RSS...", len(results))
     results.extend(_google_news_rss(keyword, lang, country, count - len(results)))
-    return results[:count]
+    extractable = [item for item in results if str(item.get("url") or "").startswith("http")]
+    if len(extractable) < len(results):
+        logger.warning(
+            "Discarded %d title-only search result(s) without extractable URLs",
+            len(results) - len(extractable),
+        )
+    return extractable[:count]
 
 
 def _ddg_api_search(keyword, count):
@@ -244,7 +253,7 @@ def extract_article(url: str) -> dict:
         title = _title(soup)
         author = _author(soup)
         date = _date(soup)
-        
+
         # Extract YouTube URLs before decomposing iframes
         videos = []
         for iframe in soup.find_all("iframe"):
@@ -254,7 +263,7 @@ def extract_article(url: str) -> dict:
                 clean_url = src.split("?")[0]
                 if clean_url not in videos:
                     videos.append(clean_url)
-        
+
         # Also check for direct links in case they aren't embedded
         for a in soup.find_all("a", href=True):
             href = a.get("href", "")
@@ -419,7 +428,7 @@ def validate_article(data: dict) -> dict:
     issues = []
     recs = []
     score = 100
-    content = data.get("content", "")
+    content = data.get("content") or data.get("content_markdown") or ""
     wc = len(content.split())
     low = content.lower()
 
@@ -492,11 +501,19 @@ def validate_article(data: dict) -> dict:
     # 6. Category
     cat = data.get("category", "")
     valid = {
+        # RecetaGenial canonical
         "Aperitivos",
-        "Postres",
+        "Arroces",
         "Carnes",
         "Pescados",
         "Ensaladas",
+        "Postres",
+        # RecetaDolce canonical
+        "fresas-y-nata",
+        "tartas-y-pasteles",
+        "chocolates",
+        "dulces-saludables",
+        # Common aliases & subsets
         "Pasteles",
         "Galletas",
         "Chocolates",
@@ -507,7 +524,8 @@ def validate_article(data: dict) -> dict:
         issues.append(f"Invalid category '{cat}'. Must be one of {sorted(valid)}")
         score -= 10
 
-    # 7. Recipe schema
+    # 7. Recipe schema. Google recipe rich-result eligibility depends on a
+    # complete Recipe object, not just any JSON blob with @type=Recipe.
     schema = data.get("recipe_schema", {})
     if isinstance(schema, str):
         try:
@@ -517,6 +535,56 @@ def validate_article(data: dict) -> dict:
     if not schema:
         issues.append("Missing recipe_schema")
         score -= 10
+    else:
+        required_text = {
+            "name": "Recipe schema missing name",
+            "description": "Recipe schema missing description",
+            "recipeYield": "Recipe schema missing recipeYield",
+            "recipeCategory": "Recipe schema missing recipeCategory",
+            "recipeCuisine": "Recipe schema missing recipeCuisine",
+            "prepTime": "Recipe schema missing prepTime",
+            "cookTime": "Recipe schema missing cookTime",
+            "totalTime": "Recipe schema missing totalTime",
+        }
+        for field, message in required_text.items():
+            if not str(schema.get(field) or "").strip():
+                issues.append(message)
+                score -= 6
+        image = schema.get("image")
+        if not image:
+            issues.append("Recipe schema missing image")
+            score -= 8
+        author = schema.get("author")
+        if not author or not (isinstance(author, dict) and str(author.get("name") or "").strip()):
+            issues.append("Recipe schema missing author.name")
+            score -= 6
+        for time_field in ("prepTime", "cookTime", "totalTime"):
+            value = str(schema.get(time_field) or "")
+            if value and not re.fullmatch(r"PT(?=\d)(?:(?:\d+)H)?(?:(?:\d+)M)?", value):
+                issues.append(f"{time_field} must be ISO-8601 duration like PT15M")
+                score -= 5
+
+        ingredients = schema.get("recipeIngredient") or schema.get("ingredients") or []
+        instructions = schema.get("recipeInstructions") or schema.get("instructions") or []
+        if not isinstance(ingredients, list) or len([x for x in ingredients if str(x).strip()]) < 5:
+            issues.append("Recipe schema needs at least 5 populated recipeIngredient items")
+            score -= 15
+        if not isinstance(instructions, list) or len(instructions) < 5:
+            issues.append("Recipe schema needs at least 5 populated recipeInstructions steps")
+            score -= 15
+        generic_schema_text = " ".join(str(item).lower() for item in ingredients)
+        generic_schema_text += " " + " ".join(str(item).lower() for item in instructions)
+        generic_markers = (
+            "ingrediente principal",
+            "base cremosa o caldo",
+            "toque aromático",
+            "toque aromatico",
+            "cocina la base",
+            "integra el ingrediente principal",
+        )
+        if any(marker in generic_schema_text for marker in generic_markers):
+            issues.append("Recipe schema contains generic placeholder ingredients or steps")
+            score -= 20
 
     # 8. FAQ schema
     faq = data.get("faq_schema", [])
@@ -526,14 +594,42 @@ def validate_article(data: dict) -> dict:
         except Exception:
             faq = []
     if not faq or len(faq) < 3:
-        recs.append("Add at least 3 FAQ items for rich snippets")
+        issues.append("Add at least 3 FAQ items for rich snippets")
         score -= 5
 
-    # 9. Unreplaced placeholders
+    # 9. Unreplaced placeholders and duplicate/content-quality hazards
     for ph in ["[TODO]", "[INSERT"]:
         if ph in content:
             issues.append(f"Unreplaced placeholder found: {ph}")
             score -= 10
+    if re.search(r"<blockquote(?![^>]*(?:pinterest-pin|data-pin-id))", content, flags=re.I):
+        issues.append(
+            "Article contains a non-Pinterest blockquote; summarize sources instead of copying text"
+        )
+        score -= 20
+    boilerplate_markers = (
+        "organización de campaña",
+        "imagen subida",
+        "pinterest actualizado",
+        "campaña multidominio",
+        "ingrediente principal",
+        "base cremosa o caldo",
+        "toque aromático",
+    )
+    for marker in boilerplate_markers:
+        if marker in low:
+            issues.append(f"Article contains internal/generic boilerplate: {marker}")
+            score -= 10
+            break
+    sentences = [
+        re.sub(r"\s+", " ", part.strip().casefold())
+        for part in re.split(r"[.!?]\s+", content)
+        if len(part.split()) >= 8
+    ]
+    repeated = sorted({sentence for sentence in sentences if sentences.count(sentence) > 1})
+    if repeated:
+        issues.append("Repeated sentence detected; article needs more varied, original prose")
+        score -= 10
 
     score = max(0, score)
     return {

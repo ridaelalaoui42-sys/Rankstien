@@ -111,9 +111,9 @@ async def main():
                     post = item["post"]
                     img = item["file"]
                     board = get_board_for_slug(post["slug"])
-    
+
                     print(f"[{i}/{len(to_upload)}] Pinning {img.name} -> {post['slug']}")
-    
+
                     # Check for closed context and recreate if needed
                     try:
                         if page.is_closed():
@@ -129,9 +129,9 @@ async def main():
                             pass
                         pw, context, page = await create_stealth_browser(headless=True)
                         await ensure_logged_in(page, email, password)
-    
+
                     pin_id = await create_pin(page, post, img, board)
-    
+
                     if pin_id:
                         print(f"✅ Success! Pin ID: {pin_id} linked to {post['slug']}")
                         with open(UPLOADED_TRACKER, "a") as f:
@@ -143,7 +143,7 @@ async def main():
                                 print(f"🗑️ Deleted {img.name} from remaster_final")
                         except Exception as e:
                             print(f"⚠️ Failed to delete {img.name}: {e}")
-                        
+
                         # Delete corresponding file from remaster_raw
                         try:
                             raw_name = img.name.replace("remastered_", "")
@@ -156,8 +156,10 @@ async def main():
                     else:
                         print(f"❌ Failed to pin {img.name}")
                 except Exception as loop_e:
-                    print(f"❌ Exception during pinning {img.name if 'img' in locals() else 'unknown'}: {loop_e}")
-    
+                    print(
+                        f"❌ Exception during pinning {img.name if 'img' in locals() else 'unknown'}: {loop_e}"
+                    )
+
                 if i < len(to_upload):
                     delay = random.uniform(9, 14)
                     print(f"⏱️ Sleeping {delay:.1f}s...")

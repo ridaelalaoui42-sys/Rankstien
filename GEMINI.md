@@ -1,6 +1,7 @@
 # RankStein Agent Operating Guide
 
 This file is the short operating contract for Gemini CLI and agentic runs.
+For Hermes messaging and production temperament, also load `docs/system/HERMES_SOUL.md`.
 
 ## Runtime Contract
 
@@ -40,9 +41,21 @@ MCP SERVERS:
   supabase         HTTP remote (always available, no local process)
 ```
 
-Gemini CLI subscription/OAuth is the primary reasoning path. Do not replace it with an API-key workflow, and do not pass `GOOGLE_API_KEY` or `GEMINI_API_KEY` into Gemini CLI subprocesses. Use `ADK_MODEL=auto` or Gemini 3/3.1 model variants so Gemini CLI can route through the subscription account.
+Gemini CLI subscription/OAuth remains available for legacy reasoning and fallback worker paths. Article generation itself is Hermes Codex first: `backend/scripts/turbo_articles.py` calls the local Hermes OpenAI-compatible API before Gemini/Odysseus/OpenCode/OpenRouter. Keep `RANKSTEIN_ARTICLE_PROVIDER=hermes-codex`, `RANKSTEIN_HERMES_CODEX_URL=http://127.0.0.1:8642/v1`, and `RANKSTEIN_AI_ENGINE=gemini_cli` unless a human explicitly changes provider strategy. Do not pass `GOOGLE_API_KEY` or `GEMINI_API_KEY` into Gemini CLI subprocesses.
+
+## 🛠️ Gold Standard Automation Mandates
+
+**CRITICAL: These settings resolve UI stalls and draft-limit issues. Do not deviate.**
+
+1. **Browser Engine:** ALWAYS force **Chromium**. Firefox profile locks are systemic blockers.
+2. **Worker Scaling:** Standard unattended mode is 2 workers (`PINTEREST_WORKER_COUNT=2`). Raise only after queue payloads are deduplicated and spread across healthy configured accounts.
+3. **UI Strategy:**
+   - **Board Selection:** Always use "Simplified Pick First" logic.
+   - **Publishing:** Prioritize "Publish Now" text. Fallback to `Control+Enter` after 5s.
+4. **Self-Healing:** Run `scripts/ops/clear_pinterest_drafts.py` if editor is 'disabled' (clears 50-draft limit).
 
 ## Trigger Words
+
 
 These phrases from the user ALWAYS mean the same thing — execute without asking:
 
@@ -63,7 +76,7 @@ When you see `START ALL`, immediately execute steps 1–8 of Required Start Of R
 2. **`multidomain_startup_brief()`** — SECOND call on every session. Returns per-domain readiness: keyword counts, queue depth, AgentMemory lessons, and blocked/ready status for every domain at once.
 3. **`process_pinterest_backlog()`** — THIRD call, no confirmation needed. Enqueues ALL Failed/Pending/Missing entries from `memory/pinterest_backlog.md` into the job queue immediately. Do not ask the user — just run it.
 4. **`start_automation_supervisor()`** — FOURTH call. Starts `run_autonomous.py run` as a background process to process the Pinterest queue across all domains and accounts. No prompting.
-5. **Enqueue remastered pins:** run `python run_autonomous.py enqueue-folder` as a background shell command to enqueue ALL images from `data/media/remaster_final/` for upload across all configured Pinterest accounts. The supervisor (step 4) will process them automatically. Do not wait — fire and continue.
+5. **Enqueue/generate remastered pins:** the supervisor enqueues existing `data/media/remaster_final/` assets and starts the social siphon by default. Do not hardcode scraper search keywords; pass generated scrape briefs from the campaign layer.
 6. `memory_stats()` — check AgentMemory health.
 7. `search_project_memory(...)` — search for recent failures, selector changes, source-quality notes, and account issues for EACH domain returned in step 1.
 8. Ensure DB domain/project/campaign ownership exists before article creation (runs for all domains).
@@ -73,23 +86,24 @@ When you see `START ALL`, immediately execute steps 1–8 of Required Start Of R
 
 ## Required Pipeline Shape
 
-1. **Auto-process backlog + remaster queue:** call `process_pinterest_backlog()` (enqueues Failed/Pending/Missing pins) then `start_automation_supervisor()` (starts the worker). Then run `python run_autonomous.py enqueue-folder` in background to push ALL remastered images from `data/media/remaster_final/` into the upload queue. The supervisor will handle uploads for all accounts automatically.
-2. Select a pending keyword from `data/domains/<handle>/keywords.md` — pick from ALL domains in rotation.
+1. **Auto-process backlog + remaster queue:** call `process_pinterest_backlog()` (enqueues Failed/Pending/Missing pins) then `start_automation_supervisor()` (starts the worker). The supervisor enqueues existing remasters and starts the social siphon unless explicitly disabled by env.
+2. Refresh Pinterest-first keyword research, then select only a `Pending` keyword present in fresh qualified `daily_best_keywords.json` evidence. Candidates must originate on Pinterest Trends/Search, name a precise dish plus concrete qualifier, and meet the independent Google demand threshold. Missing, stale, zero-demand, Google-only, or static fallback keywords fail closed. Pick from ALL domains in rotation.
 3. Search AgentMemory: `search_project_memory(query=keyword)`.
 4. `get_article_data_from_supabase_by_slug(slug, domain_handle)` — if article exists with valid `pin_id`, mark `Live` and skip (no duplicate). No prompting.
 5. Mark keyword `In Progress`.
-6. Research source articles with `scrape_news_sources`.
-7. Extract useful source text with `extract_article_content`.
-8. Generate Spanish article JSON from sources without copying. `recipeIngredient` and `recipeInstructions` arrays must NEVER be empty.
+6. Research source articles with `scrape_news_sources`; require at least two independently relevant recipe sources before writing.
+7. Reject generic source drift before and after extraction; source candidates must match the actual keyword and recipe intent, not only broad terms like "ideas" or domain niche words.
+8. Extract compact source notes with `extract_article_content`. If fewer than two relevant sources survive, stop before article generation. Never pass full scraped articles into generation prompts.
+8. Generate Spanish article JSON from sources without copying. Include `hero_image_prompt`, `pinterest_pin_prompt`, `image_negative_prompt`, and Spanish `image_alt`. `recipeIngredient` and `recipeInstructions` arrays must NEVER be empty.
 9. Pass `validate_article_quality`; revise up to three times.
 10. Generate hero image (`create_hero_image_pollinations`), validate, upload to Supabase Storage (`upload_image_to_supabase`).
 11. Generate the Pinterest pin image (`create_article_pin`) and upload it DIRECTLY using `automation_upload_pin_direct` to obtain the `pin_id`. Always pass the correct `board_name` from the domain's `boards_default`.
 12. Build the final Supabase payload using `build_supabase_content`, ensuring the `pinterest_pin_id` is passed so it replaces the `[PINTEREST_IFRAME]` placeholder.
 13. Publish to Supabase using `publish_article_to_supabase` with `domain_handle` — never omit this field.
-14. Auto-campaign triggers: `publish_article_to_supabase` enqueues supplemental pin_upload jobs for secondary accounts; cross-save propagation handled by supervisor.
-15. Mark `Live` only when Supabase publish (with valid `pin_id`), Pinterest upload, and storage all succeed.
-16. Record outcome with `remember_pipeline_event`.
-17. **Remaster social traffic loop (runs in background via supervisor):** `run_autonomous.py enqueue-folder` queues all `remaster_final/` images. The supervisor downloads trending Pinterest pins (social siphon), remasters them with domain branding via `apply_luxury_overlay` + `inject_exif_metadata`, saves to `remaster_final/`, then the uploader accounts post them. This runs continuously — no manual trigger needed after step 1.
+14. Launch `run_article_remaster_campaign(keyword, title, slug, domain_handle, category, pins_per_keyword=30)`. It generates a scrape brief, scrapes Pinterest images, rejects irrelevant/undersized images, fills missing slots with native image generation, targets 30 remastered assets, enqueues the exact images generated by that article run, and writes a campaign report.
+15. Auto-campaign triggers: `publish_article_to_supabase` and remaster enqueue jobs create supplemental `pin_upload` jobs; cross-save propagation is handled by supervisor.
+16. Mark `Live` only when Supabase publish (with valid primary `pin_id`), Pinterest upload, and storage all succeed. Track remaster queue progress separately.
+17. Record outcome with `remember_pipeline_event`.
 
 ## Image And Pin Prompt Contract
 
@@ -100,6 +114,7 @@ All image generation instructions must follow `docs/templates/IMAGE_GENERATION_C
 - Include negative prompts and Spanish alt text.
 - Avoid generic kitchen atmosphere; the dish must be clear, specific, and inspectable.
 - Do not store full prompts containing sensitive paths or credentials in AgentMemory.
+- Pinterest image scraping must receive generated `search_query`, `expected_terms`, and `blocked_terms` from the campaign layer. The scraper must not append its own fixed search keywords. Category/niche terms are supporting signals only; accepted scraped images must match the actual keyword.
 
 ## Content Quality Rules
 

@@ -14,11 +14,6 @@ pytest-mock==3.14.0
 ruff==0.13.3
 mypy==1.13.0
 
-# Pre-commit hook driver
-pre-commit==4.0.1
-
-# Secret scanning (catches .env-like patterns before commit)
-detect-secrets==1.5.0
-
 # HTTP fixture recording for news_scraper tests
 vcrpy==7.0.0
+

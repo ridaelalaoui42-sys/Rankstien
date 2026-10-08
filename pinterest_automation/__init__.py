@@ -12,6 +12,7 @@ Unified package providing:
 - self_healing: DOM analysis + LLM-powered selector recovery with caching
 """
 
+from .campaign import create_pinterest_campaign, enqueue_folder
 from .circuit_breaker import CircuitBreaker, CircuitBreakerOpenError, get_circuit_breaker
 from .config import AutomationConfig, get_config
 from .health_monitor import HealthMonitor, get_health_monitor
@@ -20,14 +21,11 @@ from .pinterest_driver import PinterestDriver
 from .rate_limiter import RateLimiter, get_rate_limiter
 from .self_healing import fallback_heal, gemini_heal_selector, get_healing_cache, robust_fill
 from .session_pool import SessionPool, get_session_pool
-from .campaign import create_pinterest_campaign, enqueue_folder
 from .supervisor import AutonomousSupervisor
 
 __all__ = [
     "AutomationConfig",
     "AutonomousSupervisor",
-    "create_pinterest_campaign",
-    "enqueue_folder",
     "CircuitBreaker",
     "CircuitBreakerOpenError",
     "HealthMonitor",
@@ -37,6 +35,8 @@ __all__ = [
     "PinterestDriver",
     "RateLimiter",
     "SessionPool",
+    "create_pinterest_campaign",
+    "enqueue_folder",
     "fallback_heal",
     "gemini_heal_selector",
     "get_circuit_breaker",

@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>RankStein | Operator</title>
+    <link rel="icon" href="/operator-assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/operator-assets/operator.css" />
+    <script defer src="/operator-assets/lucide.min.js"></script>
+    <script defer src="/operator-assets/operator.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to workspace</a>
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <a class="brand" href="/operator"
+        ><span class="brand-mark">R</span
+        ><span>RankStein<small>OPERATOR</small></span></a
+      >
+      <button
+        class="icon-button sidebar-close"
+        id="close-menu"
+        title="Close navigation"
+        aria-label="Close navigation"
+      >
+        <i data-lucide="x"></i>
+      </button>
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav id="navigation">
+        <a href="#overview" data-view="overview" aria-current="page"
+          ><i data-lucide="layout-dashboard"></i>Overview</a
+        >
+        <a href="#workflows" data-view="workflows"
+          ><i data-lucide="workflow"></i>Open workflows<span
+            class="nav-count"
+            id="active-count"
+            >-</span
+          ></a
+        >
+        <a href="#history" data-view="history"
+          ><i data-lucide="history"></i>History</a
+        >
+        <a href="#pinterest" data-view="pinterest"
+          ><i data-lucide="send"></i>Pinterest</a
+        >
+        <a href="#keywords" data-view="keywords"
+          ><i data-lucide="scan-search"></i>Keywords</a
+        >
+        <a href="#recipes" data-view="recipes"
+          ><i data-lucide="book-open"></i>Recipes</a
+        >
+        <div class="sidebar-label">SYSTEM</div>
+        <a href="#services" data-view="services"
+          ><i data-lucide="server"></i>Services & accounts</a
+        >
+        <a href="#logs" data-view="logs"><i data-lucide="terminal"></i>Logs</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="status-dot"></span>Local control plane<small
+          >127.0.0.1:7000</small
+        >
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <button
+          class="icon-button mobile-menu"
+          id="menu"
+          title="Toggle navigation"
+          aria-label="Toggle navigation"
+          aria-expanded="false"
+        >
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="breadcrumb">
+          Control room<span>/</span><strong id="view-title">Overview</strong>
+        </div>
+        <div class="topbar-actions">
+          <label class="sr-only" for="domain">Domain</label
+          ><select id="domain">
+            <option value="">All domains</option>
+          </select>
+          <button
+            class="icon-button"
+            id="theme"
+            title="Toggle light theme"
+            aria-label="Toggle light theme"
+          >
+            <i data-lucide="sun"></i>
+          </button>
+          <button
+            class="icon-button"
+            id="refresh"
+            title="Refresh telemetry"
+            aria-label="Refresh telemetry"
+          >
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <label class="auto-refresh"
+            ><input id="auto-refresh" type="checkbox" checked /><span
+              >Live</span
+            ></label
+          >
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">RANKSTEIN / OPERATIONS</p>
+            <h1 id="heading">Command center</h1>
+          </div>
+          <div class="heading-actions">
+            <span id="freshness" role="status">Connecting...</span
+            ><button class="button primary" id="new-batch">
+              <i data-lucide="plus"></i>New batch
+            </button>
+          </div>
+        </div>
+        <div class="alert" id="connection-alert" role="alert" hidden></div>
+        <section id="view-overview" class="view">
+          <div class="metrics" id="metrics" aria-label="System metrics"></div>
+          <div class="command-strip">
+            <span class="section-label">QUICK ACTIONS</span
+            ><button class="button" data-command="audit">
+              <i data-lucide="shield-check"></i>Audit & seed</button
+            ><button class="button" data-command="trends">
+              <i data-lucide="trending-up"></i>Refresh trends</button
+            ><button
+              class="button"
+              id="supervisor-toggle"
+              data-command="supervisor"
+              disabled
+            >
+              <i data-lucide="play"></i>Start supervisor</button
+            ><button class="button" data-command="normalize-boards">
+              <i data-lucide="tags"></i>Normalize boards
+            </button>
+          </div>
+          <div class="section-heading">
+            <h2>Domain operations</h2>
+            <span class="muted">Configured publishing targets</span>
+          </div>
+          <div id="domains" class="domain-grid"></div>
+          <div class="overview-grid">
+            <section class="unframed">
+              <div class="section-heading">
+                <h2>Campaign activity</h2>
+                <a href="#workflows"
+                  >View workflows<i data-lucide="arrow-up-right"></i
+                ></a>
+              </div>
+              <div id="in-flight"></div>
+            </section>
+            <section class="unframed">
+              <div class="section-heading">
+                <h2>Runtime signals</h2>
+                <a href="#services"
+                  >System<i data-lucide="arrow-up-right"></i
+                ></a>
+              </div>
+              <div id="signals"></div>
+            </section>
+          </div>
+          <section class="unframed">
+            <div class="section-heading">
+              <h2>Latest batch</h2>
+              <span class="muted" id="batch-id">No batch recorded</span>
+            </div>
+            <div id="batch"></div>
+          </section>
+        </section>
+        <section id="view-workflows" class="view" hidden>
+          <div class="section-heading">
+            <h2>Open campaigns</h2>
+            <span class="muted" id="workflow-count"></span>
+          </div>
+          <div id="workflows"></div>
+        </section>
+        <section id="view-history" class="view" hidden>
+          <div class="toolbar">
+            <label class="search-box"
+              ><i data-lucide="search"></i
+              ><input
+                id="history-search"
+                placeholder="Search campaign history"
+                aria-label="Search campaign history" /></label
+            ><label class="sr-only" for="history-status">Campaign status</label
+            ><select id="history-status">
+              <option value="">All outcomes</option>
+              <option value="complete">Complete</option>
+              <option value="failed">Failed</option>
+              <option value="warning">Needs verification</option>
+            </select>
+          </div>
+          <div id="history"></div>
+        </section>
+        <section id="view-pinterest" class="view" hidden>
+          <div id="queue-metrics" class="metrics"></div>
+          <div class="toolbar">
+            <label class="search-box"
+              ><i data-lucide="search"></i
+              ><input
+                id="pin-search"
+                placeholder="Search verified pins"
+                aria-label="Search verified pins" /></label
+            ><label class="sr-only" for="pin-account">Pinterest account</label
+            ><select id="pin-account">
+              <option value="">All accounts</option></select
+            ><button class="button" data-command="requeue">
+              <i data-lucide="rotate-ccw"></i>Retry transient DLQ</button
+            ><button class="button danger" data-command="stop-supervisor">
+              <i data-lucide="square"></i>Stop supervisor
+            </button>
+          </div>
+          <div class="section-heading">
+            <h2>Verified pin feed</h2>
+            <span id="pin-count" class="muted"></span>
+          </div>
+          <div id="pins"></div>
+        </section>
+        <section id="view-keywords" class="view" hidden>
+          <div class="toolbar">
+            <label class="search-box"
+              ><i data-lucide="search"></i
+              ><input
+                id="keyword-search"
+                placeholder="Search keywords or clusters"
+                aria-label="Search keywords" /></label
+            ><label class="sr-only" for="keyword-status">Keyword status</label
+            ><select id="keyword-status">
+              <option value="">All states</option>
+              <option>Pending</option>
+              <option>Researching</option>
+              <option>Generating</option>
+              <option>Live</option>
+              <option>Needs Verification</option>
+              <option>Failed</option></select
+            ><button class="button" data-command="trends">
+              <i data-lucide="trending-up"></i>Refresh trends
+            </button>
+          </div>
+          <div class="section-heading">
+            <h2>Keyword roadmap</h2>
+            <span id="keyword-count" class="muted"></span>
+          </div>
+          <div id="keywords"></div>
+        </section>
+        <section id="view-recipes" class="view" hidden>
+          <div class="toolbar">
+            <label class="search-box"
+              ><i data-lucide="search"></i
+              ><input
+                id="recipe-search"
+                placeholder="Search recent recipes"
+                aria-label="Search recent recipes" /></label
+            ><button
+              class="icon-button"
+              id="refresh-recipes"
+              title="Refresh recipes"
+              aria-label="Refresh recipes"
+            >
+              <i data-lucide="refresh-cw"></i>
+            </button>
+          </div>
+          <div class="section-heading">
+            <h2>Published recipes</h2>
+            <span id="recipe-count" class="muted"></span>
+          </div>
+          <div id="recipes" class="recipe-grid"></div>
+        </section>
+        <section id="view-services" class="view" hidden>
+          <div id="resources" class="metrics"></div>
+          <div class="section-heading">
+            <h2>Service health</h2>
+            <span class="muted">Loopback only</span>
+          </div>
+          <div id="services"></div>
+          <div class="section-heading">
+            <h2>Pinterest accounts</h2>
+            <span id="account-count" class="muted"></span>
+          </div>
+          <div id="accounts"></div>
+        </section>
+        <section id="view-logs" class="view" hidden>
+          <div class="toolbar">
+            <label for="log-mode">Process</label
+            ><select id="log-mode">
+              <option value="production">Production batch</option>
+              <option value="supervisor">Pinterest supervisor</option>
+              <option value="audit">Audit & seed</option>
+              <option value="trends">Trend discovery</option>
+              <option value="normalize-boards">Board normalization</option>
+              <option value="launch">Launcher</option></select
+            ><button
+              class="icon-button"
+              id="copy-logs"
+              title="Copy log tail"
+              aria-label="Copy log tail"
+            >
+              <i data-lucide="copy"></i></button
+            ><label class="auto-refresh"
+              ><input id="follow-logs" type="checkbox" checked />Follow</label
+            ><span id="log-state" class="muted"></span>
+          </div>
+          <pre class="console" id="logs" tabindex="0">Loading log tail...</pre>
+        </section>
+      </main>
+      <footer class="footer">
+        <span
+          >RankStein Operator<span class="separator">/</span>Independent control
+          plane</span
+        ><span id="provider">AI provider: checking</span>
+      </footer>
+    </div>
+    <dialog id="command-dialog" aria-labelledby="command-title">
+      <form id="command-form">
+        <div class="dialog-header">
+          <h2 id="command-title">New production batch</h2>
+          <button
+            class="icon-button"
+            type="button"
+            data-close="command-dialog"
+            title="Close dialog"
+            aria-label="Close dialog"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p id="command-description" class="muted"></p>
+        <div id="batch-fields">
+          <label for="batch-domain">Publishing target</label
+          ><select id="batch-domain">
+            <option value="">All configured domains</option>
+          </select>
+          <div class="form-grid">
+            <div>
+              <label for="batch-target">Articles per domain</label
+              ><input
+                id="batch-target"
+                type="number"
+                min="1"
+                max="20"
+                value="2"
+                required
+              />
+            </div>
+            <div>
+              <label for="batch-workers">Article workers</label
+              ><select id="batch-workers">
+                <option value="1">1 worker</option>
+                <option value="2">2 workers</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="button" type="button" data-close="command-dialog">
+            Cancel</button
+          ><button class="button primary" id="command-submit" type="submit">
+            <i data-lucide="play"></i>Start batch
+          </button>
+        </div>
+        <p id="command-error" class="error" role="alert" hidden></p>
+      </form>
+    </dialog>
+    <dialog
+      id="detail-dialog"
+      class="detail-dialog"
+      aria-labelledby="detail-title"
+    >
+      <div class="dialog-header">
+        <h2 id="detail-title">Campaign detail</h2>
+        <button
+          class="icon-button"
+          data-close="detail-dialog"
+          title="Close details"
+          aria-label="Close details"
+        >
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div id="detail"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

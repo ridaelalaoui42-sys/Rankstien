@@ -13,6 +13,7 @@ Keep these docs current:
 - `MEMORY.md`
 - `STATUS.md`
 - `docs/system/PROJECT_MAP.md`
+- `docs/system/HERMES_SOUL.md`
 - `docs/system/SYSTEM_ARCHITECTURE.md`
 - `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md`
 - `docs/system/PROJECT_HYGIENE.md`

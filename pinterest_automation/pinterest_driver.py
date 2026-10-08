@@ -4,6 +4,8 @@ High-level abstraction over Playwright with self-healing, retries, and health tr
 """
 
 import asyncio
+import contextlib
+import json
 import logging
 import os
 import re
@@ -11,13 +13,14 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from playwright.async_api import Page, Response, TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import Page, Response
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from .circuit_breaker import CircuitBreakerOpenError, get_circuit_breaker
-from .config import DATA_DIR, get_config
+from .config import DATA_DIR, get_config, resolve_account_board_name
 from .mcp_bridge import publish_pin_agentic, publish_pin_direct_mcp
 from .rate_limiter import get_rate_limiter
-from .self_healing import fallback_heal, gemini_heal_selector, robust_fill
+from .self_healing import fallback_heal, robust_fill
 from .session_pool import SessionInfo, get_session_pool
 
 logger = logging.getLogger("rankstein.driver")
@@ -111,14 +114,22 @@ class PinterestDriver:
                 self.account_handle = handle
         return self._session
 
-    async def close(self):
+    async def close(self, healthy: bool = True):
         if self._session:
-            await self.pool.release(self._session, healthy=True)
+            session = self._session
             self._session = None
+            if healthy:
+                await self.pool.release(session, healthy=True)
+            else:
+                await self.pool.release(session, healthy=False)
+                await self.pool.retire(session)
 
     # ── Response interception ──────────────────────────────
 
     def _setup_pin_interception(self, page: Page):
+        if self._response_handler is not None:
+            with contextlib.suppress(Exception):
+                page.remove_listener("response", self._response_handler)
         self._pin_create_data = {"pin_id": None, "pin_url": None}
         self._pin_create_event = asyncio.Event()
 
@@ -131,6 +142,13 @@ class PinterestDriver:
                 for p in ["/v3/pins", "pinresource/create", "pin-builder", "/resource/pin", "graphql"]
             ):
                 return
+            if "graphql" in url:
+                post_data = (response.request.post_data or "").lower()
+                if not any(
+                    marker in post_data
+                    for marker in ("pinresourcecreate", "createpin", "pin_create", "pinbuilder")
+                ):
+                    return
             try:
                 data = await response.json()
 
@@ -168,6 +186,23 @@ class PinterestDriver:
 
     # ── Login ──────────────────────────────────────────────
 
+    async def _has_auth_cookies(self, context) -> bool:
+        """Check for Pinterest auth cookies without navigating."""
+        try:
+            cookies = await context.cookies()
+            auth_cookie_names = {"_auth", "_pinterest_sess", "pinterest.auth", "_r", "csrftoken"}
+            found = {
+                c["name"] for c in cookies if c["name"] in auth_cookie_names or "auth" in c["name"].lower()
+            }
+            return len(found) >= 2
+        except Exception:
+            return False
+
+    async def _is_login_page(self, page) -> bool:
+        """Check if current page is the Pinterest login page."""
+        url = page.url.lower()
+        return "login" in url or "oauth" in url or "signin" in url
+
     async def ensure_logged_in(self, account_handle: str | None = None) -> bool:
         if not self.circuit.can_execute("pinterest_login"):
             raise CircuitBreakerOpenError("Pinterest login circuit is OPEN")
@@ -177,20 +212,44 @@ class PinterestDriver:
         page = session.page
 
         try:
-            # Check current state
-            await page.goto("https://www.pinterest.com/", timeout=self.config.browser.navigation_timeout_ms)
-            await page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            if await page.query_selector('[data-test-id="header-avatar"], [data-test-id="header-profile"]'):
-                self.info(f"Already logged in as {handle or 'default'}")
+            # ── Phase 1: Lightweight check (no navigation) ──
+            # If we're already on the pin creation page, we're good.
+            current_url = page.url.lower()
+            if "pin-creation-tool" in current_url or "pin-builder" in current_url:
+                self.info(f"Already on creation tool — logged in as {handle or 'default'}")
                 self.circuit.record_success("pinterest_login")
                 return True
 
-            # Need to login
-            self.info(f"Attempting Pinterest login for {handle or 'default'}...")
-            await page.goto(
-                "https://www.pinterest.com/login/", timeout=self.config.browser.navigation_timeout_ms
+            # Check auth cookies — if present, session should be valid
+            has_cookies = await self._has_auth_cookies(session.context)
+            if has_cookies and not await self._is_login_page(page):
+                # Have cookies and not on login page — navigate to pin-creation-tool
+                self.info(f"Auth cookies present, navigating to creation tool for {handle or 'default'}...")
+                await page.goto(
+                    "https://www.pinterest.com/pin-creation-tool/",
+                    timeout=self.config.browser.navigation_timeout_ms,
+                    wait_until="domcontentloaded",
+                )
+                await asyncio.sleep(2)
+                if "pin-creation-tool" in page.url or "pin-builder" in page.url:
+                    self.info(f"Already logged in and ready as {handle or 'default'}")
+                    self.circuit.record_success("pinterest_login")
+                    return True
+                if not await self._is_login_page(page):
+                    # Weird landing page — try one more navigation
+                    await page.goto("https://www.pinterest.com/pin-creation-tool/", timeout=30000)
+                    await asyncio.sleep(2)
+                    if "pin-creation-tool" in page.url or "pin-builder" in page.url:
+                        return True
+
+            # ── Phase 2: Full login flow ──
+            self.info(
+                f"Session invalid for creation tool, attempting Pinterest login for {handle or 'default'}..."
             )
+            if not await self._is_login_page(page):
+                await page.goto(
+                    "https://www.pinterest.com/login/", timeout=self.config.browser.navigation_timeout_ms
+                )
             await page.wait_for_timeout(2000)
 
             # Get credentials
@@ -201,34 +260,146 @@ class PinterestDriver:
             email = creds.email
             password = creds.password
 
-            # Find and fill email
+            # Dismiss overlays and wait for input visibility
+            found_login = False
+            for _ in range(12):
+                email_loc = page.locator('input[type="email"], input#email, input[name="id"]').first
+                password_loc = page.locator(
+                    'input[type="password"], input#password, input[name="password"]'
+                ).first
+
+                if await email_loc.count() > 0 and await password_loc.count() > 0:
+                    if await email_loc.is_visible() and await password_loc.is_visible():
+                        found_login = True
+                        break
+
+                # Evaluate JS to hide Google One Tap overlays
+                try:
+                    await page.evaluate("""
+                        () => {
+                            const selectors = [
+                                '#credential_picker_container',
+                                '.L5Fo6c-PQbLGe',
+                                '[title="Sign in with Google Dialog"]'
+                            ];
+                            selectors.forEach(sel => {
+                                const el = document.querySelector(sel);
+                                if (el) el.style.display = 'none';
+                            });
+                        }
+                    """)
+                except Exception:
+                    pass
+
+                # Try clicking Log in button overlay if visible
+                try:
+                    btn = page.locator(
+                        'div[data-test-id="login-button"], button:has-text("Log in"), button:has-text("Iniciar sesión"), a:has-text("Log in"), a:has-text("Iniciar sesión")'
+                    ).first
+                    if await btn.count() > 0 and await btn.is_visible():
+                        await btn.click(timeout=1000)
+                        await asyncio.sleep(1)
+                        continue
+                except Exception:
+                    pass
+
+                await asyncio.sleep(1)
+
+            # Find and fill email. Pinterest periodically changes between
+            # login, signup, localized, and embedded forms. Do not hard-fail on
+            # a single selector; choose the first visible username-like input.
             self.info(f"Looking for email/password fields for {email}...")
-            email_sel = (
-                'input[name="id"]' if await page.query_selector('input[name="id"]') else 'input[type="email"]'
+            email_sel = await self._first_visible_selector(
+                page,
+                [
+                    "input#email",
+                    'input[name="id"]',
+                    'input[type="email"]',
+                    'input[autocomplete="username"]',
+                    'input[autocomplete="email"]',
+                    'input[placeholder*="email" i]',
+                    'input[placeholder*="correo" i]',
+                    'input[aria-label*="email" i]',
+                    'input[aria-label*="correo" i]',
+                ],
+                timeout_ms=15000,
             )
+            if not email_sel:
+                await self._save_debug_artifact(page, "login_no_email")
+                self.circuit.record_failure("pinterest_login")
+                session.failure_count += 1
+                return False
             self.info(f"Using email selector: {email_sel}")
             await page.fill(email_sel, email)
             await page.wait_for_timeout(1000)
 
-            # Find and fill password
-            pwd_sel = (
-                'input[name="password"]'
-                if await page.query_selector('input[name="password"]')
-                else 'input[type="password"]'
+            # Pinterest now uses a 2-step login:
+            #   Step 1: email only + "Continue" button
+            #   Step 2: password + "Log in" button
+            # Check if password field is visible on the same page first.
+            pwd_inline = await self._first_visible_selector(
+                page,
+                [
+                    "input#password",
+                    'input[name="password"]',
+                    'input[type="password"]',
+                    'input[autocomplete="current-password"]',
+                ],
+                timeout_ms=3000,
             )
-            self.info(f"Using password selector: {pwd_sel}")
-            await page.fill(pwd_sel, password)
-            await page.wait_for_timeout(1000)
 
-            # Submit
-            self.info("Submitting login form...")
-            try:
-                await page.click('button[type="submit"]')
-            except Exception:
-                self.warning("Submit button click failed, using Enter key")
-                await page.keyboard.press("Enter")
+            if pwd_inline:
+                # Single-page login (both fields visible)
+                self.info(f"Using password selector (inline): {pwd_inline}")
+                await page.fill(pwd_inline, password)
+                await page.wait_for_timeout(1000)
+                self.info("Submitting login form...")
+                try:
+                    await page.click('button[type="submit"]')
+                except Exception:
+                    self.warning("Submit button click failed, using Enter key")
+                    await page.keyboard.press("Enter")
+                await page.wait_for_timeout(15000)
+            else:
+                # Two-step login: submit email first, then fill password
+                self.info("Password field not visible — using 2-step login flow")
+                self.info("Submitting email (Step 1)...")
+                try:
+                    await page.click('button[type="submit"]')
+                except Exception:
+                    await page.keyboard.press("Enter")
+                await page.wait_for_timeout(5000)
 
-            await page.wait_for_timeout(15000)
+                # Wait for password field to appear
+                self.info("Waiting for password field (Step 2)...")
+                pwd_sel = await self._first_visible_selector(
+                    page,
+                    [
+                        "input#password",
+                        'input[name="password"]',
+                        'input[type="password"]',
+                        'input[autocomplete="current-password"]',
+                        'input[placeholder*="password" i]',
+                        'input[placeholder*="contraseña" i]',
+                        'input[aria-label*="password" i]',
+                        'input[aria-label*="contraseña" i]',
+                    ],
+                    timeout_ms=15000,
+                )
+                if not pwd_sel:
+                    await self._save_debug_artifact(page, "login_no_password")
+                    self.circuit.record_failure("pinterest_login")
+                    session.failure_count += 1
+                    return False
+                self.info(f"Using password selector: {pwd_sel}")
+                await page.fill(pwd_sel, password)
+                await page.wait_for_timeout(1000)
+                self.info("Submitting password (Step 2)...")
+                try:
+                    await page.click('button[type="submit"]')
+                except Exception:
+                    await page.keyboard.press("Enter")
+                await page.wait_for_timeout(15000)
 
             logged_in = "login" not in page.url and "pinterest.com" in page.url
             if logged_in:
@@ -236,12 +407,9 @@ class PinterestDriver:
                 self.circuit.record_success("pinterest_login")
                 return True
             else:
+                # Check if a 2FA / security challenge page appeared
                 self.error(f"Login failed for {email}, current URL: {page.url}")
-                try:
-                    await page.screenshot(path=str(DATA_DIR / f"debug_login_fail_{int(time.time())}.png"))
-                    self.info("Saved failure screenshot to data/")
-                except:
-                    pass
+                await self._save_debug_artifact(page, "login_fail")
                 self.circuit.record_failure("pinterest_login", retryable=False)
                 return False
 
@@ -250,6 +418,75 @@ class PinterestDriver:
             self.circuit.record_failure("pinterest_login")
             session.failure_count += 1
             return False
+
+    async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 2) -> int:
+        """Delete a few stale Pinterest drafts when the creator is blocked at the 50-draft limit."""
+        try:
+            body_text = await page.locator("body").inner_text(timeout=3000)
+        except Exception:
+            body_text = ""
+
+        draft_count_match = re.search(r"Pin drafts\s*\((\d+)\)", body_text, re.I)
+        draft_count = int(draft_count_match.group(1)) if draft_count_match else None
+        at_draft_limit = (
+            (draft_count is not None and draft_count >= 50)
+            or "50 drafts" in body_text
+            or ("limit" in body_text.lower() and "draft" in body_text.lower())
+        )
+        if not at_draft_limit:
+            return 0
+
+        self.warning("Pinterest creator is at the draft limit; deleting stale drafts to free capacity.")
+        deleted = 0
+        for _ in range(max_delete):
+            try:
+                actions = page.locator('button[aria-label="Pin draft actions"]')
+                if await actions.count() == 0:
+                    self.warning("Draft limit detected but no draft action buttons were found.")
+                    break
+                await actions.first.click(force=True)
+                await page.wait_for_timeout(500)
+
+                delete_action = page.locator('[data-test-id="delete-draft-action"]').first
+                await delete_action.wait_for(state="visible", timeout=5000)
+                await delete_action.click(force=True)
+                await page.wait_for_timeout(500)
+
+                confirm = page.locator('button:has-text("Delete"), button:has-text("Eliminar")').last
+                await confirm.wait_for(state="visible", timeout=5000)
+                await confirm.click(force=True)
+                deleted += 1
+                await page.wait_for_timeout(2500)
+            except Exception as delete_err:
+                self.warning(f"Pinterest draft cleanup stopped after {deleted} deletion(s): {delete_err}")
+                break
+        return deleted
+
+    async def _first_visible_selector(
+        self, page: Page, selectors: list[str], timeout_ms: int = 10000
+    ) -> str | None:
+        deadline = time.time() + max(1, timeout_ms / 1000)
+        while time.time() < deadline:
+            for selector in selectors:
+                try:
+                    locator = page.locator(selector).first
+                    if await locator.count() > 0 and await locator.is_visible(timeout=300):
+                        return selector
+                except Exception:
+                    continue
+            await page.wait_for_timeout(500)
+        return None
+
+    async def _save_debug_artifact(self, page: Page, prefix: str) -> None:
+        stamp = int(time.time())
+        try:
+            await page.screenshot(path=str(DATA_DIR / f"debug_{prefix}_{stamp}.png"), timeout=10000)
+        except Exception:
+            pass
+        try:
+            (DATA_DIR / f"debug_{prefix}_{stamp}.html").write_text(await page.content(), encoding="utf-8")
+        except Exception:
+            pass
 
     # ── Pin Creation ───────────────────────────────────────
 
@@ -262,19 +499,26 @@ class PinterestDriver:
         alt_text: str = "",
         board_name: str = "",
         account_handle: str | None = None,
+        domain_handle: str | None = None,
     ) -> dict:
         """
         Create a Pinterest pin with full self-healing and retry logic.
         Returns: {success, pin_id, pin_url, error}
         """
         operation = "pin_upload"
+        handle = account_handle or self.account_handle
+        rate_operation = f"{operation}:{domain_handle or 'direct'}:{handle or 'unknown'}"
+        limiter = get_rate_limiter(domain_handle=domain_handle)
+        board_name = resolve_account_board_name(
+            board_name or self.config.default_board,
+            handle,
+        )
         if not self.circuit.can_execute(operation):
             raise CircuitBreakerOpenError(f"Circuit '{operation}' is OPEN")
 
-        if not self.rate_limiter.can_execute(operation):
+        if not limiter.can_execute(rate_operation):
             return {"success": False, "error": "Rate limit exceeded"}
 
-        handle = account_handle or self.account_handle
         session = await self._acquire_session(handle)
         page = session.page
 
@@ -282,21 +526,52 @@ class PinterestDriver:
         if not local.exists():
             return {"success": False, "error": f"Image not found: {image_path}"}
 
+        self._setup_pin_interception(page)
+
+        from backend.scripts.pinterest_batch_core import (
+            BrowserSessionLost,
+            PinCreationError,
+        )
+
         try:
             from backend.scripts.pinterest_batch_core import create_pin_from_fields
 
             self.info("Using shared Pinterest uploader core...")
-            pin_id = await create_pin_from_fields(
-                page,
-                local,
-                title,
-                link,
-                description,
-                board_name or self.config.default_board,
-                f"driver-{handle or 'default'}",
+            shared_task = asyncio.create_task(
+                create_pin_from_fields(
+                    page,
+                    local,
+                    title,
+                    link,
+                    description,
+                    board_name,
+                    f"driver-{handle or 'default'}",
+                )
             )
+            response_task = asyncio.create_task(self._pin_create_event.wait())
+            try:
+                done, _ = await asyncio.wait(
+                    {shared_task, response_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if response_task in done and self._pin_create_data.get("pin_id"):
+                    pin_id = self._pin_create_data["pin_id"]
+                else:
+                    pin_id = await shared_task
+            finally:
+                # The supervisor wraps create_pin in wait_for(). If that outer
+                # timeout cancels us while both children are pending, neither
+                # child may outlive the page/session that it is operating on.
+                # Drain completed exceptions as well so cleanup never masks the
+                # primary result, exception, or cancellation.
+                for task in (shared_task, response_task):
+                    if not task.done():
+                        task.cancel()
+                for task in (shared_task, response_task):
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
+                        await task
             if pin_id:
-                self.rate_limiter.record_execution(operation)
+                limiter.record_execution(rate_operation)
                 self.circuit.record_success(operation)
                 return {
                     "success": True,
@@ -309,18 +584,38 @@ class PinterestDriver:
             raise
         except Exception as shared_exc:
             from backend.scripts.pinterest_batch_core import PinCreationError
+
             if isinstance(shared_exc, PinCreationError):
                 msg = str(shared_exc)
-                self.warning(f"Shared uploader aborted: {msg}")
+                self.warning(f"Shared uploader aborted: {msg}.")
+                if "publish clicked but no Pin ID" in msg:
+                    pin_id = await self._verify_recent_public_pin(
+                        page,
+                        title=title,
+                        link=link,
+                        account_handle=handle,
+                    )
+                    if pin_id:
+                        limiter.record_execution(rate_operation)
+                        self.circuit.record_success(operation)
+                        return {
+                            "success": True,
+                            "pin_id": pin_id,
+                            "pin_url": f"https://www.pinterest.com/pin/{pin_id}/",
+                            "method": "public-profile-verification",
+                        }
+                    return {
+                        "success": False,
+                        "error": "Pin creation could not be verified; no pin_id or pin_url found",
+                    }
+                self.warning("Falling back to driver-native logic before any publish was confirmed.")
                 if "board selection failed" in msg:
-                    self.circuit.record_failure(operation, retryable=False)
-                return {"success": False, "error": msg}
-            self.warning(f"Shared Pinterest uploader failed before legacy fallback: {shared_exc}")
+                    # Specific case where we might want to record failure but still try fallback
+                    pass
+            else:
+                self.warning(f"Shared Pinterest uploader failed before legacy fallback: {shared_exc}")
 
         try:
-            # Setup API interception
-            self._setup_pin_interception(page)
-
             # Navigate to pin builder with shorter timeout and manual retries
             self.info("Navigating to pin creation tool...")
             success_nav = False
@@ -353,6 +648,16 @@ class PinterestDriver:
                 await page.wait_for_load_state("domcontentloaded", timeout=10000)
 
             self.info("Starting upload sequence...")
+
+            cleared_drafts = await self._clear_draft_limit_if_needed(page, max_delete=2)
+            if cleared_drafts:
+                self.info(f"Deleted {cleared_drafts} stale Pinterest draft(s); reloading creator.")
+                await page.goto(
+                    "https://www.pinterest.com/pin-creation-tool/",
+                    timeout=45000,
+                    wait_until="domcontentloaded",
+                )
+                await page.wait_for_timeout(3000)
 
             # Upload image
             self.info(f"Looking for file input for: {local.name}")
@@ -472,8 +777,16 @@ class PinterestDriver:
                 if pin_match:
                     pin_id = pin_match.group(1)
 
+            if not pin_id:
+                pin_id = await self._verify_recent_public_pin(
+                    page,
+                    title=title,
+                    link=link,
+                    account_handle=handle,
+                )
+
             if pin_id:
-                self.rate_limiter.record_execution(operation)
+                limiter.record_execution(rate_operation)
                 self.circuit.record_success(operation)
                 return {
                     "success": True,
@@ -482,7 +795,7 @@ class PinterestDriver:
                 }
             else:
                 self.warning("Pin creation could not be verified; no pin id/url found")
-                self.rate_limiter.record_failure(operation)
+                limiter.record_failure(rate_operation)
                 self.circuit.record_failure(operation)
                 session.failure_count += 1
                 return {
@@ -494,7 +807,7 @@ class PinterestDriver:
         except Exception as e:
             self.error(f"Manual Pin creation failed: {e}")
             if not MCP_FALLBACK_ENABLED:
-                self.rate_limiter.record_failure(operation)
+                limiter.record_failure(rate_operation)
                 self.circuit.record_failure(operation)
                 session.failure_count += 1
                 return {"success": False, "error": str(e)[:500]}
@@ -510,7 +823,7 @@ class PinterestDriver:
                     board_name=board_name,
                 )
                 if direct_res.get("success"):
-                    self.rate_limiter.record_execution(operation)
+                    limiter.record_execution(rate_operation)
                     self.circuit.record_success(operation)
                     return direct_res
                 else:
@@ -531,7 +844,7 @@ class PinterestDriver:
                     board_name=board_name,
                 )
                 if agent_res.get("success"):
-                    self.rate_limiter.record_execution(operation)
+                    limiter.record_execution(rate_operation)
                     self.circuit.record_success(operation)
                     pin_url = agent_res["pin_url"]
                     pin_id = pin_url.split("/pin/")[-1].strip("/")
@@ -541,7 +854,7 @@ class PinterestDriver:
             except Exception as agent_e:
                 self.error(f"Agentic fallback crashed: {agent_e}")
 
-            self.rate_limiter.record_failure(operation)
+            limiter.record_failure(rate_operation)
             self.circuit.record_failure(operation)
             session.failure_count += 1
             return {"success": False, "error": str(e)[:500]}
@@ -553,16 +866,25 @@ class PinterestDriver:
         pin_url: str,
         board_name: str = "",
         account_handle: str | None = None,
+        domain_handle: str | None = None,
     ) -> dict:
         """
         Save (repin) an existing pin to a board.
         Returns: {success, pin_id, error}
         """
         operation = "pin_save"
+        handle = account_handle or self.account_handle
+        rate_operation = f"{operation}:{domain_handle or 'direct'}:{handle or 'unknown'}"
+        limiter = get_rate_limiter(domain_handle=domain_handle)
+        board_name = resolve_account_board_name(
+            board_name or self.config.default_board,
+            handle,
+        )
         if not self.circuit.can_execute(operation):
             raise CircuitBreakerOpenError(f"Circuit '{operation}' is OPEN")
+        if not limiter.can_execute(rate_operation):
+            return {"success": False, "error": "Rate limit exceeded"}
 
-        handle = account_handle or self.account_handle
         session = await self._acquire_session(handle)
         page = session.page
 
@@ -575,7 +897,9 @@ class PinterestDriver:
             nav_ok = False
             for attempt in range(2):
                 try:
-                    await page.goto(pin_url, timeout=60000 if attempt == 0 else 30000, wait_until="domcontentloaded")
+                    await page.goto(
+                        pin_url, timeout=60000 if attempt == 0 else 30000, wait_until="domcontentloaded"
+                    )
                     nav_ok = True
                     break
                 except PlaywrightTimeoutError as nav_exc:
@@ -620,7 +944,7 @@ class PinterestDriver:
 
             if save_ok:
                 self.info("Pin saved successfully")
-                self.rate_limiter.record_execution(operation)
+                limiter.record_execution(rate_operation)
                 self.circuit.record_success(operation)
                 # Extract pin ID from URL
                 pin_id = None
@@ -633,6 +957,7 @@ class PinterestDriver:
 
         except Exception as e:
             self.error(f"Save pin failed: {e}")
+            limiter.record_failure(rate_operation)
             self.circuit.record_failure(operation)
             session.failure_count += 1
             return {"success": False, "error": str(e)}
@@ -667,175 +992,198 @@ class PinterestDriver:
         return False
 
     async def _select_board(self, page: Page, board_name: str) -> bool:
-        # Handle dict being passed (bug prevention)
-        if isinstance(board_name, dict):
-            self.warning(f"Board name passed as dict, attempting to resolve: {board_name}")
-            board_name = board_name.get("_default", "Aperitivos")
-            self.info(f"Resolved board name to: {board_name}")
+        from backend.scripts.pinterest_batch_core import select_board
 
-        try:
-            from backend.scripts.pinterest_batch_core import select_board
-
-            if await select_board(page, board_name, f"driver-{self.account_handle or 'default'}"):
-                return True
-        except Exception as shared_exc:
-            self.warning(f"Shared board selector failed before legacy fallback: {shared_exc}")
-
-        try:
-
-            async def click_board_option(target_board: str) -> bool:
-                option_selectors = [
-                    f'[data-test-id^="board-row-"]:has-text("{target_board}")',
-                    f'[data-test-id="boardWithoutSection"]:has-text("{target_board}")',
-                    f'[role="listitem"]:has-text("{target_board}")',
-                    f'div[role="option"]:has-text("{target_board}")',
-                    f'[data-test-id*="board"]:has-text("{target_board}")',
-                ]
-                for sel in option_selectors:
-                    option = page.locator(sel).first
-                    if await option.count() > 0 and await option.is_visible():
-                        self.info(f"Clicking board option: {sel}")
-                        await option.click(force=True)
-                        await asyncio.sleep(1)
-                        return True
-                return False
-
-            # Combined selector for the dropdown button
-            selectors = [
-                '[data-test-id="board-dropdown-select-button"]',
-                '[aria-label*="Choose a board" i]',
-                '[aria-label*="Select board" i]',
-                'div[role="button"]:has-text("Choose a board")',
-                'div[role="button"]:has-text("Selecciona un tablero")',
-            ]
-            board_btn = None
-            for sel in selectors:
-                loc = page.locator(sel).first
-                if await loc.count() > 0 and await loc.is_visible():
-                    board_btn = loc
-                    break
-
-            if board_btn:
-                self.info(
-                    f"Clicking board dropdown button: {await board_btn.get_attribute('aria-label') or 'no label'}"
-                )
-                await board_btn.click(force=True)
-                await asyncio.sleep(2)
-
-                if await click_board_option(board_name):
-                    return True
-
-                # Check if search input appeared
-                search_selectors = [
-                    'input[placeholder*="search" i]',
-                    'input[placeholder*="buscar" i]',
-                    'input[aria-label*="search" i]',
-                ]
-
-                search_input = None
-                for sel in search_selectors:
-                    loc = page.locator(sel).first
-                    if await loc.count() > 0 and await loc.is_visible():
-                        search_input = loc
-                        break
-
-                if search_input:
-                    self.info(f"Typing board name '{board_name}' into search...")
-                    await search_input.fill(board_name)
-                    await asyncio.sleep(2)
-                else:
-                    self.warning("Search input not found, trying direct typing...")
-                    await page.keyboard.type(board_name, delay=30)
-                    await asyncio.sleep(2)
-
-                # Select the best matching option
-                # Look for board rows or options that contain the board name.
-                # Pinterest currently renders rows as board-row-<name>, not a
-                # fixed board-row test id, so use prefix selectors.
-                if await click_board_option(board_name):
-                    await asyncio.sleep(3)
-                    return True
-
-                board_sample = await page.evaluate(
-                    """() => Array.from(document.querySelectorAll('[data-test-id^="board-row-"], [data-test-id="boardWithoutSection"], [role="listitem"], [role="option"]'))
-                    .map((el) => (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' '))
-                    .filter(Boolean)
-                    .slice(0, 12)"""
-                )
-                self.warning(f"Board option not found for '{board_name}'. Visible boards: {board_sample}")
-            else:
-                self.warning("Board dropdown button not found.")
-        except Exception as e:
-            self.warning(f"Board selection failed: {e}")
-        return False
+        handle = self.account_handle or "default"
+        return await select_board(page, board_name, f"driver-{handle}")
 
     async def _click_publish(self, page: Page) -> bool:
-        publish_sel = await fallback_heal(page, "publish")
-        if publish_sel:
-            try:
-                btn = page.locator(publish_sel).first
-                if await btn.count() > 0 and await btn.is_visible():
-                    await btn.wait_for(state="visible", timeout=10000)
-                    await btn.click(force=True)
-                    self.info("Publish clicked")
-                    return True
-            except Exception as e:
-                self.warning(f"Publish click failed: {e}")
-
-        # English-first generic selectors
-        generics = [
-            'button[data-test-id="board-dropdown-save-button"]',
-            'button:has-text("Publish")',
-            'button:has-text("Publicar")',
-            'button:has-text("Save")',
-        ]
-        for sel in generics:
-            try:
-                btn = page.locator(sel).first
-                if await btn.count() > 0 and await btn.is_visible():
-                    await btn.click(force=True)
-                    self.info(f"Publish clicked via generic: {sel}")
-                    return True
-            except:
-                continue
-
-        # Fast fallback: Pinterest's creator accepts Ctrl+Enter even when the
-        # visible publish button locator is obscured by drafts/sidebar UI.
+        """Find and click the publish button with extreme prejudice."""
+        self.info("Aggressive publish: ensuring live post...")
         try:
-            await page.keyboard.press("Control+Enter")
-            self.info("Ctrl+Enter sent — waiting for page navigation or API confirmation...")
-            # Wait up to 10s for the page to leave pin-creation-tool, OR for
-            # the response interceptor to fire (set by _setup_pin_interception).
-            confirmed = False
-            pin_event = getattr(self, "_pin_create_event", None)
-            for _ in range(20):
-                await asyncio.sleep(0.5)
-                if "pin-creation-tool" not in page.url:
-                    confirmed = True
-                    break
-                if pin_event and pin_event.is_set():
-                    confirmed = True
-                    break
-            if confirmed:
-                self.info("Published via Ctrl+Enter (confirmed)")
+            # 0. Debug screenshot before publish
+            try:
+                await page.screenshot(path=str(DATA_DIR / f"debug_publish_before_{int(time.time())}.png"))
+            except:
+                pass
+
+            # 1. Dismiss potential blockers
+            try:
+                for blocker in ["Got it", "Done", "Entendido", "Listo", "Aceptar", "Close", "Cerrar"]:
+                    btn = page.get_by_text(blocker).first
+                    if await btn.count() > 0 and await btn.is_visible(timeout=300):
+                        await btn.click(force=True)
+                        self.info(f"Dismissed blocker: {blocker}")
+                        await asyncio.sleep(0.5)
+            except:
+                pass
+
+            # 2. Reveal UI — scroll all the way down + intermediate
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(1)
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(0.5)
+
+            # 3. Broad publish selectors — covers EN, ES, IT, FR, PT, DE
+            publish_selectors = [
+                # English
+                'button:has-text("Publish")',
+                'button:has-text("Publish now")',
+                'button:has-text("Save")',
+                # Spanish
+                'button:has-text("Publicar")',
+                'button:has-text("Publicar ahora")',
+                'button:has-text("Subir")',
+                'button:has-text("Guardar")',
+                # Other common
+                'button:has-text("Publier")',
+                'button:has-text("Veröffentlichen")',
+                'button:has-text("Pubblicare")',
+                # Data attributes
+                '[data-test-id="storyboard-creation-nav-done"]',
+                '[data-test-id="publish-button"]',
+                '[data-test-id="save-button"]',
+                '[data-test-id="save"]',
+                # Generic footer — any primary button at the bottom
+                'div[data-test-id*="footer"] button[type="button"]',
+                'div[data-test-id*="footer"] button:not([aria-label])',
+                # Role-based
+                '[role="button"][aria-label*="Publish" i]',
+                '[role="button"][aria-label*="Publicar" i]',
+                '[role="button"][aria-label*="Save" i]',
+                '[role="button"][aria-label*="Guardar" i]',
+            ]
+
+            for sel in publish_selectors:
+                try:
+                    btn = page.locator(sel).first
+                    if await btn.count() > 0 and await btn.is_visible(timeout=500):
+                        text = (await btn.inner_text()).lower() if await btn.inner_text() else ""
+                        self.info(f"Checking selector: {sel} — text={text!r}")
+                        # Skip any button that looks like draft/help/footer navigation
+                        _skip_words = [
+                            "save draft",
+                            "guardar borrador",
+                            "save as draft",
+                            "how to create pins",
+                            "create pins",
+                            "help",
+                            "learn",
+                            "support",
+                            "feedback",
+                            "contact",
+                            "privacy",
+                            "terms",
+                            "cookie",
+                            "log out",
+                            "cerrar sesión",
+                            "sign up",
+                            "regístrate",
+                        ]
+                        if any(w in text for w in _skip_words):
+                            self.info(f"Skipping non-publish button: {sel} ({text!r})")
+                            continue
+                        self.info(f"Clicking REAL publish button: {sel}")
+                        await btn.click(force=True)
+                        await asyncio.sleep(2)
+                        if "/pin/" in page.url or await self._page_has_publish_success(page):
+                            return True
+                except:
+                    continue
+
+            # 4. JS targeted publish — only click buttons with publish-related text
+            self.info("Trying JS targeted publish fallback...")
+            js_result = await page.evaluate("""() => {
+                const targets = [
+                    'publish', 'publicar', 'save', 'guardar',
+                    'subir', 'upload', 'compartir', 'share',
+                    'publier', 'veröffentlichen', 'pubblicare',
+                    'publicar ahora', 'publish now',
+                ];
+                // Words that disqualify a button from being the publish action
+                const skipWords = [
+                    'draft', 'borrador', 'help', 'learn', 'support',
+                    'feedback', 'contact', 'privacy', 'terms', 'cookie',
+                    'log out', 'sign up', 'create pins', 'how to',
+                    'cerrar', 'regístrate',
+                ];
+                const btns = Array.from(document.querySelectorAll(
+                    'button, [role="button"], button[type="submit"], input[type="submit"]'
+                )).filter(el => {
+                    const t = (el.innerText || el.textContent || el.value || '').toLowerCase().trim();
+                    if (skipWords.some(w => t.includes(w))) return false;
+                    return targets.some(target => t.includes(target));
+                });
+                if (btns.length > 0) {
+                    btns[btns.length - 1].click();
+                    return 'clicked_' + btns.length;
+                }
+                return 'no_button_found';
+            }""")
+            self.info(f"JS targeted publish result: {js_result}")
+
+            await asyncio.sleep(5)
+
+            # 5. Final check — only /pin/ URL or explicit success toast counts
+            if "/pin/" in page.url or await self._page_has_publish_success(page):
                 return True
-            self.warning("Ctrl+Enter sent but no confirmation received within 10s")
+
+            # Debug screenshot after failure
+            try:
+                await page.screenshot(path=str(DATA_DIR / f"debug_publish_fail_{int(time.time())}.png"))
+            except:
+                pass
+            return False
+
+        except Exception as e:
+            self.error(f"Error in aggressive publish: {e}")
+            return False
+
+    async def _page_has_publish_success(self, page: Page) -> bool:
+        try:
+            success = page.get_by_text(
+                re.compile(
+                    r"your pin has been published|pin has been published"
+                    r"|pin published|pin guardado|publicado con éxito"
+                    r"|se ha publicado|pin saved",
+                    re.I,
+                )
+            ).first
+            if await success.count() > 0 and await success.is_visible(timeout=500):
+                return True
+            # Check for success modal with View/Ver button
+            view_btn = page.get_by_text(re.compile(r"^(View|Ver|See it)$", re.I)).first
+            if await view_btn.count() > 0 and await view_btn.is_visible(timeout=300):
+                return True
+            return False
+        except Exception:
+            return False
+
+    async def _dismiss_publish_success_overlays(self, page: Page) -> None:
+        try:
+            await page.keyboard.press("Escape")
+            await asyncio.sleep(0.3)
         except Exception:
             pass
-
-        if PUBLISH_LLM_HEALING_ENABLED:
-            healed = await gemini_heal_selector(page, "the publish or save pin button")
-            if healed:
-                try:
-                    btn = page.locator(healed).first
-                    if await btn.count() > 0 and await btn.is_visible():
-                        await btn.click(force=True)
-                        self.info("Publish clicked via self-healing")
-                        return True
-                except Exception:
-                    pass
-
-        return False
+        try:
+            await page.evaluate(
+                """() => {
+                    const needles = [
+                        'install the pinterest browser extension',
+                        'find it. love it. save it.',
+                        'install now'
+                    ];
+                    for (const el of Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"], div'))) {
+                        const text = (el.innerText || el.textContent || '').toLowerCase();
+                        if (needles.some((needle) => text.includes(needle))) {
+                            el.style.display = 'none';
+                            el.setAttribute('aria-hidden', 'true');
+                        }
+                    }
+                }"""
+            )
+        except Exception:
+            pass
 
     async def _extract_pin_from_page(self, page: Page) -> str | None:
         try:
@@ -844,6 +1192,20 @@ class PinterestDriver:
             pin_match = re.search(r"/pin/(\d+)", current_url)
             if pin_match:
                 return pin_match.group(1)
+
+            try:
+                if await self._page_has_publish_success(page):
+                    await self._dismiss_publish_success_overlays(page)
+                    view_btn = page.get_by_role("button", name=re.compile(r"^(View|Ver)$", re.I)).first
+                    if await view_btn.count() > 0 and await view_btn.is_visible(timeout=500):
+                        await view_btn.click(force=True)
+                        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                        await asyncio.sleep(2)
+                        pin_match = re.search(r"/pin/(\d+)", page.url)
+                        if pin_match:
+                            return pin_match.group(1)
+            except Exception:
+                pass
 
             # 2. Check window.__PINTEREST_DATA__ and links via JS
             extracted = await page.evaluate("""
@@ -890,4 +1252,65 @@ class PinterestDriver:
 
         except Exception as e:
             logger.debug(f"Page extraction failed: {e}")
+        return None
+
+    def _public_username(self, account_handle: str | None) -> str:
+        raw = os.environ.get("PINTEREST_PUBLIC_USERNAME_MAP", "").strip()
+        if raw:
+            try:
+                mapping = json.loads(raw)
+            except (TypeError, ValueError):
+                mapping = {}
+            if isinstance(mapping, dict):
+                username = str(mapping.get(account_handle or "", "")).strip()
+                if username:
+                    return username
+
+        creds = self.config.accounts.get(account_handle or "")
+        if creds and creds.email:
+            return creds.email.partition("@")[0].strip()
+        return ""
+
+    async def _verify_recent_public_pin(
+        self,
+        page: Page,
+        *,
+        title: str,
+        link: str,
+        account_handle: str | None,
+    ) -> str | None:
+        """Verify an uncertain publish against the account's public recent pins."""
+        username = self._public_username(account_handle)
+        if not username or not title or not link:
+            return None
+
+        try:
+            profile_response = await page.context.request.get(
+                f"https://www.pinterest.com/{username}/",
+                timeout=30000,
+                fail_on_status_code=False,
+            )
+            if profile_response.status != 200:
+                return None
+            profile_html = (await profile_response.text()).replace("\\/", "/")
+            title_pos = profile_html.casefold().find(title.casefold())
+            if title_pos < 0:
+                return None
+
+            window = profile_html[max(0, title_pos - 5000) : title_pos + 5000]
+            candidates = list(dict.fromkeys(re.findall(r"/pin/(?:[^/\"<]*--)?(\d{10,})", window, flags=re.I)))
+            for pin_id in candidates[:5]:
+                pin_response = await page.context.request.get(
+                    f"https://www.pinterest.com/pin/{pin_id}/",
+                    timeout=30000,
+                    fail_on_status_code=False,
+                )
+                if pin_response.status != 200:
+                    continue
+                pin_html = (await pin_response.text()).replace("\\/", "/")
+                if title.casefold() in pin_html.casefold() and link in pin_html:
+                    self.info(f"Verified recent public pin after API timeout: {pin_id}")
+                    return pin_id
+        except Exception as exc:
+            self.debug(f"Recent public pin verification failed: {exc}")
         return None

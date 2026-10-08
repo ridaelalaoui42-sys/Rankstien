@@ -47,4 +47,4 @@ These dependencies are required for full RankStein operation but are not stored 
 
 ## Secrets Policy
 
-Never store service keys, cookies, browser profiles, OAuth files, generated articles, or local payloads in Markdown or Git.
+Never store service keys, cookies, browser profiles, OAuth files, generated articles, or local payloads in Markdown or the codebase.

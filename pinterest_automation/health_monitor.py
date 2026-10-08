@@ -5,17 +5,19 @@ Persistent health tracking with automatic recovery triggers.
 
 import json
 import logging
+import os
 import shutil
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from threading import Lock
 
 from .config import DATA_DIR, PROJECT_ROOT, get_config
 
 logger = logging.getLogger("rankstein.health")
 
-HEALTH_STATE_FILE = DATA_DIR / "health_state.json"
+HEALTH_STATE_FILE = Path(os.environ.get("PINTEREST_HEALTH_STATE_FILE") or DATA_DIR / "health_state.json")
 
 
 @dataclass
@@ -102,42 +104,68 @@ class HealthMonitor:
                 checks["disk_space"] = HealthCheck("disk_space", True, f"unknown: {e}")
 
             # 2. Log size
-            log_file = DATA_DIR / "rankstein_mcp.log"
-            if log_file.exists():
-                log_mb = round(log_file.stat().st_size / (1024 * 1024), 1)
+            log_files = list(DATA_DIR.glob("rankstein_mcp*.log*"))
+            if log_files:
+                log_mb = round(sum(path.stat().st_size for path in log_files) / (1024 * 1024), 1)
                 checks["log_size"] = HealthCheck(
                     "log_size",
                     log_mb < self.config.log_size_threshold_mb,
-                    f"{log_mb} MB",
+                    f"{log_mb} MB total",
                     severity="warning" if log_mb >= 50 else "info",
                 )
             else:
                 checks["log_size"] = HealthCheck("log_size", True, "no log file")
 
-            # 3. Session freshness
-            session_dir = DATA_DIR / "sessions" / get_config().browser.session_name
-            if session_dir.exists():
-                cookies = list(session_dir.glob("*.sqlite"))
+            # 3. Session availability. Cookie modification time is diagnostic
+            # only; a successful browser login check is the authentication gate.
+            config = get_config()
+            configured_sessions = {
+                handle: account.session_name
+                for handle, account in config.accounts.items()
+                if account.session_name
+            }
+            if not configured_sessions:
+                configured_sessions = {"default": config.browser.session_name}
+
+            missing_sessions = []
+            session_ages = []
+            for handle, session_name in configured_sessions.items():
+                session_dir = DATA_DIR / "sessions" / session_name
+                cookies = (
+                    list(session_dir.glob("*.sqlite")) + list(session_dir.glob("**/Cookies"))
+                    if session_dir.exists()
+                    else []
+                )
                 if cookies:
                     newest = max(cookies, key=lambda f: f.stat().st_mtime)
                     age_days = (now - newest.stat().st_mtime) / 86400
-                    checks["session_freshness"] = HealthCheck(
-                        "session_freshness",
-                        age_days <= self.config.session_max_age_days,
-                        f"{age_days:.1f} days old",
-                        severity="warning" if age_days > 30 else "info",
-                    )
+                    session_ages.append((handle, age_days))
                 else:
-                    checks["session_freshness"] = HealthCheck(
-                        "session_freshness", True, "No cookie files found (new session?)", severity="info"
-                    )
-            else:
+                    missing_sessions.append(handle)
+
+            credentials_configured = config.credentials.valid or any(
+                account.valid for account in config.accounts.values()
+            )
+            if missing_sessions:
                 checks["session_freshness"] = HealthCheck(
-                    "session_freshness", True, "Session dir missing (fresh start?)", severity="info"
+                    "session_freshness",
+                    not credentials_configured,
+                    f"Missing cookie state for: {', '.join(sorted(missing_sessions))}",
+                    severity="warning" if credentials_configured else "info",
+                )
+            else:
+                oldest_handle, oldest_age = max(session_ages, key=lambda item: item[1])
+                checks["session_freshness"] = HealthCheck(
+                    "session_freshness",
+                    True,
+                    (
+                        f"{len(session_ages)} account profile(s) present; "
+                        f"oldest cookie metadata is {oldest_age:.1f} days ({oldest_handle})"
+                    ),
+                    severity="info",
                 )
 
             # 4. Pinterest credentials
-            config = get_config()
             creds = config.credentials
             valid_account_handles = sorted(
                 handle for handle, account in config.accounts.items() if account.valid
@@ -174,8 +202,9 @@ class HealthMonitor:
                 dlq_size = qstats.get("dlq_size", 0)
                 by_status = qstats.get("by_status", {})
 
-                # Flag as degraded when there are many pending or anything in DLQ
-                queue_ok = pending < 10000 and dlq_size < 100
+                # A DLQ row is unresolved production work and must be visible in
+                # the top-level health signal, even while workers keep running.
+                queue_ok = pending < 50000 and dlq_size == 0
                 checks["queue_health"] = HealthCheck(
                     "queue_health",
                     queue_ok,
@@ -225,6 +254,7 @@ class HealthMonitor:
     async def start_monitoring(self, interval_seconds: float = 60.0):
         """Background loop to update health periodically without blocking."""
         import asyncio
+
         logger.info(f"Health monitoring background loop started (interval: {interval_seconds}s)")
         while True:
             try:

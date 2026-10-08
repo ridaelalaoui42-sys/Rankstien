@@ -6,7 +6,9 @@ DOM analysis + LLM-powered selector recovery with persistent caching.
 import hashlib
 import json
 import logging
+import os
 from datetime import UTC, datetime
+from pathlib import Path
 
 from playwright.async_api import Page
 
@@ -14,7 +16,9 @@ from .config import HEALING_CACHE_DIR, get_config
 
 logger = logging.getLogger("rankstein.healing")
 
-HEALING_CACHE_FILE = HEALING_CACHE_DIR / "selector_cache.json"
+HEALING_CACHE_FILE = Path(
+    os.environ.get("PINTEREST_HEALING_CACHE_FILE") or HEALING_CACHE_DIR / "selector_cache.json"
+)
 
 # Fallback selector strategies organized by target type
 FALLBACK_STRATEGIES: dict[str, list[str]] = {
@@ -102,10 +106,8 @@ class HealingCache:
 
             tmp = HEALING_CACHE_FILE.with_suffix(".tmp")
             tmp.parent.mkdir(parents=True, exist_ok=True)
-            tmp.write_text(
-                json.dumps(self._cache, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
-            # Atomic rename – on Windows NTFS this replaces atomically if target exists
+            tmp.write_text(json.dumps(self._cache, indent=2, ensure_ascii=False), encoding="utf-8")
+            # Atomic rename - on Windows NTFS this replaces atomically if target exists
             os.replace(tmp, HEALING_CACHE_FILE)
         except Exception as e:
             logger.warning(f"Failed to save healing cache: {e}")

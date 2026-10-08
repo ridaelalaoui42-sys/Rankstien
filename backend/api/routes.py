@@ -4,15 +4,12 @@ All FastAPI endpoints with authentication, rate limiting, and SSE streaming.
 
 from __future__ import annotations
 
-import json
 import logging
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from backend.agents.orchestrator import PipelineOrchestrator
 from backend.core import database as db
 from backend.core.config import get_settings
 from backend.core.engine import generate_structured, get_genai_client
@@ -40,7 +37,24 @@ from backend.services.site_auditor import (
 
 logger = logging.getLogger("rankstein.api")
 router = APIRouter()
-orchestrator = PipelineOrchestrator()
+
+_LEGACY_AGENT_ROLES = (
+    "ceo",
+    "manager",
+    "strategist",
+    "researcher",
+    "author",
+    "validator",
+    "studio",
+    "publisher",
+    "layout",
+    "pinterest",
+)
+_LEGACY_ARTICLE_PIPELINE_DISABLED = (
+    "This legacy article pipeline is retired because it cannot enforce RankStein's "
+    "Codex-only article policy. Launch a bounded Production Batch from the RankStein "
+    "dashboard or use the maintained rankstein.py workflow."
+)
 
 
 # ── Request Models ─────────────────────────────────────
@@ -93,10 +107,6 @@ class ContentOptimizeRequest(BaseModel):
 
 
 # ── Helper ─────────────────────────────────────────────
-def _sse(event_type: str, data: dict) -> str:
-    return f"data: {json.dumps({'type': event_type, **data})}\n\n"
-
-
 # ── Health ─────────────────────────────────────────────
 @router.get("/health")
 async def health():
@@ -154,7 +164,12 @@ async def domain_agents(domain_id: str):
     domain = await db.get_domain(domain_id)
     if not domain:
         raise HTTPException(404, "Domain not found")
-    return {"domain_id": domain_id, "agents": orchestrator.agents.keys(), "count": len(orchestrator.agents)}
+    return {
+        "domain_id": domain_id,
+        "agents": _LEGACY_AGENT_ROLES,
+        "count": len(_LEGACY_AGENT_ROLES),
+        "status": "retired",
+    }
 
 
 # ── Projects ───────────────────────────────────────────
@@ -293,10 +308,12 @@ async def test_integration(body: dict):
 # ── Pipeline (SSE) ─────────────────────────────────────
 @router.post("/orchestrate", dependencies=[Depends(get_api_key)])
 async def orchestrate_pipeline(body: PipelineRequest):
-    return StreamingResponse(
-        orchestrator.run_pipeline(body.keyword, body.domain, body.niche, body.project_id),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "legacy_article_pipeline_retired",
+            "message": _LEGACY_ARTICLE_PIPELINE_DISABLED,
+        },
     )
 
 

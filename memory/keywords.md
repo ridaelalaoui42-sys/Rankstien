@@ -186,6 +186,16 @@
 | Saint Honoré de Caramelo Salado | Alta Pastelería | Master List | RecetaDolce | High | Pending |
 | Milhojas de Vainilla Bourbon | Repostería | Master List | RecetaDolce | High | Pending |
 | Eclairs de Pistacho y Frambuesa | Alta Pastelería | Master List | RecetaDolce | High | Pending |
+| tarta de queso vasca pistacho | Postres | Master List | RecetaDolce | High | Pending |
+| flan de huevo casero tradicional | Postres | Master List | RecetaDolce | High | Pending |
+| tiramisu clasico italiano | Postres | Master List | RecetaDolce | High | Pending |
+| brownie de chocolate y nueces jugoso | Postres | Master List | RecetaDolce | High | Pending |
+| mousse de chocolate negro esponjoso | Postres | Master List | RecetaDolce | High | Pending |
+| coulant de chocolate volcan | Postres | Master List | RecetaDolce | High | Pending |
+| bizcocho de limon esponjoso abuela | Postres | Master List | RecetaDolce | High | Pending |
+| torrijas de leche caseras tradicionales | Postres | Master List | RecetaDolce | High | Pending |
+| tarta tatin de manzana caramelizada | Postres | Master List | RecetaDolce | High | Pending |
+| panna cotta de vainilla y frutos rojos | Postres | Master List | RecetaDolce | High | Pending |
 | paella valenciana receta original | Carnes | Master List | RecetaGenial | High | Pending |
 | gazpacho andaluz tradicional | Ensaladas | Master List | RecetaGenial | High | Pending |
 | tortilla de patatas con cebolla | Aperitivos | Master List | RecetaGenial | High | Pending |
@@ -200,4 +210,4 @@
 | croquetas de jamon cremosas | Aperitivos | Master List | RecetaGenial | High | Pending |
 | ensaladilla rusa perfecta | Aperitivos | Master List | RecetaGenial | High | Pending |
 | bacalao al pil pil paso a paso | Pescados | Master List | RecetaGenial | High | Pending |
-| arroz con bogavante caldoso | Pescados | Master List | RecetaGenial | High | Pending |
+| arroz con bogavante caldoso | Pescados | Master List | RecetaGenial | High | Pending |

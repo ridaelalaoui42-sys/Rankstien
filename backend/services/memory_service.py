@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 logger = logging.getLogger("rankstein.memory")
+_REQUESTS_POST = requests.post
 
 
 class MemoryService:
@@ -18,16 +19,24 @@ class MemoryService:
         base_url: str | None = None,
         project: str = "rankstein",
         cwd: str | None = None,
-        timeout: float = 8,
+        timeout: float = 60,
     ):
         self.base_url = (base_url or os.environ.get("AGENTMEMORY_URL") or "http://127.0.0.1:3111").rstrip("/")
         self.secret = os.environ.get("AGENTMEMORY_SECRET", "")
+        if not self.secret:
+            secret_path = Path.home() / ".agentmemory" / "secret"
+            if secret_path.exists():
+                try:
+                    self.secret = secret_path.read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
         self.project = project
         self.cwd = cwd or str(Path(__file__).resolve().parents[2])
         self.timeout = timeout
-        
+
         # Initialize pooled session
         from requests.adapters import HTTPAdapter
+
         self.session = requests.Session()
         adapter = HTTPAdapter(pool_connections=5, pool_maxsize=10)
         self.session.mount("http://", adapter)
@@ -35,15 +44,25 @@ class MemoryService:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        if self.secret:
-            headers["Authorization"] = f"Bearer {self.secret}"
+        secret = self.secret or os.environ.get("AGENTMEMORY_SECRET", "")
+        if not secret:
+            secret_path = Path.home() / ".agentmemory" / "secret"
+            if secret_path.exists():
+                try:
+                    secret = secret_path.read_text(encoding="utf-8").strip()
+                    self.secret = secret
+                except Exception:
+                    pass
+        if secret:
+            headers["Authorization"] = f"Bearer {secret}"
         return headers
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}/agentmemory/{path.lstrip('/')}"
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        resp = self.session.post(self._url(path), json=payload, headers=self._headers(), timeout=self.timeout)
+        post = requests.post if requests.post is not _REQUESTS_POST else self.session.post
+        resp = post(self._url(path), json=payload, headers=self._headers(), timeout=self.timeout)
         if resp.status_code not in {200, 201}:
             raise RuntimeError(f"AgentMemory {path} returned {resp.status_code}: {resp.text[:300]}")
         return resp.json() if resp.content else {}

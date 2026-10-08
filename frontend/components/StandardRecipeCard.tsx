@@ -1,6 +1,7 @@
 
 
 import SafeImage from './SafeImage';
+import { getPostImageUrl } from '@/lib/imageHelper';
 import Link from 'next/link';
 import { Post } from '@/types';
 import { FaClock } from 'react-icons/fa';
@@ -10,12 +11,7 @@ interface StandardRecipeCardProps {
 }
 
 export default function StandardRecipeCard({ post }: StandardRecipeCardProps) {
-  const imageUrl = [post.hero_image, post.featured_image]
-    .map((image) => image?.trim())
-    .find((image): image is string => {
-      if (!image || image === 'PLACEHOLDER') return false;
-      return image.startsWith('/') || image.startsWith('data:image/') || /^https?:\/\//i.test(image);
-    });
+  const imageUrl = getPostImageUrl(post);
 
   return (
     <Link href={`/${post.slug}`} className="group block h-full" aria-label={`Ver receta de ${post.title}`}>

@@ -13,7 +13,11 @@ from pathlib import Path
 import pytest
 
 from pinterest_automation.job_queue import _reset_job_queue_singleton, get_job_queue
-from pinterest_automation.rate_limiter import _reset_rate_limiter_singleton, get_rate_limiter
+from pinterest_automation.rate_limiter import (
+    RateLimiter,
+    _reset_rate_limiter_singleton,
+    get_rate_limiter,
+)
 from rankstein.domain import DomainRegistry
 
 
@@ -90,3 +94,16 @@ class TestDomainIsolation:
         # Verify their daily limits are populated correctly from domain configs
         assert limiter_alpha.config.daily_pin_limit == 15
         assert limiter_beta.config.daily_pin_limit == 45
+
+
+@pytest.mark.unit
+def test_rate_limit_retry_delay_targets_next_hour(tmp_path: Path) -> None:
+    limiter = RateLimiter(db_file=tmp_path / "rate-limit.db")
+    operation = "pin_upload:recetadolce:rida"
+    limiter.config.hourly_pin_limit = 1
+    limiter.config.daily_pin_limit = 10
+    limiter._hourly_counts[operation] = 1
+
+    delay = limiter.retry_after_seconds(operation)
+
+    assert 5 < delay <= 3600

@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +21,8 @@ from rankstein.keyword_roadmap import (
     keyword_counts,
     read_keyword_rows,
 )
-from rankstein.trend_intelligence import refresh_domain_trend_lists
+from rankstein.runtime_env import clean_python_env
+from rankstein.trend_intelligence import load_qualified_keyword_keys, refresh_domain_trend_lists
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 COMPLETED_STATUSES = {"approved", "complete", "completed", "published", "live"}
@@ -54,6 +57,7 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
     skipped_existing = []
     trend_report: dict[str, Any] | None = None
     pre_trend_cleanup = []
+    research_domains: list[str] = []
 
     if options.refresh_trends:
         for domain in domains:
@@ -61,17 +65,16 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
             completed_keywords = completed_by_domain.get(domain.domain, set()) | completed_by_domain.get(
                 domain.handle, set()
             )
-            pre_trend_cleanup.append(
-                {
-                    "domain": domain.handle,
-                    "cleanup": clean_keyword_roadmap(domain.keywords_file, title, completed_keywords),
-                }
-            )
+            cleanup = clean_keyword_roadmap(domain.keywords_file, title, completed_keywords)
+            pre_trend_cleanup.append({"domain": domain.handle, "cleanup": cleanup})
+            if int(cleanup["counts"].get("Pending", 0)) == 0:
+                research_domains.append(domain.handle)
         trend_report = await asyncio.to_thread(
             refresh_domain_trend_lists,
             domains,
             limit_per_domain=options.trend_limit_per_domain,
             append_to_roadmap=True,
+            candidate_origin_policy="pinterest_required",
         )
 
     for domain in domains:
@@ -90,7 +93,17 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
         )
         cleanup = clean_keyword_roadmap(domain.keywords_file, title, completed_keywords)
         rows = read_keyword_rows(domain.keywords_file)
-        pending = [row for row in rows if row.status.lower() == "pending"]
+        eligible_keywords, research_status = load_qualified_keyword_keys(domain)
+        pending = [
+            row
+            for row in rows
+            if row.status.lower() == "pending" and row.keyword.strip().casefold() in eligible_keywords
+        ]
+        unresearched_pending = [
+            row
+            for row in rows
+            if row.status.lower() == "pending" and row.keyword.strip().casefold() not in eligible_keywords
+        ]
 
         seeded = 0
         for row in pending[: options.keywords_per_domain]:
@@ -117,6 +130,9 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
                 "keywords_file": str(domain.keywords_file),
                 "keyword_counts": keyword_counts(read_keyword_rows(domain.keywords_file)),
                 "cleanup": cleanup,
+                "keyword_research_status": research_status,
+                "qualified_pending": len(pending),
+                "unresearched_pending": len(unresearched_pending),
                 "pending_selected": min(len(pending), options.keywords_per_domain),
                 "campaigns_seeded": seeded,
                 "memory_hits": len(memory_hits),
@@ -144,22 +160,24 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
         },
     )
 
+    publishable_pending = sum(int(item["qualified_pending"]) for item in domain_reports)
+    keywords_discovered = sum(
+        int(item.get("roadmap_added", 0)) for item in (trend_report or {}).get("domains", {}).values()
+    )
     launched = []
-    if options.launch:
-        # Launch a single worker process covering ALL domains simultaneously
-        cmd = [
-            sys.executable,
-            str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
-            "--all-domains",
-            "--workers",
-            str(options.workers_per_domain),
-            "--limit",
-            str(options.keywords_per_domain),
-        ]
-        proc = await asyncio.create_subprocess_exec(*cmd, cwd=PROJECT_ROOT)
-        launched.append({"domain": "all", "pid": proc.pid, "cmd": cmd})
-        logger.info("Launched turbo_articles --all-domains pid=%d", proc.pid)
-
+    launch_blocked_reason = ""
+    if options.launch and publishable_pending:
+        launched.append(
+            _launch_article_worker(
+                workers_per_domain=options.workers_per_domain,
+                keywords_per_domain=options.keywords_per_domain,
+            )
+        )
+    elif options.launch:
+        launch_blocked_reason = (
+            "No qualified Pending keywords have fresh Pinterest-first research and external demand proof."
+        )
+        logger.error(launch_blocked_reason)
 
     return {
         "brief": {
@@ -170,6 +188,12 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
             "launch": options.launch,
             "agentmemory_ok": bool(memory_health.get("ok")),
             "trends_refreshed": bool(trend_report),
+            "research_triggered": bool(research_domains),
+            "research_domains": research_domains,
+            "keywords_discovered": keywords_discovered,
+            "publishable_pending": publishable_pending,
+            "work_ready": publishable_pending > 0,
+            "launch_blocked_reason": launch_blocked_reason,
         },
         "domains": domain_reports,
         "trend_report": trend_report,
@@ -178,6 +202,58 @@ async def build_startup_plan(options: StartupOptions) -> dict[str, Any]:
         "skipped_existing": skipped_existing,
         "launched": launched,
     }
+
+
+def _launch_article_worker(
+    *,
+    workers_per_domain: int,
+    keywords_per_domain: int,
+) -> dict[str, Any]:
+    """Launch the continuous article worker independently of the short CLI process."""
+
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+        "--all-domains",
+        "--workers",
+        str(workers_per_domain),
+        "--limit",
+        str(keywords_per_domain),
+    ]
+    log_dir = PROJECT_ROOT / "data" / "logs" / "services"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stdout = (log_dir / "articles.log").open("ab")
+    stderr = (log_dir / "articles_err.log").open("ab")
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            | getattr(subprocess, "DETACHED_PROCESS", 0)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            | 0x01000000
+        )
+    kwargs = {
+        "cwd": PROJECT_ROOT,
+        "env": clean_python_env(),
+        "stdin": subprocess.DEVNULL,
+        "stdout": stdout,
+        "stderr": stderr,
+        "creationflags": creationflags,
+        "close_fds": True,
+    }
+    try:
+        try:
+            proc = subprocess.Popen(cmd, **kwargs)
+        except OSError:
+            if os.name != "nt" or not creationflags:
+                raise
+            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            proc = subprocess.Popen(cmd, **kwargs)
+    finally:
+        stdout.close()
+        stderr.close()
+    logger.info("Launched detached turbo_articles --all-domains pid=%d", proc.pid)
+    return {"domain": "all", "pid": proc.pid, "cmd": cmd, "detached": True}
 
 
 def run_startup(options: StartupOptions) -> dict[str, Any]:
@@ -204,8 +280,20 @@ def print_startup_report(report: dict[str, Any], *, as_json: bool = False) -> No
     print(f"Campaigns seeded:      {brief['campaigns_seeded']}")
     print(f"Existing skipped:      {brief['skipped_existing']}")
     print(f"Trends refreshed:      {'yes' if brief.get('trends_refreshed') else 'no'}")
+    print(
+        "Keyword research:      "
+        + (
+            f"triggered for {', '.join(brief.get('research_domains', []))}"
+            if brief.get("research_triggered")
+            else "not required by an empty roadmap"
+        )
+    )
+    print(f"Keywords discovered:   {brief.get('keywords_discovered', 0)}")
+    print(f"Publishable pending:    {brief.get('publishable_pending', 0)}")
     print(f"AgentMemory:           {'ok' if brief['agentmemory_ok'] else 'unavailable'}")
     print(f"Workers launched:      {len(report['launched'])}")
+    if brief.get("launch_blocked_reason"):
+        print(f"Publishing blocked:    {brief['launch_blocked_reason']}")
 
     print("\nDomain Readiness")
     for item in report["domains"]:

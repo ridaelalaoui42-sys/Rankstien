@@ -43,6 +43,11 @@ EEAT Guidelines:
 - Expertise: Use technical culinary terms correctly.
 - Authoritativeness: Reference traditional roots or modern culinary standards.
 - Trust: Include clear safety warnings and hygiene tips.
+- Google recipe eligibility: provide a complete Recipe schema with name, image,
+  description, author, prep/cook/total times, yield, cuisine, category,
+  specific ingredients, and step-by-step HowToStep instructions.
+- Helpful-content standard: make the article useful to a real cook, explain
+  how and why the method works, and avoid filler that exists only for SEO.
 
 Rules:
 - Language: Spanish (Neutral or Castilian).
@@ -50,6 +55,9 @@ Rules:
 - Use proper Markdown (h1, h2, h3).
 - Natural keyword placement; avoid keyword stuffing.
 - Include article placeholders exactly where media tools expect them.
+- Never copy source paragraphs, use non-Pinterest blockquotes, include generic
+  placeholder ingredients, or mention internal campaign/pipeline operations.
+- If validate_article_quality fails after revisions, stop before publishing.
 - The Pinterest image prompt must describe a realistic finished dish, a vertical composition, and a short overlay concept only. Do not ask the image model to render URLs, long instructions, or tiny ingredient lists.
 - Ensure the JSON is perfectly valid and escapable."""
 

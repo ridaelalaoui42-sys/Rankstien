@@ -9,12 +9,20 @@ venv/
 ENV/
 env/
 
-# Project specific
+# Project specific & Secrets
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 .claude/
 .gemini/
 .ruff_cache/
+.pytest_cache/
 .playwright-mcp/
+.playwright-cli/
+.planning/
 
 # Node
 node_modules/
@@ -23,23 +31,17 @@ out/
 build/
 dist/
 
-# Data and logs (Recursive)
-**/data/logs/
-**/data/sessions/
-**/data/queue/
-**/data/healing_cache/
-**/data/media/
-**/data/remaster_final/
-**/data/state_store.db/
-*.log
+# Security & Credentials
+config/*service_account*.json
+*service_account*.json
+*.pem
+*.key
+*.p12
+*.pfx
 
-# State files
-data/circuit_state.json
-data/health_state.json
-circuit_state.json
-health_state.json
-
-# Large artifacts or temp files
+# Outputs and Generated Media
+output/
+nanobanana-output/
 *.zip
 *.rar
 *.mp4
@@ -52,7 +54,48 @@ latest_article.json
 temp_article*.json
 article_*.json
 
-# Ignore session files specifically if not caught by directory ignore
+# Data, runtime and logs (Recursive)
+**/data/logs/
+**/data/sessions/
+**/data/queue/
+**/data/healing_cache/
+**/data/media/
+**/data/remaster_final/
+**/data/state_store.db/
+**/data/runtime/
+*.log
+*.bak
+*.bak.*
+*.db
+*.db-*
+data/app.db
+data/debug_login_*.html
+data/debug_mcp_login_*.html
+data/iii-config*.yaml
+data/image_provenance_audit.md
+
+# Reports and runtime state
+data/reports/production_batches/
+data/reports/campaigns/
+data/reports/design_audit/
+data/reports/launcher/
+data/reports/pinterest_draft_clear_*.json
+data/reports/pinterest_login_*.json
+data/reports/production_validation_*.json
+data/reports/autonomous-cycle-*.json
+data/reports/article-quality-repair-*.json
+data/reports/live-article-quality-*.json
+data/reports/posts_data.json
+data/reports/final_urls_report.json
+data/reports/published_urls.json
+
+# State files
+data/circuit_state.json
+data/health_state.json
+circuit_state.json
+health_state.json
+
+# Session files
 *.bin
 *.sqlite
 *.sqlite-shm

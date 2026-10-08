@@ -1,163 +1,358 @@
 {
-  "generated_at": "2026-05-15T17:51:07.766748+00:00",
+  "generated_at": "2026-10-08T03:46:55.797683+00:00",
   "domain": "recetagenial",
+  "methodology": {
+    "candidate_origin": "Pinterest Trends/Search only",
+    "candidate_origin_policy": "pinterest_required",
+    "specificity_gate": "dish plus concrete qualifier",
+    "external_validation": "Google search demand plus optional Google News freshness",
+    "fail_closed": true
+  },
   "items": [
     {
-      "keyword": "Descubre la Receta Perfecta",
+      "keyword": "croquetas caseras para gato",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 154.0,
+      "pinterest_score": 93.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La comida para gatos tiene metales pesados, pesticidas y químicos derivados del plástico, revela investigación",
+        "¿Croquetas, alimento húmedo o dieta casera para tu mascota? Esto dicen los especialistas",
+        "Conchita, abuela cocinera, sobre su mejor receta de croquetas: \"Son 3 cucharadas de harina por medio litro de leche\"",
+        "13 Tendencias en Pet Food en 2026 que Están Revolucionando el Mercado",
+        "Alimentación mixta de mascotas se consolida en Centroamérica y República Dominicana"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 5.0,
+      "search_volume_score": 6.0,
+      "search_demand_score": 6.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "salmón al horno recetas faciles",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 151.0,
+      "pinterest_score": 88.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Paula Monreal, experta en alimentación saludable: \"Esta es la forma más fácil de cocinar salmón en la freidora de aire\"",
+        "Los chefs con más experiencia coinciden: \"Para que cualquier pescado al horno tenga más sabor se debe limpiar con agua con la misma salinidad que el mar\"",
+        "La receta de salmón marinado que Miguel Torres prepara en 15 minutos cuando quiere comer sano",
+        "Salmón al horno en papel de aluminio: una receta jugosa y aromática para Navidad",
+        "Con más proteínas, más barato y de temporada: así es el pescado español con el que sustituir al salmón"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 3.0,
+      "search_volume_score": 8.0,
+      "search_demand_score": 8.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "paella de marisco video",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 139.0,
+      "pinterest_score": 84.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Paella de marisco exprés: El invento japonés para \"disfrutar del sabor de España en tan solo 5 minutos\"",
+        "La paella favorita de Elsa Pataky",
+        "El niño viral de 'Cooking with Carter' alucina con la paella en Mallorca: «Es increíble»",
+        "Arroz con marisco, la receta española favorita de Marcus Rashford",
+        "Alfredo Vozmediano, cocinero, lo advierte: \"La clave para un buen arroz de marisco no es el tiempo, son estos cuatro pasos\""
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 6.0,
+      "search_demand_score": 6.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "arroz con leche en vaso",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
       "score": 135.0,
-      "pinterest_score": 98.0,
+      "pinterest_score": 66.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Un científico descubre la receta secreta de Coca-Cola: «La mayoría piensa que es una fórmula compleja»",
-        "El dulce secreto del arequipe: origen, diferencias y la receta perfecta para un postre irresistible",
-        "Álvaro Morte: “En Navidad siempre tomamos esta receta de mi madre, si no es como si no hubiera Nochebuena”",
-        "Descubre «La Receta», la canción más dulce de Carmen Ferre",
-        "¡Horchapiña colada con David de Jorge! Patricia Conde descubre la receta del verano"
+        "Las 20 mejores recetas para Monsieur Cuisine Smart: fáciles, rápidas y deliciosas",
+        "TheGrefg y Jordi Roca unen fuerzas para hacer este singular postre: \"Hemos hecho una marranada de receta\"",
+        "La Navidad que se cocina en Colombia: sabores y tendencias de 2025 para lucirse en la mesa",
+        "Vasitos de postre, la tendencia que te conquistará (y más si son artesanales)",
+        "\"¡Esto está muy rico!\": Karlos Arguiñano transforma un postre de toda la vida en una receta vegana"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "aperitivos que se hacen en",
+      "keyword": "ensalada de garbanzos pollo",
+      "domain": "recetagenial",
+      "cluster": "Carnes",
+      "priority": "High",
+      "score": 132.0,
+      "pinterest_score": 69.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Ensaladas de verano: 30 recetas fáciles, rápidas y deliciosas para comer saludable y disfrutar",
+        "¡La receta perfecta para combatir el calor! Ensalada de garbanzos con Sandía elaborada por Soraya y Joseba Arguiñano",
+        "Menú semanal de Cocina Abierta del 17 al 23 de agosto",
+        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”",
+        "Cocina abierta de Joseba Arguiñano - Programa 1: Muslos de pollo a la tailandesa"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 3.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "arroz con leche para vender publicidad",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 133.0,
-      "pinterest_score": 96.0,
+      "score": 131.0,
+      "pinterest_score": 80.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "El aperitivo más sencillo con sardinillas del chef 3 estrellas Michelin Jesús Sánchez",
-        "Martín Berasategui (65), chef: \"El aperitivo más fácil de Navidad se hace con 250 g de queso y 4 yemas de huevo\"",
-        "La receta de magdalenas saladas de calabacín y queso de la cocinera Anna Terés: \"Sorprendentes y deliciosas\"",
-        "Chef Jesús Sánchez: \"En 20 segundos haces un aperitivo de cine con sardinillas en lata, pepinillo, cebolla y mayonesa\"",
-        "El hojaldre triunfa en Navidad: 5 aperitivos fáciles, rápidos y económicos"
+        "Hermanos Torres, cocineros: \"El arroz con leche más elegante y especial se hace con 150 ml de nata, canela y un pelín de sal\"",
+        "Dani García, chef malagueño: \"El mejor arroz con leche del mundo se hace con arroz, leche y nata, y es fundamental añadir una vaina de vainilla\"",
+        "Las ventas \"güenas güenas\" de la provincia de Cádiz",
+        "La leche cruda que bebe Haaland está autorizada y regulada. Aun así, en tu cocina puede convertirse en un problema serio",
+        "El localito en la CDMX que te vende arroz con leche en tamaño gigante y todavía le puedes poner Nutella, Lechera y más toppings"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 2.0,
+      "search_demand_score": 2.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "El Secreto para Aperitivos de Calidad Gourmet",
+      "keyword": "croquetas caseras recetas para hacer",
+      "domain": "recetagenial",
+      "cluster": "Aperitivos",
+      "priority": "High",
+      "score": 130.0,
+      "pinterest_score": 65.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Iván de la Torre, chef, desvela el truco para hacer las mejores croquetas caseras: \"Están casi como las de tu abuela\"",
+        "Ni harina ni pan rallado: el sencillo truco de la abuela cocinera para hacer las mejores croquetas caseras",
+        "Conchita, abuela cocinera, sobre su mejor receta de croquetas: \"Son 3 cucharadas de harina por medio litro de leche\"",
+        "El Pollo Paulino: tradición, producto y cocina casera para el día a día en Pamplona",
+        "La dieta del futbolista Mbappé y su alimento español favorito"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "pollo al horno con ensalada rusa",
+      "domain": "recetagenial",
+      "cluster": "Carnes",
+      "priority": "High",
+      "score": 130.0,
+      "pinterest_score": 61.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Los chefs expertos coinciden: para que la ensaladilla rusa quede más ligera no hay que echarle patata, sino...",
+        "Dani García revela cómo reutilizar las sobras de pollo",
+        "Martín Berasategui (65), chef: \"La ensaladilla rusa no se hace con el atún troceado; se tritura con la mayonesa\"",
+        "Cuáles son las recetas más populares en Latinoamérica para la cena de Año Nuevo, según la IA",
+        "Dani García, chef: “Las sobras de pollo no se hacen en ensalada, sino que quedan mejor con crema, pasas de uva y piñones”"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "salmón al horno con patatas",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
       "score": 129.0,
-      "pinterest_score": 92.0,
+      "pinterest_score": 60.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "🤔 ¿Te acuerdas? 😋 El 16 de enero se celebra el Día Internacional de la Croqueta. En el año 2015, el programa Sin ir más lejos nos contaba el secreto para hacer este clásico aperitivo. #croquetas #comida #aragon #receta #aragontv",
-        "Menú de Navidad sin cocinar 2025. Platos preparados gourmet",
-        "\"Tarda 5 minutos en el horno, está super jugoso por dentro, es una pasada\": el aperitivo más fácil y rápido del chef Martín Berasategui",
-        "Guía de los mejores restaurantes de Tarragona",
-        "20 restaurantes de moda de Salamanca donde comer bien"
+        "15 recetas con boniato: opciones fáciles y sabrosas para otoño",
+        "Salmón en salsa cremosa, la receta que se hizo viral y sí merece la pena",
+        "Chef Karlos Arguiñano: “Para los que estáis con dudas de qué hacer en Nochebuena, con una buena cola de salmón",
+        "Cómetelo. Pescado al horno con sofrito marin...",
+        "Menú semanal de Cocina Abierta del 16 al 22 de febrero, recetas caseras para comer bien"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "Ideas de aperitivos para fiestas",
+      "keyword": "tortilla española gourmet",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
       "priority": "High",
-      "score": 127.0,
-      "pinterest_score": 90.0,
+      "score": 126.0,
+      "pinterest_score": 71.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Comidas ricas: 101 recetas muy sabrosas, para disfrutar a lo grande",
-        "Menú semanal navideño del 22 al 28 de diciembre",
-        "Comida preparada para las fiestas navideñas en Cádiz",
-        "Revista Cocina Fácil (diciembre), con las mejores recetas de Navidad, ¡ya a la venta!",
-        "118 recetas navideñas para inspirarte en el menú de este año"
+        "La clave de la mejor tortilla de patata de especialidad: \"El AOVE tiene que ser el director de orquesta\"",
+        "La tortilla murciana escala a la élite nacional: Cucú Food Experience, entre las diez mejores de España",
+        "Karlos Arguiñano reinventa la tortilla con una versión alemana",
+        "Las 35 mejores tortillas de patata de Madrid: dónde comerlas",
+        "La alcaldesa visita 'Gourmet Nüvo', un establecimiento que aumenta la oferta gastronómica de la ciudad"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 6.0,
+      "search_demand_score": 6.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "Tapas Españolas",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "Medium",
-      "score": 115.0,
-      "pinterest_score": 78.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "50 tapas para comerse España",
-        "De tapeo por España: 17 recetas por saborear cada comunidad",
-        "La ruta de Burgos que sigue uno de los programas de gastronomía más prestigiosos de la televisión",
-        "El arte de las tapas: cómo chefs argentinos reinventan la tradición y crean nuevas recetas",
-        "Las tapas frías que recomienda Karlos Arguiñano para un picoteo al aire libre en verano"
-      ],
-      "source": "Pinterest Trends + Google News"
-    },
-    {
-      "keyword": "Ideas de aperitivos para fiestas pin page",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "Medium",
-      "score": 108.0,
-      "pinterest_score": 91.0,
-      "google_news_hits": 1,
-      "google_news_titles": [
-        "25 Ricas recetas para darle sabor latino a la cena de Thanksgiving"
-      ],
-      "source": "Pinterest Trends + Google News"
-    },
-    {
-      "keyword": "Aperitivos Fáciles con Masa de Hojaldre para Antojos",
-      "domain": "recetagenial",
-      "cluster": "Aperitivos",
-      "priority": "Medium",
-      "score": 101.0,
-      "pinterest_score": 79.0,
-      "google_news_hits": 2,
-      "google_news_titles": [
-        "El menú por menos de 150 euros que triunfa en Nochevieja; fácil, rápido y chic",
-        "Más de 25 recetas de canapés fáciles para sorprender en Navidad"
-      ],
-      "source": "Pinterest Trends + Google News"
-    },
-    {
-      "keyword": "Ensalada de Burrata y Tomate Asado al Horno",
+      "keyword": "ensalada de garbanzos pepino",
       "domain": "recetagenial",
       "cluster": "Ensaladas",
-      "priority": "Medium",
-      "score": 100.0,
-      "pinterest_score": 75.0,
+      "priority": "High",
+      "score": 124.0,
+      "pinterest_score": 55.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Las 21 mejores recetas con tomate para saborear el otoño",
-        "Menú semanal de El Comidista (8 a 14 de septiembre)",
-        "Ya en Lidl: una burrata italiana muy especial, perfecta para acompañar pizzas y ensaladas",
-        "Menús de Navidad 2025 en Burgos",
-        "Un nuevo local de Vigo aspira a ofrecer las tortillas más irresistibles con una receta \"peligrosamente buena\""
+        "Ensaladas de verano: 30 recetas fáciles, rápidas y deliciosas para comer saludable y disfrutar",
+        "Rosa Rullán, experta en nutrición, enseña su receta de ensalada para llevar a la playa: \"No tienes por qué recurrir a la ensalada de pasta de siempre, esta es sencilla y tiene 60g de proteína\"",
+        "Vicky Martín Berrocal, sobre su ensalada de garbanzos de bote y aguacate: \"Para el aderezo, sustituyo la miel por el sirope de agave porque engorda menos\"",
+        "Miguel Ducrós, nutricionista: «Los garbanzos de bote mejoran en esta ensalada fría y alta en proteínas con atún, zumo de limón y medio pepino»",
+        "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "Recetas que realmente funcionan",
+      "keyword": "paella de marisco restaurante",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
-      "priority": "Low",
-      "score": 76.0,
-      "pinterest_score": 39.0,
+      "priority": "High",
+      "score": 123.0,
+      "pinterest_score": 70.0,
       "google_news_hits": 5,
       "google_news_titles": [
-        "Dos chefs vascos coinciden: \"Los huevos rellenos quedan mejor con bonito en lugar de atún. Añade salmón ahumado y guarda el jugo de los pepinillos para dar más sabor a mar\"",
-        "Las recetas electrónicas ya funcionan en Mi Argentina: cómo activarlas en el celular, paso a paso",
-        "Tortitas americanas esponjosas: la receta que siempre funciona",
-        "Pazzi, el local retrofuturista de Madrid donde las pizzas las cocina y las sirve un robot",
-        "AC New Horizons: Cómo cocinar comida, cultivar, recetas e ingredientes"
+        "Restaurantes y arrocerías para celebrar el Día Mundial de la Paella si estás fuera de Valencia",
+        "Los 21 mejores arroces de Barcelona",
+        "Los 17 mejores restaurantes para comer paella en Valencia",
+        "El Restaurant Andalucía lleva el Arroz de Castelldefels al corazón de la ciudad",
+        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta"
       ],
-      "source": "Pinterest Trends + Google News"
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     },
     {
-      "keyword": "aperitivo fácil y original pin page",
+      "keyword": "ensalada de garbanzos crujientes",
+      "domain": "recetagenial",
+      "cluster": "Ensaladas",
+      "priority": "High",
+      "score": 123.0,
+      "pinterest_score": 62.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Cuatro ingredientes crujientes, saludables y nutritivos para combinar con tus ensaladas de garbanzos",
+        "Cómo convertir unos garbanzos de bote en un plato gourmet en tres minutos, según José Andrés",
+        "Chef José Andrés: “El mejor aliño para los garbanzos de bote necesita ladolemono y cilantro”",
+        "Los chefs de Europa coinciden: “La ensalada de garbanzos mejora su sabor con hierbas frescas y un ingrediente crujiente”",
+        "La cena saludable que recomiendan los mejores nutricionistas: con garbanzos de bote y lista en 10 minutos"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 12.0,
+      "search_demand_score": 12.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "paella de marisco casera",
       "domain": "recetagenial",
       "cluster": "Aperitivos",
-      "priority": "Low",
-      "score": 73.0,
-      "pinterest_score": 73.0,
-      "google_news_hits": 0,
-      "google_news_titles": [],
-      "source": "Pinterest Trends + Google News"
+      "priority": "High",
+      "score": 122.0,
+      "pinterest_score": 63.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Sevilla busca la mejor receta casera de arroz: así puedes participar y ganar 600 euros",
+        "12 restaurantes en Valencia para comer paella auténtica",
+        "Dosier de arroces",
+        "Dónde comer en Gandía: 16 restaurantes para probar fideuà de premio, arroces, marisco y cocina de la terreta",
+        "Cómo hacer una paella de marisco perfecta: trucos, consejos y secretos de la Familia Nuri"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 10.0,
+      "search_demand_score": 10.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
+    },
+    {
+      "keyword": "pollo al horno recetas faciles",
+      "domain": "recetagenial",
+      "cluster": "Carnes",
+      "priority": "High",
+      "score": 122.0,
+      "pinterest_score": 47.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Dos chefs Michelin coinciden: “Para que el pollo asado quede mucho más jugoso, hay que cocinarlo antes en l...",
+        "Adiós a la pechuga de pollo de siempre: la receta fácil de Raquel Meroño con mozzarella y yogur",
+        "Rollitos de pollo, ensalada de lentejas, bizcocho de pera y 7 recetas fáciles más: este es el top 10 de Cocina Fácil del 9 al 16 de septiembre",
+        "Pollo al horno jugoso y con piel crujiente: estos son los trucos de los chefs José Andrés, Jordi Cruz y Dani García",
+        "Menú semanal del 10 al 16 de agosto"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 3.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
+      "pinterest_origin": true,
+      "qualified": true
     }
   ]
 }

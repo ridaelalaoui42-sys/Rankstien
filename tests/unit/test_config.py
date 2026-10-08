@@ -52,10 +52,11 @@ class TestEnvAliases:
         s = Settings(_env_file=None)  # type: ignore[call-arg]
         assert s.debug_mode is True
 
-    def test_ai_engine_defaults_to_gemini_cli(self) -> None:
+    def test_ai_engine_defaults_to_gemini_cli(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ADK_MODEL", raising=False)
         s = Settings(_env_file=None)  # type: ignore[call-arg]
         assert s.ai_engine == "gemini_cli"
-        assert s.adk_model == "auto"
+        assert s.adk_model == "gemini-3.1-flash-lite-preview"
 
     def test_ai_engine_rejects_unknown_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("RANKSTEIN_AI_ENGINE", "unknown")
@@ -160,9 +161,7 @@ class TestParityWithLegacyConfigs:
 
 @pytest.mark.unit
 class TestPinterestAutomationAccounts:
-    def test_accounts_json_supports_multiple_browser_families(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_accounts_json_supports_multiple_browser_families(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import pinterest_automation.config as legacy_pa
 
         monkeypatch.delenv("PINTEREST_EMAIL", raising=False)
@@ -202,6 +201,7 @@ class TestPinterestAutomationAccounts:
 
         monkeypatch.setenv("PINTEREST_EMAIL", "m@example.test")
         monkeypatch.setenv("PINTEREST_PASSWORD", "pw")
+        monkeypatch.setenv("PINTEREST_DEFAULT_ACCOUNT_HANDLE", "m1")
         monkeypatch.setenv(
             "PINTEREST_ACCOUNTS",
             '[{"name":"r1","email":"r@example.test","password":"pw","session":"turbo_r1"}]',
@@ -211,3 +211,36 @@ class TestPinterestAutomationAccounts:
 
         assert sorted(cfg.accounts) == ["m1", "r1"]
         assert cfg.accounts["m1"].email == "m@example.test"
+
+
+@pytest.mark.unit
+class TestPinterestBoards:
+    def test_legacy_board_names_normalize_to_live_boards(self) -> None:
+        from pinterest_automation.config import normalize_board_name
+
+        assert normalize_board_name("Postres y Dulces") == "Chocolate"
+        assert normalize_board_name("Arroces y Paellas") == "Arroces"
+        assert normalize_board_name("Ensaladas y Saludable") == "ENSALADES"
+        assert normalize_board_name("recetas") == "Aperitivos"
+        assert normalize_board_name("Carnes y Tradición") == "Carnes"
+
+    def test_unknown_or_blank_board_fails_closed_to_default_live_board(self) -> None:
+        from pinterest_automation.config import normalize_board_name
+
+        assert normalize_board_name("") == "Aperitivos"
+        assert normalize_board_name(None) == "Aperitivos"
+        assert normalize_board_name("old-missing-board") == "Aperitivos"
+
+    def test_canonical_board_resolves_to_account_live_label(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from pinterest_automation.config import resolve_account_board_name
+
+        monkeypatch.setenv(
+            "PINTEREST_ACCOUNT_BOARD_MAP",
+            '{"media":{"ENSALADES":"Ensaladas y Saludable"}}',
+        )
+
+        assert resolve_account_board_name("ENSALADES", "media") == "Ensaladas y Saludable"
+        assert resolve_account_board_name("ENSALADES", "rida") == "ENSALADES"

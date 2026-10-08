@@ -5,17 +5,19 @@ Prevents cascading failures by opening the circuit after threshold breaches.
 
 import json
 import logging
+import os
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
+from pathlib import Path
 from threading import RLock
 
 from .config import DATA_DIR, get_config
 
 logger = logging.getLogger("rankstein.circuit")
 
-CIRCUIT_STATE_FILE = DATA_DIR / "circuit_state.json"
+CIRCUIT_STATE_FILE = Path(os.environ.get("PINTEREST_CIRCUIT_STATE_FILE") or DATA_DIR / "circuit_state.json")
 
 
 class CircuitState(Enum):
@@ -46,6 +48,7 @@ class CircuitBreaker:
         self._load_state()
 
     def _load_state(self):
+        self._last_disk_load = time.time()
         if self._state_file.exists():
             try:
                 data = json.loads(self._state_file.read_text(encoding="utf-8"))
@@ -53,7 +56,6 @@ class CircuitBreaker:
                 self._failure_counts = data.get("failure_counts", {})
                 self._success_counts = data.get("success_counts", {})
                 self._last_failure_time = data.get("last_failure_time", {})
-                self._last_disk_load = time.time()
                 self._dirty = False
             except Exception as e:
                 logger.warning(f"Failed to load circuit state: {e}")
@@ -88,6 +90,7 @@ class CircuitBreaker:
             }
             self._state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
             self._last_save_time = now
+            self._last_disk_load = now
             self._dirty = False
             logger.debug("Circuit breaker: saved state to disk")
         except Exception as e:
@@ -132,8 +135,9 @@ class CircuitBreaker:
 
     def record_success(self, operation: str):
         with self._lock:
+            self._maybe_reload_from_disk()
             self._failure_counts[operation] = 0
-            state = self.get_state(operation)
+            state = CircuitState(self._states.get(operation, CircuitState.CLOSED.value))
 
             if state == CircuitState.HALF_OPEN:
                 self._success_counts[operation] = self._success_counts.get(operation, 0) + 1
@@ -147,10 +151,11 @@ class CircuitBreaker:
 
     def record_failure(self, operation: str, retryable: bool = True):
         with self._lock:
+            self._maybe_reload_from_disk()
             self._failure_counts[operation] = self._failure_counts.get(operation, 0) + 1
             self._last_failure_time[operation] = time.time()
 
-            state = self.get_state(operation)
+            state = CircuitState(self._states.get(operation, CircuitState.CLOSED.value))
 
             if state == CircuitState.HALF_OPEN:
                 logger.warning(f"Circuit '{operation}' failed in HALF_OPEN, re-opening")

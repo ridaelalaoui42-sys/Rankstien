@@ -1,6 +1,6 @@
 """
 RankStein MCP Server — Connects Gemini CLI to RankStein tools.
-Gemini CLI handles all AI/LLM calls. This server handles:
+Hermes Codex is the primary article provider. This server handles:
   - Keyword roadmap management
   - Editorial image overlay (Luxury V3 / NanaBanana style)
   - EXIF metadata injection
@@ -12,14 +12,27 @@ Run: python rankstein_mcp_server.py
 Register: gemini mcp add rankstein python <path_to_repo>/rankstein_mcp_server.py
 """
 
+import os
+import sys
+
+# Re-exec with a clean Python environment before importing modules such as re.
+_clean_env = dict(os.environ)
+_reexec_needed = False
+for _name in ("PYTHONHOME",):
+    if _clean_env.pop(_name, None):
+        _reexec_needed = True
+_clean_env.pop("UV_INTERNAL__PYTHONHOME", None)
+if _reexec_needed:
+    _exe = sys.executable.replace("\\", "/")
+    os.execve(_exe, [_exe, *sys.argv], _clean_env)  # noqa: S606
+
 import json
 import logging
-import os
 import random
 import re
-import sys
-import textwrap
-from datetime import datetime
+import time
+from datetime import UTC, datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # ── Load .env FIRST (before any other project imports) ───────────────────────
@@ -42,17 +55,16 @@ except ImportError:
                 os.environ.setdefault(_k.strip(), _v.strip())
 
 # ── Logging ───────────────────────────────────────────────────────────────────
-from logging.handlers import RotatingFileHandler
-
-import requests
 import cloudinary
 import cloudinary.uploader
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from backend.services.memory_service import memory
 
 # Global session for Supabase pooling
 _SUPABASE_SESSION = None
+_REQUESTS_GET = requests.get
 
 
 def get_supabase_session():
@@ -71,18 +83,31 @@ def get_supabase_session():
 
 
 # Domain registry — resolves a Domain by handle (or default).
+from rankstein.category_policy import CategoryPolicyError, assign_article_category
 from rankstein.domain import get_registry
 
 _log_dir = Path(__file__).resolve().parent / "data"
 _log_dir.mkdir(parents=True, exist_ok=True)
+_mcp_logs = sorted(
+    _log_dir.glob("rankstein_mcp_*.log*"),
+    key=lambda path: path.stat().st_mtime,
+    reverse=True,
+)
+for _old_log in _mcp_logs[24:]:
+    try:
+        _old_log.unlink()
+    except OSError:
+        pass
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(message)s",
     handlers=[
+        # Separate files avoid Windows rename conflicts when several MCP hosts
+        # run this server at the same time.
         RotatingFileHandler(
-            str(_log_dir / "rankstein_mcp.log"),
-            maxBytes=5 * 1024 * 1024,  # 5 MB per file
-            backupCount=3,
+            str(_log_dir / f"rankstein_mcp_{os.getpid()}.log"),
+            maxBytes=2 * 1024 * 1024,
+            backupCount=2,
             encoding="utf-8",
         ),
         logging.StreamHandler(sys.stderr),
@@ -115,7 +140,7 @@ cloudinary.config(
     cloud_name=_settings.cloudinary_cloud_name,
     api_key=_settings.cloudinary_api_key.get_secret_value(),
     api_secret=_settings.cloudinary_api_secret.get_secret_value(),
-    secure=True
+    secure=True,
 )
 
 
@@ -127,14 +152,24 @@ def _reload_supabase_config():
     SUPABASE_URL = new_settings.supabase_url
     SUPABASE_KEY = new_settings.supabase_service_role_key.get_secret_value()
     BUCKET = new_settings.supabase_bucket
-    
+
     # Also reload Cloudinary
     cloudinary.config(
         cloud_name=new_settings.cloudinary_cloud_name,
         api_key=new_settings.cloudinary_api_key.get_secret_value(),
         api_secret=new_settings.cloudinary_api_secret.get_secret_value(),
-        secure=True
+        secure=True,
     )
+
+
+def _supabase_request_headers(key: str, **extra: str) -> dict[str, str]:
+    """Build headers for both legacy JWT keys and current opaque Supabase keys."""
+
+    headers = {"apikey": key}
+    if key.count(".") == 2:
+        headers["Authorization"] = f"Bearer {key}"
+    headers.update(extra)
+    return headers
 
 
 @mcp.tool()
@@ -155,23 +190,20 @@ def upload_image_to_cloudinary(local_path: str, public_id: str = "", folder: str
             else:
                 folder = "RecetaGenial"
 
-        upload_params = {
-            "folder": folder,
-            "resource_type": "image"
-        }
+        upload_params = {"folder": folder, "resource_type": "image"}
         if public_id:
             upload_params["public_id"] = public_id
 
         result = cloudinary.uploader.upload(str(path), **upload_params)
-        
+
         logger.info(f"Image uploaded to Cloudinary: {result.get('secure_url')}")
         return {
-            "success": True, 
+            "success": True,
             "public_url": result.get("secure_url"),
             "public_id": result.get("public_id"),
             "width": result.get("width"),
             "height": result.get("height"),
-            "format": result.get("format")
+            "format": result.get("format"),
         }
     except Exception as e:
         logger.error(f"Cloudinary upload failed: {e}")
@@ -365,26 +397,24 @@ def list_domains() -> dict:
         except Exception:
             counts = {}
 
-        domain_list.append({
-            "handle": d.handle,
-            "domain": d.domain,
-            "display_name": d.display_name,
-            "niche": d.niche,
-            "language": d.language,
-            "supabase_url": d.supabase_url,
-            "is_synthesized": d.is_synthesized,
-            "daily_pin_budget": d.daily_pin_budget,
-            "keywords_file": str(d.keywords_file),
-            "keyword_counts": counts,
-            "credentials": {
-                "pinterest": bool(
-                    d.pinterest_email and d.pinterest_password.get_secret_value()
-                ),
-                "supabase": bool(
-                    d.supabase_url and d.supabase_service_role_key.get_secret_value()
-                ),
-            },
-        })
+        domain_list.append(
+            {
+                "handle": d.handle,
+                "domain": d.domain,
+                "display_name": d.display_name,
+                "niche": d.niche,
+                "language": d.language,
+                "supabase_url": d.supabase_url,
+                "is_synthesized": d.is_synthesized,
+                "daily_pin_budget": d.daily_pin_budget,
+                "keywords_file": str(d.keywords_file),
+                "keyword_counts": counts,
+                "credentials": {
+                    "pinterest": bool(d.pinterest_email and d.pinterest_password.get_secret_value()),
+                    "supabase": bool(d.supabase_url and d.supabase_service_role_key.get_secret_value()),
+                },
+            }
+        )
 
     logger.info("list_domains: found %d domain(s): %s", len(all_domains), [d.handle for d in all_domains])
     return {
@@ -416,9 +446,9 @@ def multidomain_startup_brief(refresh_trends: bool = False) -> dict:
     refresh_trends: set True to pull fresh Pinterest/Google News trends
                     before generating content (costs extra time).
     """
+    from pinterest_automation import get_job_queue
     from rankstein.domain import get_registry, reload_registry
     from rankstein.keyword_roadmap import keyword_counts, read_keyword_rows
-    from pinterest_automation import get_job_queue
 
     reload_registry()
     registry = get_registry()
@@ -456,27 +486,30 @@ def multidomain_startup_brief(refresh_trends: bool = False) -> dict:
         pending_count = counts.get("Pending", 0)
         in_progress_count = counts.get("In Progress", 0)
 
-        briefings.append({
-            "handle": d.handle,
-            "domain": d.domain,
-            "display_name": d.display_name,
-            "niche": d.niche,
-            "ready": has_pinterest and has_supabase and pending_count > 0,
-            "credentials": {"pinterest": has_pinterest, "supabase": has_supabase},
-            "keyword_counts": counts,
-            "pending_keywords": [r.keyword for r in rows if r.status.lower() == "pending"][:5],
-            "in_progress_keywords": [r.keyword for r in rows if r.status.lower() == "in progress"],
-            "queue": queue_stats,
-            "memory_lessons": memory_lessons,
-            "supabase_url": d.supabase_url,
-            "daily_pin_budget": d.daily_pin_budget,
-        })
+        briefings.append(
+            {
+                "handle": d.handle,
+                "domain": d.domain,
+                "display_name": d.display_name,
+                "niche": d.niche,
+                "ready": has_pinterest and has_supabase and (pending_count > 0 or in_progress_count > 0),
+                "credentials": {"pinterest": has_pinterest, "supabase": has_supabase},
+                "keyword_counts": counts,
+                "pending_keywords": [r.keyword for r in rows if r.status.lower() == "pending"][:5],
+                "in_progress_keywords": [r.keyword for r in rows if r.status.lower() == "in progress"],
+                "queue": queue_stats,
+                "memory_lessons": memory_lessons,
+                "supabase_url": d.supabase_url,
+                "daily_pin_budget": d.daily_pin_budget,
+            }
+        )
 
     # Optionally refresh trends
     trend_report = None
     if refresh_trends:
         try:
             from rankstein.trend_intelligence import refresh_domain_trend_lists
+
             trend_report = refresh_domain_trend_lists(
                 all_domains, limit_per_domain=10, append_to_roadmap=True
             )
@@ -488,7 +521,9 @@ def multidomain_startup_brief(refresh_trends: bool = False) -> dict:
 
     logger.info(
         "multidomain_startup_brief: %d domains, %d ready, %d blocked",
-        len(briefings), len(ready_domains), len(blocked_domains),
+        len(briefings),
+        len(ready_domains),
+        len(blocked_domains),
     )
 
     return {
@@ -521,9 +556,9 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
     Returns: {enqueued: int, skipped_no_image: int, details: [...]}
     """
     import re
-    import sys
 
     from pinterest_automation import get_config, get_job_queue
+    from pinterest_automation.config import normalize_board_name
     from rankstein.domain import get_registry
 
     PROJECT_ROOT = Path(__file__).resolve().parent
@@ -545,6 +580,7 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
 
     def _find_image(slug: str) -> Path | None:
         import re as _re
+
         slug_u = slug.replace("-", "_")
         slug_n = slug.replace("-", "")
         for d in media_dirs:
@@ -563,9 +599,7 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
     if force_all:
         statuses.add("queued")
 
-    table_row = re.compile(
-        r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(\w+)\s*\|", re.IGNORECASE
-    )
+    table_row = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(\w+)\s*\|", re.IGNORECASE)
     enqueued = 0
     skipped = 0
     details = []
@@ -603,6 +637,7 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
             if cat != "_default" and cat.lower() in slug_lower:
                 board = brd
                 break
+        board = normalize_board_name(board)
 
         desc = f"Aprende a preparar {title} paso a paso. Receta auténtica con fotos."
 
@@ -629,9 +664,7 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
 
     BACKLOG_FILE.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
-    logger.info(
-        "process_pinterest_backlog: %d jobs enqueued, %d skipped (no image)", enqueued, skipped
-    )
+    logger.info("process_pinterest_backlog: %d jobs enqueued, %d skipped (no image)", enqueued, skipped)
     return {
         "enqueued": enqueued,
         "skipped_no_image": skipped,
@@ -661,6 +694,8 @@ def start_automation_supervisor(dry_run: bool = False) -> dict:
     import subprocess
     import sys
 
+    from rankstein.runtime_env import clean_python_env
+
     PROJECT_ROOT = Path(__file__).resolve().parent
     cmd = [sys.executable, str(PROJECT_ROOT / "run_autonomous.py"), "run"]
     cmd_str = " ".join(cmd)
@@ -674,6 +709,7 @@ def start_automation_supervisor(dry_run: bool = False) -> dict:
             cwd=str(PROJECT_ROOT),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=clean_python_env(),
             start_new_session=True,
         )
         logger.info("start_automation_supervisor: launched pid=%d", proc.pid)
@@ -710,10 +746,12 @@ def debug_mcp_state() -> dict:
 
 @mcp.tool()
 def debug_supabase_env() -> dict:
-    """Debug tool to check Supabase environment variables."""
+    """Debug tool to check Supabase environment variables (masked)."""
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    masked_key = f"{key[:4]}...{key[-4:]}" if len(key) >= 8 else ("***" if key else "NOT_SET")
     return {
         "SUPABASE_URL": os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "NOT_SET"),
-        "SUPABASE_KEY": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "NOT_SET"),
+        "SUPABASE_KEY": masked_key,
     }
 
 
@@ -785,7 +823,15 @@ def mark_keyword_status(keyword: str, status: str, domain_handle: str = "") -> d
             }
     elif status == "Live":
         _clear_fail_count(keyword, domain_handle=domain.handle)
-    result = _update_keyword_field(keyword, status=status, kw_file=kw_file)
+
+    # Stamp lease timestamp when reserving a keyword
+    notes = None
+    if status == "In Progress":
+        from datetime import datetime as _dt
+
+        notes = f"reserved {_dt.now(UTC).strftime('%Y-%m-%dT%H:%M')}"
+
+    result = _update_keyword_field(keyword, status=status, notes=notes, kw_file=kw_file)
     logger.info(f"Keyword '{keyword}' (domain={domain.handle}) -> {status} (success={result})")
     return {"success": result, "keyword": keyword, "status": status, "domain": domain.handle}
 
@@ -827,9 +873,10 @@ def refresh_trend_keywords(domain_handle: str = "", limit: int = 10, append_to_r
     Refresh daily Pinterest trend intelligence for one domain or every domain.
 
     Uses the project Playwright browser automation layer first to search
-    Pinterest Trends/Search by domain niche, validates candidates against
-    Google News RSS, writes daily best keyword reports, and optionally appends
-    unique Pending rows to each domain roadmap.
+    Collects candidates only from Pinterest Trends/Search by domain niche,
+    rejects vague phrases, validates precise survivors against independent
+    Google demand/freshness signals, writes fresh authorization reports, and
+    optionally appends qualified Pending rows to each domain roadmap.
     """
     from rankstein.trend_intelligence import refresh_domain_trend_lists
 
@@ -844,7 +891,11 @@ def refresh_trend_keywords(domain_handle: str = "", limit: int = 10, append_to_r
 
 
 def _update_keyword_field(
-    keyword: str, priority: str = None, status: str = None, kw_file: Path = None
+    keyword: str,
+    priority: str = None,
+    status: str = None,
+    notes: str = None,
+    kw_file: Path = None,
 ) -> bool:
     if kw_file is None:
         kw_file = KEYWORDS_FILE
@@ -861,6 +912,14 @@ def _update_keyword_field(
                     parts[-3] = f" {priority} "
                 if status:
                     parts[-2] = f" {status} "
+                # Append lease/notes to the last column if provided
+                if notes and len(parts) >= 8:
+                    existing_notes = parts[-1].strip()
+                    # Replace any previous 'reserved ...' stamp
+                    import re as _re_notes
+
+                    existing_notes = _re_notes.sub(r"reserved \S+", "", existing_notes).strip()
+                    parts[-1] = f" {notes} {existing_notes} ".rstrip() + " "
                 lines[i] = "|".join(parts)
                 changed = True
             break
@@ -1059,66 +1118,118 @@ def validate_article_quality(article_json: str) -> dict:
 @mcp.tool()
 def apply_luxury_overlay(image_path: str, title_text: str, brand: str = "RECETA GENIAL | 2026") -> dict:
     """
-    Apply the Luxury V3 editorial overlay (NanoBanana style) to an image.
-    Creates a 1000x1500 vertical Pinterest pin with gold border card and CTA.
+    Apply the visual-first luxury editorial pin styling (2026 Pinterest standard).
+    Creates a full-bleed 1000x1500 vertical Pinterest pin with subtle gradient vignette,
+    minimal floating glass pill badge, and elegant serif typography.
     Returns: {output_path, success}
     """
     try:
-        from PIL import Image, ImageDraw, ImageFilter, ImageFont
+        import textwrap
+
+        from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
         src = Path(image_path)
         if not src.exists():
             return {"success": False, "error": f"Image not found: {image_path}"}
 
-        with Image.open(src) as img:
-            if img.mode != "RGBA":
-                img = img.convert("RGBA")
-
+        with Image.open(src) as raw:
             W, H = 1000, 1500
-            bg = img.resize((W, H), Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(15))
-            img.thumbnail((900, 1300), Image.Resampling.LANCZOS)
-            x = (W - img.size[0]) // 2
-            y = (H - img.size[1]) // 2 - 100
-            bg.paste(img, (x, y), img if img.mode == "RGBA" else None)
+            # Full-bleed cover crop
+            source_ratio = raw.width / raw.height
+            target_ratio = W / H
+            if source_ratio > target_ratio:
+                crop_w = max(1, int(raw.height * target_ratio))
+                left = max(0, (raw.width - crop_w) // 2)
+                cropped = raw.crop((left, 0, left + crop_w, raw.height))
+            else:
+                crop_h = max(1, int(raw.width / target_ratio))
+                top = max(0, int((raw.height - crop_h) * 0.38))
+                cropped = raw.crop((0, top, raw.width, top + crop_h))
+            photo = cropped.resize((W, H), Image.Resampling.LANCZOS)
 
-            canvas = bg
-            draw = ImageDraw.Draw(canvas)
+        photo = ImageEnhance.Contrast(photo).enhance(1.05)
+        photo = ImageEnhance.Color(photo).enhance(1.06).convert("RGBA")
 
-            # Floating card
-            cw, ch = 920, 480
-            cx = (W - cw) // 2
-            cy = H - ch - 40
-            draw.rectangle([cx + 5, cy + 5, cx + cw + 5, cy + ch + 5], fill=(0, 0, 0, 80))
-            draw.rectangle([cx, cy, cx + cw, cy + ch], fill=(255, 255, 255, 245))
-            draw.rectangle([cx + 10, cy + 10, cx + cw - 10, cy + ch - 10], outline="#D4AF37", width=2)
+        # Delicate cinematic gradient overlay
+        overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        for y in range(H):
+            if y < 140:
+                alpha = int(45 * (1 - y / 140))
+            elif y > 960:
+                alpha = min(180, int(((y - 960) / 540) ** 1.3 * 180))
+            else:
+                alpha = 0
+            if alpha > 0:
+                overlay_draw.line((0, y, W, y), fill=(12, 10, 8, alpha))
+        canvas = Image.alpha_composite(photo, overlay)
+        draw = ImageDraw.Draw(canvas, "RGBA")
 
-            try:
-                font_brand = ImageFont.truetype("arial.ttf", 30)
-                font_title = ImageFont.truetype("georgia.ttf", 85)
-            except Exception:
-                font_brand = ImageFont.load_default(size=30)
-                font_title = ImageFont.load_default(size=60)
+        # Fonts
+        try:
+            font_brand = ImageFont.truetype("arial.ttf", 22)
+            font_title = ImageFont.truetype("georgia.ttf", 68)
+            font_kicker = ImageFont.truetype("arialbd.ttf", 20)
+            font_cta = ImageFont.truetype("arialbd.ttf", 22)
+        except Exception:
+            font_brand = ImageFont.load_default(size=22)
+            font_title = ImageFont.load_default(size=50)
+            font_kicker = ImageFont.load_default(size=20)
+            font_cta = ImageFont.load_default(size=22)
 
-            # Brand header
-            bb = draw.textbbox((0, 0), brand, font=font_brand)
-            draw.text(((W - (bb[2] - bb[0])) // 2, cy + 30), brand, font=font_brand, fill="#D4AF37")
+        # Floating brand pill at top center (<1% of area)
+        bb = draw.textbbox((0, 0), brand, font=font_brand)
+        bw = (bb[2] - bb[0]) + 44
+        bx = (W - bw) // 2
+        by = 38
+        draw.rounded_rectangle(
+            (bx, by, bx + bw, by + 40), radius=20, fill=(15, 15, 15, 160), outline="#D4AF37", width=1
+        )
+        draw.text((bx + 22, by + 9), brand, font=font_brand, fill="#D4AF37")
 
-            # Title (max 3 lines)
-            clean = title_text.replace(":", "").upper()
-            for idx, line in enumerate(textwrap.wrap(clean, width=15)[:3]):
-                tb = draw.textbbox((0, 0), line, font=font_title)
-                draw.text(
-                    ((W - (tb[2] - tb[0])) // 2, cy + 90 + idx * 100), line, font=font_title, fill="#1a1a1a"
-                )
+        # Lower-third kicker tag
+        kicker = "RECETA CASERA"
+        kw = draw.textbbox((0, 0), kicker, font=font_kicker)
+        kicker_w = (kw[2] - kw[0]) + 30
+        kicker_x = (W - kicker_w) // 2
+        kicker_y = 1045
+        draw.rounded_rectangle(
+            (kicker_x, kicker_y, kicker_x + kicker_w, kicker_y + 34), radius=17, fill=(212, 175, 55, 230)
+        )
+        draw.text((kicker_x + 15, kicker_y + 7), kicker, font=font_kicker, fill="#1a1a1a")
 
-            # CTA button
-            cta = "TOCA PARA VER LA RECETA"
-            cb = draw.textbbox((0, 0), cta, font=font_brand)
-            draw.rectangle([W // 2 - 200, cy + ch - 80, W // 2 + 200, cy + ch - 30], fill="#E60023")
-            draw.text(((W - (cb[2] - cb[0])) // 2, cy + ch - 70), cta, font=font_brand, fill="white")
+        # Title (max 3 lines, elegant serif with shadow)
+        clean = title_text.replace(":", "").strip()
+        lines = textwrap.wrap(clean, width=22)[:3]
+        current_y = 1100
+        for line in lines:
+            tb = draw.textbbox((0, 0), line, font=font_title)
+            tw = tb[2] - tb[0]
+            tx = (W - tw) // 2
+            # subtle shadow
+            draw.text((tx + 3, current_y + 3), line, font=font_title, fill=(0, 0, 0, 180))
+            draw.text((tx, current_y), line, font=font_title, fill="white")
+            current_y += (tb[3] - tb[1]) + 12
 
-            out = REMASTER_DIR / f"remastered_{src.name.replace('.png', '.jpg')}"
-            canvas.convert("RGB").save(str(out), "JPEG", quality=95)
+        # Minimal save pill
+        cta = "GUARDAR RECETA"
+        cb = draw.textbbox((0, 0), cta, font=font_cta)
+        cw = (cb[2] - cb[0]) + 50
+        cx = (W - cw) // 2
+        cy = min(1390, max(1310, current_y + 24))
+        draw.rounded_rectangle(
+            (cx, cy, cx + cw, cy + 46), radius=23, fill=(20, 20, 20, 210), outline="#D4AF37", width=1
+        )
+        draw.text(((W - (cb[2] - cb[0])) // 2, cy + 11), cta, font=font_cta, fill="#D4AF37")
+
+        # Bottom baseline signature
+        footer = brand
+        fb = draw.textbbox((0, 0), footer, font=font_brand)
+        draw.text(((W - (fb[2] - fb[0])) // 2, 1455), footer, font=font_brand, fill=(200, 200, 200, 160))
+
+        REMASTER_DIR.mkdir(parents=True, exist_ok=True)
+        out = REMASTER_DIR / f"remastered_{src.stem}.jpg"
+        canvas.convert("RGB").save(str(out), "JPEG", quality=95)
 
         return {"success": True, "output_path": str(out)}
 
@@ -1378,6 +1489,451 @@ def save_image_from_path(
         return {"success": False, "error": str(e)}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CODEX IMAGE GENERATION (PRIMARY) — gpt-image-2 via ChatGPT/Codex OAuth
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex"
+_CODEX_INSTRUCTIONS = (
+    "You are an assistant that must fulfill image generation requests by "
+    "using the image_generation tool when provided."
+)
+
+
+def _codex_image_chat_model() -> str:
+    """Use the current Codex account model instead of a retired pinned model."""
+    model = os.environ.get("RANKSTEIN_CODEX_IMAGE_CHAT_MODEL", "").strip()
+    if not model:
+        import tomllib
+
+        codex_home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex").expanduser()
+        try:
+            with (codex_home / "config.toml").open("rb") as config:
+                model = str(tomllib.load(config).get("model") or "").strip()
+        except (OSError, ValueError):
+            pass
+    model = model or "gpt-5.5"
+    if not model.startswith("gpt-"):
+        raise ValueError("Codex image generation requires an OpenAI GPT controller model")
+    return model
+
+
+_CODEX_SIZES = {
+    "landscape": "1536x1024",
+    "square": "1024x1024",
+    "portrait": "1024x1536",
+}
+
+
+def _read_codex_token() -> "str | None":
+    """Read a valid Codex OAuth access token from Codex CLI or Hermes.
+
+    The desktop/CLI Codex login is the primary local credential and Hermes is
+    retained as an attested secondary store. Returns None when neither store
+    contains a current access token.
+    """
+    import base64 as _b64
+    import time as _time
+
+    def _current_access_token(value) -> "str | None":
+        access_token = str(value or "").strip()
+        if not access_token:
+            return None
+        try:
+            payload = access_token.split(".")[1]
+            payload += "=" * (-len(payload) % 4)
+            claims = json.loads(_b64.urlsafe_b64decode(payload))
+            exp = claims.get("exp", 0)
+            if exp and _time.time() > exp:
+                return None
+        except Exception:
+            # OAuth access tokens are currently JWTs, but keep compatibility
+            # with opaque tokens issued by the same authenticated client.
+            pass
+        return access_token
+
+    # Codex desktop/CLI OAuth. This is also the credential proven by the
+    # dashboard's Codex auth check and does not require a separate Hermes login.
+    try:
+        codex_home = Path(os.environ.get("CODEX_HOME", "")).expanduser()
+        if not str(codex_home).strip() or str(codex_home) == ".":
+            codex_home = Path.home() / ".codex"
+        codex_auth_path = codex_home / "auth.json"
+        if codex_auth_path.exists():
+            data = json.loads(codex_auth_path.read_text(encoding="utf-8"))
+            token = _current_access_token((data.get("tokens") or {}).get("access_token"))
+            if token:
+                return token
+    except Exception as exc:
+        logger.debug("Codex token direct CLI read failed: %s", exc)
+
+    # Try Hermes's canonical reader first (handles credential pools, JWT refresh)
+    try:
+        sys.path.insert(0, r"C:\ProgramData\hermes\hermes-agent")
+        from agent.auxiliary_client import _read_codex_access_token
+
+        token = _current_access_token(_read_codex_access_token())
+        if token:
+            return token
+    except Exception as exc:
+        logger.debug("Codex token via Hermes auxiliary_client failed: %s", exc)
+
+    # Fallback: read directly from Hermes auth store
+    try:
+        auth_path = Path(r"C:\ProgramData\hermes\auth\auth.json")
+        if not auth_path.exists():
+            # Try user profile location
+            auth_path = Path.home() / ".hermes" / "auth.json"
+        if auth_path.exists():
+            data = json.loads(auth_path.read_text(encoding="utf-8"))
+            codex = data.get("providers", {}).get("openai-codex", {})
+            tokens = codex.get("tokens", {})
+            access_token = _current_access_token(tokens.get("access_token"))
+            if access_token:
+                return access_token
+    except Exception as exc:
+        logger.debug("Codex token direct read failed: %s", exc)
+    return None
+
+
+def _codex_headers(access_token: str) -> dict:
+    """Build headers for the Codex Responses API (Cloudflare bypass)."""
+    headers = {
+        "User-Agent": "codex_cli_rs/0.0.0 (RankStein)",
+        "originator": "codex_cli_rs",
+        "Accept": "text/event-stream",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    try:
+        import base64 as _b64
+
+        parts = access_token.split(".")
+        if len(parts) >= 2:
+            payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
+            claims = json.loads(_b64.urlsafe_b64decode(payload_b64))
+            acct_id = claims.get("https://api.openai.com/auth", {}).get("chatgpt_account_id")
+            if isinstance(acct_id, str) and acct_id:
+                headers["ChatGPT-Account-ID"] = acct_id
+    except Exception:
+        pass
+    return headers
+
+
+def _codex_extract_image_b64(value) -> "str | None":
+    """Extract the latest image base64 from a Codex SSE event payload."""
+    found = None
+    if isinstance(value, dict):
+        if value.get("type") == "image_generation_call":
+            result = value.get("result")
+            if isinstance(result, str) and result:
+                found = result
+        partial = value.get("partial_image_b64")
+        if isinstance(partial, str) and partial:
+            found = partial
+        for child in value.values():
+            nested = _codex_extract_image_b64(child)
+            if nested:
+                found = nested
+    elif isinstance(value, list):
+        for child in value:
+            nested = _codex_extract_image_b64(child)
+            if nested:
+                found = nested
+    return found
+
+
+def _normalise_codex_image(path: Path, requested_size: str) -> tuple[int, int]:
+    """Crop/resize Codex output to the requested canvas.
+
+    The ChatGPT image tool can occasionally return a valid portrait frame for
+    a landscape request.  Rejecting that image caused the production pipeline
+    to invoke a lower-quality fallback.  Preserve the generated food image,
+    center-crop it to the requested aspect, and save the exact requested size.
+    """
+
+    from PIL import Image
+
+    target_width, target_height = (int(value) for value in requested_size.split("x", 1))
+    with Image.open(path) as raw:
+        image = raw.convert("RGBA" if raw.mode in {"RGBA", "LA", "P"} else "RGB")
+        if image.size != (target_width, target_height):
+            source_ratio = image.width / image.height
+            target_ratio = target_width / target_height
+            if source_ratio > target_ratio:
+                crop_width = max(1, int(image.height * target_ratio))
+                left = max(0, (image.width - crop_width) // 2)
+                image = image.crop((left, 0, left + crop_width, image.height))
+            else:
+                crop_height = max(1, int(image.width / target_ratio))
+                room = max(0, image.height - crop_height)
+                top = max(0, int(room * 0.38))
+                image = image.crop((0, top, image.width, top + crop_height))
+            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+            if path.suffix.lower() in {".jpg", ".jpeg"}:
+                image.convert("RGB").save(path, "JPEG", quality=95, optimize=True)
+            else:
+                image.save(path, "PNG", optimize=True)
+    return target_width, target_height
+
+
+@mcp.tool()
+def create_hero_image_codex(
+    prompt: str,
+    slug: str,
+    suffix: str = "hero",
+    aspect: str = "landscape",
+    quality: str = "medium",
+    timeout_seconds: int = 300,
+) -> dict:
+    """
+    PRIMARY hero image generator using OpenAI gpt-image-2 via Codex OAuth.
+
+    Uses the same ChatGPT/Codex OAuth credentials as Hermes Agent — no API key
+    required. Generates high-quality editorial images at 1536x1024 (landscape),
+    1024x1024 (square), or 1024x1536 (portrait).
+
+    If Codex auth is unavailable, returns ``success=False``. Production article
+    workflows must fail closed instead of substituting another provider.
+
+    quality: "low" (~15s), "medium" (~40s, default), "high" (~2min, best fidelity)
+    aspect: "landscape" (default), "square", "portrait"
+
+    Returns: {success, output_path, format, size_bytes, width, height, provider}
+    """
+    try:
+        import base64 as _b64
+
+        import httpx
+
+        clean_prompt = (prompt or "").strip()
+        if not clean_prompt:
+            return {"success": False, "error": "prompt is empty", "provider": "codex"}
+
+        token = _read_codex_token()
+        if not token:
+            return {
+                "success": False,
+                "error": "No Codex OAuth token available. Run `hermes auth codex` to authenticate.",
+                "provider": "codex",
+            }
+
+        size = _CODEX_SIZES.get(aspect, _CODEX_SIZES["landscape"])
+        quality = quality if quality in ("low", "medium", "high") else "medium"
+
+        chat_model = _codex_image_chat_model()
+        # Build Responses API payload
+        payload = {
+            "model": chat_model,
+            "store": False,
+            "instructions": _CODEX_INSTRUCTIONS,
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": clean_prompt}],
+                }
+            ],
+            "tools": [
+                {
+                    "type": "image_generation",
+                    "model": "gpt-image-2",
+                    "size": size,
+                    "quality": quality,
+                    "output_format": "png",
+                    "background": "opaque",
+                    "partial_images": 1,
+                }
+            ],
+            "tool_choice": {
+                "type": "allowed_tools",
+                "mode": "required",
+                "tools": [{"type": "image_generation"}],
+            },
+            "stream": True,
+        }
+
+        headers = _codex_headers(token)
+        timeout = httpx.Timeout(
+            float(timeout_seconds), connect=30.0, read=float(timeout_seconds), write=30.0, pool=30.0
+        )
+
+        logger.info(
+            "create_hero_image_codex: requesting %s controller=%s quality=%s prompt=%s...",
+            size,
+            chat_model,
+            quality,
+            clean_prompt[:80],
+        )
+
+        image_b64 = None
+        with httpx.Client(timeout=timeout, headers=headers) as http:
+            with http.stream("POST", f"{_CODEX_BASE_URL}/responses", json=payload) as response:
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    exc.response.read()
+                    body = exc.response.text[:500]
+                    return {
+                        "success": False,
+                        "error": f"Codex API returned HTTP {exc.response.status_code}: {body}",
+                        "provider": "codex",
+                        "controller_model": chat_model,
+                    }
+
+                # Parse SSE stream
+                event_name = None
+                data_lines = []
+                for line in response.iter_lines():
+                    if isinstance(line, bytes):
+                        line = line.decode("utf-8", errors="replace")
+                    line = str(line)
+                    if line == "":
+                        if data_lines:
+                            raw = "\n".join(data_lines).strip()
+                            event_name = None
+                            data_lines = []
+                            if raw and raw != "[DONE]":
+                                try:
+                                    evt = json.loads(raw)
+                                    found = _codex_extract_image_b64(evt)
+                                    if found:
+                                        image_b64 = found
+                                except json.JSONDecodeError:
+                                    pass
+                        continue
+                    if line.startswith(":"):
+                        continue
+                    if line.startswith("event:"):
+                        event_name = line[len("event:") :].strip()
+                    elif line.startswith("data:"):
+                        data_lines.append(line[len("data:") :].lstrip())
+
+                # Flush remaining
+                if data_lines:
+                    raw = "\n".join(data_lines).strip()
+                    if raw and raw != "[DONE]":
+                        try:
+                            evt = json.loads(raw)
+                            found = _codex_extract_image_b64(evt)
+                            if found:
+                                image_b64 = found
+                        except json.JSONDecodeError:
+                            pass
+
+        if not image_b64:
+            return {
+                "success": False,
+                "error": "Codex response contained no image data",
+                "provider": "codex",
+            }
+
+        # Decode and save
+        data = _b64.b64decode(image_b64)
+        if len(data) < 5000:
+            return {
+                "success": False,
+                "error": f"Codex image suspiciously small ({len(data)} bytes)",
+                "provider": "codex",
+            }
+
+        ext = _detect_image_extension(data)
+        out = OUTPUT_DIR / f"{slug}-{suffix}.{ext}"
+        out.write_bytes(data)
+
+        try:
+            w, h = _normalise_codex_image(out, size)
+        except Exception as exc:
+            try:
+                out.unlink()
+            except OSError:
+                pass
+            return {
+                "success": False,
+                "error": f"Could not normalize Codex image to {size}: {exc}",
+                "provider": "codex",
+            }
+
+        if w < 1024 or h < 1024:
+            try:
+                out.unlink()
+            except OSError:
+                pass
+            return {
+                "success": False,
+                "error": f"Codex image too small after normalization: {w}x{h}",
+                "provider": "codex",
+            }
+
+        size_bytes = out.stat().st_size
+        logger.info(
+            "create_hero_image_codex: saved %s bytes -> %s (%dx%d, quality=%s)",
+            f"{size_bytes:,}",
+            out.name,
+            w,
+            h,
+            quality,
+        )
+        return {
+            "success": True,
+            "output_path": str(out),
+            "format": ext,
+            "size_bytes": size_bytes,
+            "width": w,
+            "height": h,
+            "provider": "codex",
+            "quality": quality,
+            "controller_model": chat_model,
+        }
+
+    except Exception as e:
+        logger.error(f"create_hero_image_codex failed: {e}")
+        return {"success": False, "error": str(e), "provider": "codex"}
+
+
+@mcp.tool()
+def create_hero_image(
+    prompt: str,
+    slug: str,
+    suffix: str = "hero",
+    aspect: str = "landscape",
+    quality: str = "medium",
+    width: int = 1920,
+    height: int = 1280,
+    model: str = "flux",
+) -> dict:
+    """
+    Unified production hero generator.
+
+    Article heroes are generated only by Codex native image generation
+    (OpenAI gpt-image-2 via Hermes OAuth). The router fails closed on any Codex
+    error; scraped images, Pollinations images, and programmatic placeholders
+    are not valid publishable article heroes.
+
+    Returns: {success, output_path, format, size_bytes, width, height, provider}
+    """
+    logger.info("create_hero_image: requesting Codex-only hero for '%s'", slug)
+    codex_result = create_hero_image_codex(
+        prompt=prompt,
+        slug=slug,
+        suffix=suffix,
+        aspect=aspect,
+        quality=quality,
+    )
+    if codex_result.get("success"):
+        codex_result["provider"] = "codex"
+        logger.info("create_hero_image: Codex succeeded for '%s'", slug)
+        return codex_result
+
+    logger.error("create_hero_image: Codex failed closed for '%s': %s", slug, codex_result.get("error"))
+    return {
+        "success": False,
+        "error": f"Codex-only hero generation failed: {codex_result.get('error', 'unknown')}",
+        "provider": "codex",
+        "provider_errors": {"codex": codex_result.get("error", "unknown")},
+    }
+
+
 _POLLINATIONS_MIN_RAW_WIDTH = 800
 _POLLINATIONS_MIN_RAW_HEIGHT = 500
 
@@ -1434,8 +1990,16 @@ def create_hero_image_pollinations(
             f"create_hero_image_pollinations: requesting {width}x{height} "
             f"model={model} enhance={enhance} prompt={clean_prompt[:80]}..."
         )
-        session = get_supabase_session()
-        resp = session.get(url, params=params, timeout=timeout_seconds, allow_redirects=True)
+        http_get = requests.get if requests.get is not _REQUESTS_GET else get_supabase_session().get
+        resp = http_get(url, params=params, timeout=timeout_seconds, allow_redirects=True)
+        if resp.status_code in {400, 402, 403, 500} and "model" in params:
+            logger.warning(
+                f"create_hero_image_pollinations: model {model} failed with status {resp.status_code}. "
+                "Retrying with free default model (removing model/enhance params)..."
+            )
+            params.pop("model", None)
+            params.pop("enhance", None)
+            resp = http_get(url, params=params, timeout=timeout_seconds, allow_redirects=True)
         resp.raise_for_status()
         data = resp.content
 
@@ -1545,135 +2109,252 @@ def create_article_pin(
     hero_image_path: str,
     title_text: str,
     subtitle: str = "",
-    brand: str = "RECETA GENIAL | 2026",
-    cta_text: str = "TOCA PARA VER LA RECETA",
-    style_variant: str = "classic",
+    brand: str = "",
+    cta_text: str = "",
+    style_variant: str = "visual_first",
+    domain_handle: str = "",
+    recipe_ingredients: str = "",
+    recipe_steps: str = "",
+    tip_text: str = "",
 ) -> dict:
     """
-    Generate a Luxury V3 editorial Pinterest pin (1000x1500) from the article's
-    hero image. This is the ARTICLE-SPECIFIC pin that gets uploaded to Pinterest
-    and embedded as an iframe in the blog post.
+    Generate a Pinterest pin (1000x1500) from the article's hero image.
 
-    style_variant: 'classic' (gold border), 'dark' (charcoal card), 'warm' (terracotta accent)
-    Returns: {success, output_path}
+    **Default mode (style_variant='visual_first' or 'auto'):**
+    Ultra-visual, image-first design (LESS TEXT, MORE IMAGE). Leaves >85% of
+    the canvas for mouth-watering food photography with an artisanal script
+    title overlay, subtle kicker pill, and domain branding. Maximizes impressions
+    and saves according to 2026 Pinterest best practices.
+
+    **Infographic mode (style_variant='infographic'):**
+    Two-column recipe card with Ingredientes + Preparación.
+
+    Parameters
+    ----------
+    hero_image_path : str
+        Path to the hero food photograph.
+    title_text : str
+        Recipe title.
+    subtitle : str
+        Optional subtitle / kicker (e.g., "SIN HORNO • 15 MIN").
+    brand : str
+        Brand text. Auto-resolved from domain if empty.
+    cta_text : str
+        CTA button text. Auto-resolved from domain if empty.
+    style_variant : str
+        'visual_first' (default) — image-led pin (LESS TEXT, MORE IMAGE).
+        'auto' — alias for visual_first.
+        'infographic' — rich recipe card with ingredients/steps.
+        'warm_parchment'|'elegant_dark'|'fresh_green' — specific infographic variant.
+        'classic'|'dark'|'warm' — legacy Luxury V3 card overlay.
+    domain_handle : str
+        Domain handle ('recetadolce', 'recetagenial'). Resolves branding.
+    recipe_ingredients : str
+        JSON list or newline-separated ingredient strings.
+    recipe_steps : str
+        JSON list or newline-separated preparation step strings.
+    tip_text : str
+        Optional health/cooking tip for the tip section.
+
+    Returns
+    -------
+    dict
+        {success, output_path, variant_used} on success.
     """
+    # ── Visual-first mode (2026 Pinterest standard: LESS TEXT, MORE IMAGE) ─
+    visual_variants = {"visual", "viral_visual", "visual_first", "auto"}
+    if style_variant in visual_variants or not style_variant:
+        try:
+            from rankstein.remaster_variants import create_viral_visual_pin
+
+            res = create_viral_visual_pin(
+                source_path=hero_image_path,
+                title=title_text,
+                domain_handle=domain_handle or "recetadolce",
+                pair_id="hero-pin",
+                output_dir=OUTPUT_DIR,
+                subtitle=subtitle,
+                cta_text=cta_text,
+            )
+            if res.get("success"):
+                res["variant_used"] = "visual_first"
+                return res
+        except Exception as e:
+            logger.error("Visual-first pin generation failed, falling back: %s", e)
+
+    # ── Infographic mode ────────────────────────────────────────────
+    infographic_variants = {"infographic", "warm_parchment", "elegant_dark", "fresh_green"}
+    if style_variant in infographic_variants:
+        try:
+            import json as _json
+
+            from rankstein.recipe_pin_generator import create_recipe_infographic_pin
+
+            # Parse ingredients
+            ingredients = []
+            if recipe_ingredients:
+                try:
+                    ingredients = _json.loads(recipe_ingredients)
+                except (ValueError, TypeError):
+                    ingredients = [l.strip() for l in recipe_ingredients.split("\n") if l.strip()]
+
+            # Parse steps
+            steps = []
+            if recipe_steps:
+                try:
+                    steps = _json.loads(recipe_steps)
+                except (ValueError, TypeError):
+                    steps = [l.strip() for l in recipe_steps.split("\n") if l.strip()]
+
+            # Map variant name
+            variant_map = {
+                "infographic": "auto",
+                "auto": "auto",
+            }
+            mapped_variant = variant_map.get(style_variant, style_variant)
+
+            result = create_recipe_infographic_pin(
+                hero_image_path=hero_image_path,
+                title=title_text,
+                subtitle=subtitle,
+                ingredients=ingredients,
+                steps=steps,
+                tip_text=tip_text,
+                domain_handle=domain_handle,
+                style_variant=mapped_variant,
+            )
+            return result
+
+        except Exception as e:
+            logger.error("Infographic pin generation failed, falling back to visual standard: %s", e)
+            # Fall through to visual legacy mode
+            style_variant = "classic"
+
+    # ── Visual-first editorial mode (classic / dark / warm) ─────────
     try:
-        from PIL import Image, ImageDraw, ImageFilter, ImageFont
+        import textwrap
+
+        from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
         src = Path(hero_image_path)
         if not src.exists():
             return {"success": False, "error": f"Hero image not found: {hero_image_path}"}
 
-        with Image.open(src) as img:
-            if img.mode != "RGBA":
-                img = img.convert("RGBA")
+        # Resolve brand/cta from domain if not provided
+        if not brand or not cta_text:
+            if domain_handle:
+                try:
+                    from rankstein.domain import get_registry
 
+                    domain_obj = get_registry().get(domain_handle)
+                    brand = brand or getattr(domain_obj, "brand_name_short", "RECETA GENIAL | 2026")
+                    cta_text = cta_text or getattr(domain_obj, "cta_text", "GUARDAR RECETA")
+                except Exception:
+                    pass
+            brand = brand or "RECETA GENIAL | 2026"
+            cta_text = cta_text or "GUARDAR RECETA"
+
+        with Image.open(src) as raw:
             W, H = 1000, 1500
+            # Full-bleed cover crop
+            source_ratio = raw.width / raw.height
+            target_ratio = W / H
+            if source_ratio > target_ratio:
+                crop_w = max(1, int(raw.height * target_ratio))
+                left = max(0, (raw.width - crop_w) // 2)
+                cropped = raw.crop((left, 0, left + crop_w, raw.height))
+            else:
+                crop_h = max(1, int(raw.width / target_ratio))
+                top = max(0, int((raw.height - crop_h) * 0.38))
+                cropped = raw.crop((0, top, raw.width, top + crop_h))
+            photo = cropped.resize((W, H), Image.Resampling.LANCZOS)
 
-            # Style variants for subtle design diversity
-            styles = {
-                "classic": {
-                    "card_bg": (255, 255, 255, 245),
-                    "border": "#D4AF37",
-                    "title_fill": "#1a1a1a",
-                    "brand_fill": "#D4AF37",
-                    "cta_bg": "#E60023",
-                    "cta_text": "white",
-                    "shadow": (0, 0, 0, 80),
-                },
-                "dark": {
-                    "card_bg": (30, 30, 30, 240),
-                    "border": "#D4AF37",
-                    "title_fill": "#FFFFFF",
-                    "brand_fill": "#D4AF37",
-                    "cta_bg": "#D4AF37",
-                    "cta_text": "#1a1a1a",
-                    "shadow": (0, 0, 0, 120),
-                },
-                "warm": {
-                    "card_bg": (255, 248, 240, 245),
-                    "border": "#C67B3C",
-                    "title_fill": "#3D1C00",
-                    "brand_fill": "#C67B3C",
-                    "cta_bg": "#E60023",
-                    "cta_text": "white",
-                    "shadow": (0, 0, 0, 80),
-                },
-            }
-            s = styles.get(style_variant, styles["classic"])
+        photo = ImageEnhance.Contrast(photo).enhance(1.05)
+        photo = ImageEnhance.Color(photo).enhance(1.06).convert("RGBA")
 
-            # Background: blurred hero stretched to pin dimensions
-            bg = img.resize((W, H), Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(18))
-            # Sharp hero overlay centered in top 2/3
-            img.thumbnail((920, 950), Image.Resampling.LANCZOS)
-            x = (W - img.size[0]) // 2
-            y = max(30, (950 - img.size[1]) // 2)
-            bg.paste(img, (x, y), img if img.mode == "RGBA" else None)
+        # Delicate lower-third cinematic gradient overlay
+        overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        for y in range(H):
+            if y < 140:
+                alpha = int(45 * (1 - y / 140))
+            elif y > 960:
+                alpha = min(180, int(((y - 960) / 540) ** 1.3 * 180))
+            else:
+                alpha = 0
+            if alpha > 0:
+                overlay_draw.line((0, y, W, y), fill=(12, 10, 8, alpha))
+        canvas = Image.alpha_composite(photo, overlay)
+        draw = ImageDraw.Draw(canvas, "RGBA")
 
-            canvas = bg
-            draw = ImageDraw.Draw(canvas)
+        # Fonts
+        try:
+            font_brand = ImageFont.truetype("arial.ttf", 22)
+            font_title = ImageFont.truetype("georgia.ttf", 68)
+            font_kicker = ImageFont.truetype("arialbd.ttf", 20)
+            font_cta = ImageFont.truetype("arialbd.ttf", 22)
+        except Exception:
+            font_brand = ImageFont.load_default(size=22)
+            font_title = ImageFont.load_default(size=50)
+            font_kicker = ImageFont.load_default(size=20)
+            font_cta = ImageFont.load_default(size=22)
 
-            # Floating card in bottom third
-            cw, ch = 920, 480
-            cx = (W - cw) // 2
-            cy = H - ch - 40
+        # Floating brand pill at top center (<1% area)
+        bb = draw.textbbox((0, 0), brand, font=font_brand)
+        bw = (bb[2] - bb[0]) + 44
+        bx = (W - bw) // 2
+        by = 38
+        draw.rounded_rectangle(
+            (bx, by, bx + bw, by + 40), radius=20, fill=(15, 15, 15, 160), outline="#D4AF37", width=1
+        )
+        draw.text((bx + 22, by + 9), brand, font=font_brand, fill="#D4AF37")
 
-            # Drop shadow
-            draw.rectangle([cx + 5, cy + 5, cx + cw + 5, cy + ch + 5], fill=s["shadow"])
-            # Card background
-            draw.rectangle([cx, cy, cx + cw, cy + ch], fill=s["card_bg"])
-            # Gold/accent border inset
-            draw.rectangle([cx + 10, cy + 10, cx + cw - 10, cy + ch - 10], outline=s["border"], width=2)
+        # Lower-third kicker tag
+        kicker = (subtitle.upper() if subtitle else "RECETA CASERA")[:25]
+        kw = draw.textbbox((0, 0), kicker, font=font_kicker)
+        kicker_w = (kw[2] - kw[0]) + 30
+        kicker_x = (W - kicker_w) // 2
+        kicker_y = 1045
+        draw.rounded_rectangle(
+            (kicker_x, kicker_y, kicker_x + kicker_w, kicker_y + 34), radius=17, fill=(212, 175, 55, 230)
+        )
+        draw.text((kicker_x + 15, kicker_y + 7), kicker, font=font_kicker, fill="#1a1a1a")
 
-            # Fonts
-            try:
-                font_brand = ImageFont.truetype("arial.ttf", 28)
-                font_title = ImageFont.truetype("georgia.ttf", 80)
-                font_sub = ImageFont.truetype("arial.ttf", 26)
-                font_cta = ImageFont.truetype("arial.ttf", 28)
-            except Exception:
-                font_brand = ImageFont.load_default(size=28)
-                font_title = ImageFont.load_default(size=55)
-                font_sub = ImageFont.load_default(size=24)
-                font_cta = ImageFont.load_default(size=28)
+        # Title (max 3 lines, elegant serif with shadow)
+        clean = title_text.replace(":", "").strip()
+        lines = textwrap.wrap(clean, width=22)[:3]
+        current_y = 1100
+        for line in lines:
+            tb = draw.textbbox((0, 0), line, font=font_title)
+            tw = tb[2] - tb[0]
+            tx = (W - tw) // 2
+            draw.text((tx + 3, current_y + 3), line, font=font_title, fill=(0, 0, 0, 180))
+            draw.text((tx, current_y), line, font=font_title, fill="white")
+            current_y += (tb[3] - tb[1]) + 12
 
-            # Brand header
-            bb = draw.textbbox((0, 0), brand, font=font_brand)
-            draw.text(((W - (bb[2] - bb[0])) // 2, cy + 25), brand, font=font_brand, fill=s["brand_fill"])
+        # Minimal save pill
+        cta = cta_text.upper() if len(cta_text) <= 25 else "GUARDAR RECETA"
+        cb = draw.textbbox((0, 0), cta, font=font_cta)
+        cw = (cb[2] - cb[0]) + 50
+        cx = (W - cw) // 2
+        cy = min(1390, max(1310, current_y + 24))
+        draw.rounded_rectangle(
+            (cx, cy, cx + cw, cy + 46), radius=23, fill=(20, 20, 20, 210), outline="#D4AF37", width=1
+        )
+        draw.text(((W - (cb[2] - cb[0])) // 2, cy + 11), cta, font=font_cta, fill="#D4AF37")
 
-            # Title (max 3 lines, uppercase)
-            clean = title_text.replace(":", "").upper()
-            lines = textwrap.wrap(clean, width=16)[:3]
-            for idx, line in enumerate(lines):
-                tb = draw.textbbox((0, 0), line, font=font_title)
-                draw.text(
-                    ((W - (tb[2] - tb[0])) // 2, cy + 75 + idx * 95),
-                    line,
-                    font=font_title,
-                    fill=s["title_fill"],
-                )
+        # Bottom baseline signature
+        footer = brand
+        fb = draw.textbbox((0, 0), footer, font=font_brand)
+        draw.text(((W - (fb[2] - fb[0])) // 2, 1455), footer, font=font_brand, fill=(200, 200, 200, 160))
 
-            # Optional subtitle
-            if subtitle:
-                sub_clean = subtitle[:60]
-                sb = draw.textbbox((0, 0), sub_clean, font=font_sub)
-                sub_y = cy + 75 + len(lines) * 95 + 5
-                draw.text(((W - (sb[2] - sb[0])) // 2, sub_y), sub_clean, font=font_sub, fill=s["brand_fill"])
-
-            # CTA button
-            cb = draw.textbbox((0, 0), cta_text, font=font_cta)
-            btn_w = (cb[2] - cb[0]) + 60
-            btn_x = (W - btn_w) // 2
-            draw.rectangle([btn_x, cy + ch - 80, btn_x + btn_w, cy + ch - 35], fill=s["cta_bg"])
-            draw.text(((W - (cb[2] - cb[0])) // 2, cy + ch - 75), cta_text, font=font_cta, fill=s["cta_text"])
-
-            # Save
-            stem = src.stem.replace("-hero", "")
-            out = OUTPUT_DIR / f"{stem}-pin.jpg"
-            canvas.convert("RGB").save(str(out), "JPEG", quality=95)
+        # Save
+        stem = src.stem.replace("-hero", "")
+        out = OUTPUT_DIR / f"{stem}-pin.jpg"
+        canvas.convert("RGB").save(str(out), "JPEG", quality=95)
 
         logger.info(f"Created article pin: {out.name} (style={style_variant})")
-        return {"success": True, "output_path": str(out)}
+        return {"success": True, "output_path": str(out), "variant_used": style_variant}
 
     except Exception as e:
         logger.error(f"create_article_pin failed: {e}")
@@ -1772,7 +2453,7 @@ textarea[id="pin-draft-alttext"]
             env["GOOGLE_API_KEY"] = env["GEMINI_API_KEY"]
         elif env.get("GOOGLE_API_KEY") and not env.get("GEMINI_API_KEY"):
             env["GEMINI_API_KEY"] = env["GOOGLE_API_KEY"]
-        model = os.environ.get("RANKSTEIN_FALLBACK_MODEL", "auto")
+        model = os.environ.get("RANKSTEIN_FALLBACK_MODEL", "gemini-3.1-flash-lite-preview")
         cmd = [gemini_path, "-p", prompt]
         if model.lower() != "auto":
             cmd.extend(["--model", model])
@@ -1816,6 +2497,9 @@ async def upload_pin_to_pinterest(
     """
     import asyncio
 
+    from pinterest_automation.config import normalize_board_name
+
+    board_name = normalize_board_name(board_name)
     local = Path(image_path)
     if not local.exists():
         return {"success": False, "error": f"Image not found: {image_path}"}
@@ -1836,9 +2520,14 @@ async def upload_pin_to_pinterest(
             create_turbo_browser,
             ensure_account_logged_in,
         )
+        from pinterest_automation.browser_utils import normalize_browser_type
 
-        browser_type = DEFAULT_BROWSER_MAP.get(
-            session_dir.name, os.environ.get("PINTEREST_BROWSER", "firefox")
+        browser_type = normalize_browser_type(
+            os.environ.get("PINTEREST_DEFAULT_BROWSER")
+            or DEFAULT_BROWSER_MAP.get(session_dir.name)
+            or os.environ.get("PINTEREST_BROWSER")
+            or "chromium",
+            "chromium",
         )
         password = (
             domain.pinterest_password.get_secret_value()
@@ -1854,9 +2543,7 @@ async def upload_pin_to_pinterest(
         )
         pw = context = page = None
         try:
-            pw, context, page = await create_turbo_browser(
-                account, "rankstein_mcp_upload", headless=True
-            )
+            pw, context, page = await create_turbo_browser(account, "rankstein_mcp_upload", headless=True)
             if not await ensure_account_logged_in(page, account):
                 return {"success": False, "error": "Pinterest session is not logged in"}
             pin_id = await create_pin_from_fields(
@@ -1874,6 +2561,7 @@ async def upload_pin_to_pinterest(
                 "pin_url": f"https://www.pinterest.com/pin/{pin_id}/" if pin_id else "",
                 "metadata": {"title": title, "desc_len": len(description), "alt": bool(alt_text)},
                 "method": "shared-core",
+                "browser": browser_type,
             }
         finally:
             await close_turbo_browser(pw, context)
@@ -2720,14 +3408,18 @@ def _is_valid_pinterest_pin_id(pin_id: str) -> bool:
 
 
 @mcp.tool()
-def update_pinterest_pin_id(slug: str, pin_id: str) -> dict:
+def update_pinterest_pin_id(slug: str, pin_id: str, domain_handle: str = "") -> dict:
     """
     Update an existing Supabase post record with the Pinterest Pin ID.
     Call this after upload_pin_to_pinterest returns a pin_id.
     Returns: {success, slug, pin_id}
     """
-    if not SUPABASE_KEY:
-        return {"success": False, "error": "SUPABASE_SERVICE_ROLE_KEY not set"}
+    domain = get_registry().get(domain_handle)
+    url = domain.supabase_url
+    key = domain.supabase_service_role_key.get_secret_value()
+
+    if not key:
+        return {"success": False, "error": f"Supabase key not set for domain {domain.handle}"}
     if not pin_id:
         return {"success": False, "error": "pin_id is empty"}
     if not _is_valid_pinterest_pin_id(pin_id):
@@ -2740,21 +3432,22 @@ def update_pinterest_pin_id(slug: str, pin_id: str) -> dict:
             ),
         }
     try:
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "return=representation",
-        }
+        headers = _supabase_request_headers(
+            key,
+            **{
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+        )
         session = get_supabase_session()
         resp = session.patch(
-            f"{SUPABASE_URL}/rest/v1/posts?slug=eq.{slug}",
+            f"{url}/rest/v1/posts?slug=eq.{slug}",
             headers=headers,
             json={"pinterest_pin_id": pin_id},
         )
         if resp.status_code in [200, 204]:
-            logger.info(f"Updated pinterest_pin_id={pin_id} for slug={slug}")
-            return {"success": True, "slug": slug, "pin_id": pin_id}
+            logger.info("Updated pinterest_pin_id=%s for slug=%s domain=%s", pin_id, slug, domain.handle)
+            return {"success": True, "slug": slug, "pin_id": pin_id, "domain": domain.handle}
         return {"success": False, "status": resp.status_code, "error": resp.text}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -2777,27 +3470,100 @@ def upload_image_to_supabase(local_path: str, storage_path: str, domain_handle: 
 
     if not key:
         return {"success": False, "error": f"Supabase key not set for domain {domain.handle}"}
+    ext = Path(local_path).suffix.lower()
+    content_type = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
+    target_url = f"{url}/storage/v1/object/{BUCKET}/{storage_path}"
+    public_url = f"{url}/storage/v1/object/public/{BUCKET}/{storage_path}"
+    headers = _supabase_request_headers(
+        key,
+        **{
+            "x-upsert": "true",
+            "Content-Type": content_type,
+        },
+    )
     try:
-        ext = Path(local_path).suffix.lower()
-        content_type = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
-        target_url = f"{url}/storage/v1/object/{BUCKET}/{storage_path}"
-        with open(local_path, "rb") as f:
-            session = get_supabase_session()
-            resp = session.post(
-                target_url,
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "x-upsert": "true",
-                    "Content-Type": content_type,
-                },
-                data=f,
-            )
+        session = get_supabase_session()
+    except Exception as exc:
+        return {"success": False, "error": str(exc), "attempts": 0}
+    timeout = (10, 30)
+    max_attempts = 3
+    retryable_statuses = {408, 429}
+    retryable_errors = (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.SSLError,
+    )
+    last_error = "Supabase image upload failed"
+    last_status = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # Reopening the file guarantees a fresh body after a failed streamed
+            # request, even when requests consumed the original file object.
+            with open(local_path, "rb") as image_body:
+                resp = session.post(
+                    target_url,
+                    headers=headers,
+                    data=image_body,
+                    timeout=timeout,
+                )
+        except retryable_errors as exc:
+            last_error = str(exc)
+
+            # A connection can fail after Supabase committed the object but
+            # before the response reached us. Verify the exact public object
+            # before retrying the idempotent x-upsert request.
+            try:
+                probe = session.get(public_url, timeout=timeout)
+            except requests.exceptions.RequestException:
+                probe = None
+            if probe is not None and probe.status_code == 200:
+                try:
+                    local_bytes = Path(local_path).read_bytes()
+                    public_bytes = probe.content
+                except (AttributeError, OSError):
+                    local_bytes = b""
+                    public_bytes = b""
+                if local_bytes and public_bytes == local_bytes:
+                    return {
+                        "success": True,
+                        "public_url": public_url,
+                        "attempts": attempt,
+                        "verified_via": "public_url_content_match",
+                    }
+
+            if attempt == max_attempts:
+                return {
+                    "success": False,
+                    "error": last_error,
+                    "attempts": attempt,
+                }
+            time.sleep(0.25 * (2 ** (attempt - 1)))
+            continue
+        except Exception as exc:
+            return {"success": False, "error": str(exc), "attempts": attempt}
+
+        last_status = resp.status_code
+        last_error = resp.text
         if resp.status_code in [200, 201]:
-            public_url = f"{url}/storage/v1/object/public/{BUCKET}/{storage_path}"
-            return {"success": True, "public_url": public_url}
-        return {"success": False, "status": resp.status_code, "error": resp.text}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+            return {"success": True, "public_url": public_url, "attempts": attempt}
+
+        retryable_status = resp.status_code in retryable_statuses or (500 <= resp.status_code < 600)
+        if not retryable_status or attempt == max_attempts:
+            return {
+                "success": False,
+                "status": resp.status_code,
+                "error": resp.text,
+                "attempts": attempt,
+            }
+        time.sleep(0.25 * (2 ** (attempt - 1)))
+
+    return {
+        "success": False,
+        "status": last_status,
+        "error": last_error,
+        "attempts": max_attempts,
+    }
 
 
 @mcp.tool()
@@ -2820,17 +3586,35 @@ def publish_article_to_supabase(
     faq_schema: str = "[]",
     pinterest_pin_id: str = "",
     domain_handle: str = "",
+    auto_create_pinterest_campaign: bool = True,
 ) -> dict:
     """
     Publish (upsert) an article to the Supabase posts table.
     Performs PATCH if slug exists, POST if new.
     category must be one of the configured categories for the domain.
     domain_handle="" resolves to the default domain.
+    ``auto_create_pinterest_campaign`` preserves the historical default for
+    general callers. Set it false when the caller owns a dedicated primary-pin
+    and campaign workflow and must avoid a duplicate hero-pin enqueue.
     Returns: {success, action, slug, url}
     """
     domain = get_registry().get(domain_handle)
     url = domain.supabase_url
     key = domain.supabase_service_role_key.get_secret_value()
+
+    try:
+        category_assignment = assign_article_category(
+            domain_handle=domain.handle,
+            categories=domain.categories,
+            requested=category,
+            context=f"{title} {slug}",
+        )
+    except CategoryPolicyError as exc:
+        return {
+            "success": False,
+            "error": f"Category policy rejected article for {domain.handle}: {exc}",
+        }
+    category = category_assignment.category
 
     valid_cats = (
         set(domain.categories)
@@ -2866,6 +3650,18 @@ def publish_article_to_supabase(
 
         # Prepare structured data for V2
         r_schema = _parse_schema(recipe_schema, {})
+        r_schema["recipeCategory"] = category
+        r_schema.setdefault(
+            "author",
+            {
+                "@type": "Organization",
+                "name": (
+                    "Atelier editorial de RecetaDolce"
+                    if domain.handle == "recetadolce"
+                    else "Equipo editorial de RecetaGenial"
+                ),
+            },
+        )
         v2_instructions = r_schema.get("recipeInstructions", [])
         v2_ingredients = r_schema.get("recipeIngredient", [])
         v2_faq = _parse_schema(faq_schema, [])
@@ -2881,7 +3677,8 @@ def publish_article_to_supabase(
             "featured_image": featured_image_url,
             "image_alt": image_alt or title,
             # Category (Dual)
-            "category_id": None,  # Resolve below
+            "category_id": category_assignment.category_id,
+            "category": category,
             # SEO (Dual)
             "seo_title": meta_title or title[:60],
             "meta_title": meta_title or title[:60],
@@ -2904,30 +3701,35 @@ def publish_article_to_supabase(
             # Status & Metadata
             "is_published": True,
             "status": "published",
-            "author": "Isabella Dolce" if "dolce" in domain.domain else "Chef Receta Genial",
+            "author": (
+                "Atelier editorial de RecetaDolce"
+                if domain.handle == "recetadolce"
+                else "Equipo editorial de RecetaGenial"
+            ),
             "pinterest_pin_id": pinterest_pin_id,
         }
 
         # Resolve category_id for V2 compatibility
-        if category:
+        if category and not payload["category_id"]:
             try:
                 # Try to find category by name in the categories table
                 session = get_supabase_session()
                 cat_resp = session.get(
                     f"{url}/rest/v1/categories?name=eq.{category}",
-                    headers={"apikey": key, "Authorization": f"Bearer {key}"},
+                    headers=_supabase_request_headers(key),
                 )
                 if cat_resp.status_code == 200 and cat_resp.json():
                     payload["category_id"] = cat_resp.json()[0].get("id")
             except Exception as e:
                 logger.warning(f"Could not resolve category_id: {e}")
 
-        headers = {
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal",  # Prevents errors if return schema is inconsistent
-        }
+        headers = _supabase_request_headers(
+            key,
+            **{
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+        )
 
         base = f"{url}/rest/v1/posts"
         # Check existence using minimal selection
@@ -2942,19 +3744,33 @@ def publish_article_to_supabase(
             action = "created"
 
         if resp.status_code in [200, 201, 204]:
-            result = {"success": True, "action": action, "slug": slug, "url": f"https://{domain.domain}/{slug}"}
-            # ── Auto-create Pinterest Campaign ──
-            try:
-                from pinterest_automation.campaign import create_pinterest_campaign
-                campaign = create_pinterest_campaign(
-                    slug=slug, title=title, excerpt=excerpt,
-                    domain_handle=domain_handle, domain_url=domain.domain,
-                )
-                result["pinterest_campaign"] = campaign
-                logger.info("Auto-created Pinterest campaign for %s: %s jobs", slug, campaign.get("jobs_created", 0))
-            except Exception as camp_err:
-                logger.warning("Pinterest campaign auto-create failed for %s: %s", slug, camp_err)
-                result["pinterest_campaign"] = {"success": False, "error": str(camp_err)}
+            result = {
+                "success": True,
+                "action": action,
+                "slug": slug,
+                "url": f"https://{domain.domain}/{slug}",
+            }
+            if auto_create_pinterest_campaign:
+                # ── Auto-create Pinterest Campaign ──
+                try:
+                    from pinterest_automation.campaign import create_pinterest_campaign
+
+                    campaign = create_pinterest_campaign(
+                        slug=slug,
+                        title=title,
+                        excerpt=excerpt,
+                        domain_handle=domain_handle,
+                        domain_url=domain.domain,
+                    )
+                    result["pinterest_campaign"] = campaign
+                    logger.info(
+                        "Auto-created Pinterest campaign for %s: %s jobs",
+                        slug,
+                        campaign.get("jobs_created", 0),
+                    )
+                except Exception as camp_err:
+                    logger.warning("Pinterest campaign auto-create failed for %s: %s", slug, camp_err)
+                    result["pinterest_campaign"] = {"success": False, "error": str(camp_err)}
             return result
 
         # Domain schemas are not always perfectly in lock-step. PostgREST reports
@@ -2985,18 +3801,27 @@ def publish_article_to_supabase(
                     "url": f"https://{domain.domain}/{slug}",
                     "omitted_columns": retried_missing,
                 }
-                # ── Auto-create Pinterest Campaign (retry path) ──
-                try:
-                    from pinterest_automation.campaign import create_pinterest_campaign
-                    campaign = create_pinterest_campaign(
-                        slug=slug, title=title, excerpt=excerpt,
-                        domain_handle=domain_handle, domain_url=domain.domain,
-                    )
-                    result["pinterest_campaign"] = campaign
-                    logger.info("Auto-created Pinterest campaign for %s: %s jobs", slug, campaign.get("jobs_created", 0))
-                except Exception as camp_err:
-                    logger.warning("Pinterest campaign auto-create failed for %s: %s", slug, camp_err)
-                    result["pinterest_campaign"] = {"success": False, "error": str(camp_err)}
+                if auto_create_pinterest_campaign:
+                    # ── Auto-create Pinterest Campaign (retry path) ──
+                    try:
+                        from pinterest_automation.campaign import create_pinterest_campaign
+
+                        campaign = create_pinterest_campaign(
+                            slug=slug,
+                            title=title,
+                            excerpt=excerpt,
+                            domain_handle=domain_handle,
+                            domain_url=domain.domain,
+                        )
+                        result["pinterest_campaign"] = campaign
+                        logger.info(
+                            "Auto-created Pinterest campaign for %s: %s jobs",
+                            slug,
+                            campaign.get("jobs_created", 0),
+                        )
+                    except Exception as camp_err:
+                        logger.warning("Pinterest campaign auto-create failed for %s: %s", slug, camp_err)
+                        result["pinterest_campaign"] = {"success": False, "error": str(camp_err)}
                 return result
 
         # If it fails with "column does not exist", we help the user with the SQL Parity script
@@ -3027,11 +3852,7 @@ def check_supabase_connection(domain_handle: str = "") -> dict:
         session = get_supabase_session()
         resp = session.get(
             f"{url}/rest/v1/posts?select=count",
-            headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Prefer": "count=exact",
-            },
+            headers=_supabase_request_headers(key, Prefer="count=exact"),
         )
         count = resp.headers.get("content-range", "?")
         return {
@@ -3048,7 +3869,8 @@ def check_supabase_connection(domain_handle: str = "") -> dict:
 def get_article_data_from_supabase_by_slug(slug: str, domain_handle: str = "") -> dict:
     """
     Retrieve article data from Supabase 'posts' table by slug.
-    Returns: {success, title, featured_image_url, error}
+    Returns article identity, visual proof, and recipe context for downstream
+    pin/remaster workflows.
     """
     domain = get_registry().get(domain_handle)
     url = domain.supabase_url
@@ -3057,14 +3879,11 @@ def get_article_data_from_supabase_by_slug(slug: str, domain_handle: str = "") -
     if not key:
         return {"success": False, "error": f"Supabase key not set for domain {domain.handle}"}
     try:
-        headers = {
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-        }
+        headers = _supabase_request_headers(key, **{"Content-Type": "application/json"})
         session = get_supabase_session()
         resp = session.get(
-            f"{url}/rest/v1/posts?slug=eq.{slug}&select=title,hero_image",
+            f"{url}/rest/v1/posts?slug=eq.{slug}"
+            "&select=title,hero_image,pinterest_pin_id,recipe_schema,chef_tip,excerpt,category",
             headers=headers,
             timeout=10,
         )
@@ -3072,10 +3891,24 @@ def get_article_data_from_supabase_by_slug(slug: str, domain_handle: str = "") -
             data = resp.json()
             if data:
                 article = data[0]
+                recipe_schema = article.get("recipe_schema") or {}
+                if isinstance(recipe_schema, str):
+                    try:
+                        recipe_schema = json.loads(recipe_schema)
+                    except json.JSONDecodeError:
+                        recipe_schema = {}
                 return {
                     "success": True,
                     "title": article.get("title"),
                     "featured_image_url": article.get("hero_image"),
+                    "pinterest_pin_id": article.get("pinterest_pin_id"),
+                    "recipe_schema": recipe_schema if isinstance(recipe_schema, dict) else {},
+                    "chef_tip": article.get("chef_tip") or "",
+                    "excerpt": article.get("excerpt") or "",
+                    "category": article.get("category") or "",
+                    "has_valid_pin_id": _is_valid_pinterest_pin_id(
+                        str(article.get("pinterest_pin_id") or "")
+                    ),
                     "domain": domain.handle,
                 }
             else:
@@ -3129,11 +3962,7 @@ def health_check(domain_handle: str = "") -> dict:
         session = get_supabase_session()
         resp = session.get(
             f"{domain.supabase_url}/rest/v1/posts?select=count",
-            headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Prefer": "count=exact",
-            },
+            headers=_supabase_request_headers(key, Prefer="count=exact"),
             timeout=10,
         )
         checks["supabase_connection"] = {
@@ -3160,10 +3989,10 @@ def health_check(domain_handle: str = "") -> dict:
         checks["disk_space"] = {"ok": True, "detail": "unknown"}
 
     # 7. Log file size
-    log_file = PROJECT_ROOT / "data" / "rankstein_mcp.log"
-    if log_file.exists():
-        log_mb = round(log_file.stat().st_size / (1024 * 1024), 1)
-        checks["log_size"] = {"ok": log_mb < 50, "detail": f"{log_mb} MB"}
+    log_files = list((PROJECT_ROOT / "data").glob("rankstein_mcp*.log*"))
+    if log_files:
+        log_mb = round(sum(path.stat().st_size for path in log_files) / (1024 * 1024), 1)
+        checks["log_size"] = {"ok": log_mb < 50, "detail": f"{log_mb} MB total"}
     else:
         checks["log_size"] = {"ok": True, "detail": "no log file yet"}
 
@@ -3191,27 +4020,31 @@ def health_check(domain_handle: str = "") -> dict:
 
 
 @mcp.tool()
-def check_pinterest_session(session_type: str = "uploader") -> dict:
+def check_pinterest_session(session_type: str = "uploader", domain_handle: str = "") -> dict:
     """
     Check if a Pinterest browser session is likely still valid by inspecting
     the session directory for recent cookie files.
     session_type: 'uploader' | 'remasterer' | 'harvester'
     Returns: {likely_valid, session_dir, cookie_files, warning}
     """
-    dirs = {
-        "uploader": Path("data/sessions/pinterest_rida_v7"),
-        "remasterer": Path("data/sessions/remasterer_v1"),
-        "harvester": Path("data/sessions/harvester_v1"),
-    }
-    d = PROJECT_ROOT / dirs.get(session_type, dirs["uploader"])
+    try:
+        domain = get_registry().get(domain_handle)
+        d = _pinterest_session_dir(session_type, domain)
+    except (KeyError, ValueError) as exc:
+        return {"likely_valid": False, "warning": str(exc)}
     if not d.exists():
         return {"likely_valid": False, "warning": f"Session dir missing: {d}"}
-    cookies = list(d.glob("*.sqlite"))
+    cookies = [
+        path
+        for pattern in ("**/cookies.sqlite", "**/Network/Cookies")
+        for path in d.glob(pattern)
+        if path.is_file()
+    ]
     if not cookies:
         return {
             "likely_valid": False,
             "session_dir": str(d),
-            "warning": "No cookie SQLite files found. Pinterest login required.",
+            "warning": "No browser cookie databases found. Pinterest login required.",
         }
     newest = max(cookies, key=lambda f: f.stat().st_mtime)
     age_days = (datetime.now().timestamp() - newest.stat().st_mtime) / 86400
@@ -3359,7 +4192,78 @@ def kill_firefox_and_cleanup(session_type: str = "all") -> dict:
     return {"success": True, "actions_taken": all_actions or ["Nothing to clean up"]}
 
 
-async def _do_pinterest_login_attempt(session_dir: Path, email: str, password: str, attempt: int) -> dict:
+def _pinterest_session_dir(session_type: str, domain) -> Path:
+    """Resolve the exact persistent profile used by a domain's Pinterest service."""
+
+    normalized_type = str(session_type or "").strip().lower()
+    if normalized_type == "uploader":
+        session_dir = Path(domain.sessions_dir)
+    elif normalized_type == "remasterer":
+        from backend.services.remasterer import _resolve_session_name
+
+        session_name = _resolve_session_name(domain_handle=domain.handle)
+        session_dir = PROJECT_ROOT / "data" / "sessions" / session_name
+    elif normalized_type == "harvester":
+        session_dir = PROJECT_ROOT / "data" / "sessions" / "harvester_v1"
+    else:
+        raise ValueError("Unsupported Pinterest session type; expected uploader, remasterer, or harvester")
+
+    return session_dir if session_dir.is_absolute() else PROJECT_ROOT / session_dir
+
+
+def _pinterest_login_identity(session_type: str, domain) -> tuple[str, str, str]:
+    """Return credentials and account handle from the production routing source."""
+
+    normalized_type = str(session_type or "").strip().lower()
+    if normalized_type == "remasterer":
+        from pinterest_automation.config import get_config
+        from pinterest_automation.routing import account_cohort
+
+        config = get_config()
+        cohort = account_cohort(domain.handle, config=config)
+        if not cohort:
+            raise ValueError(f"No Pinterest account is routed for domain {domain.handle}")
+        account_handle = cohort[0]
+        credentials = config.accounts.get(account_handle)
+        if credentials is None or not credentials.valid:
+            raise ValueError(f"Pinterest credentials are not configured for routed account {account_handle}")
+        return credentials.email, credentials.password, account_handle
+
+    email = domain.pinterest_email or os.environ.get("PINTEREST_EMAIL", "")
+    password = (
+        domain.pinterest_password.get_secret_value()
+        if domain.pinterest_password.get_secret_value()
+        else os.environ.get("PINTEREST_PASSWORD", "")
+    )
+    if not email or not password:
+        raise ValueError("Pinterest credentials not set for domain or environment")
+    return email, password, str(getattr(domain, "pinterest_account_handle", "") or "")
+
+
+async def _pinterest_search_session_authenticated(page) -> bool:
+    """Prove that Pinterest search exposes canonical pins without a login wall."""
+
+    from backend.services.remasterer import _is_pinterest_login_wall_text
+
+    await page.goto(
+        "https://es.pinterest.com/search/pins/?q=recetas&rs=typed",
+        wait_until="domcontentloaded",
+        timeout=30000,
+    )
+    await page.wait_for_timeout(3000)
+    body_text = await page.locator("body").inner_text(timeout=5000)
+    if _is_pinterest_login_wall_text(body_text):
+        return False
+    return await page.locator('a[href*="/pin/"]').count() > 0
+
+
+async def _do_pinterest_login_attempt(
+    session_dir: Path,
+    email: str,
+    password: str,
+    attempt: int,
+    verification_mode: str = "uploader",
+) -> dict:
     """One Pinterest login attempt. Hoisted out of pinterest_relogin to avoid
     the unawaited-closure-coroutine quirk that produced
     ``RuntimeWarning: coroutine '_attempt_login' was never awaited`` in the
@@ -3370,80 +4274,255 @@ async def _do_pinterest_login_attempt(session_dir: Path, email: str, password: s
     from playwright.async_api import Error as PlaywrightError
     from playwright.async_api import async_playwright
 
-    lock_actions = _kill_firefox_locks(session_dir)
-    await asyncio.sleep(2)
+    # Chromium is the stable unattended path. Firefox profile locks were a
+    # repeated source of Playwright failures, so use Chromium unless explicitly
+    # overridden.
+    browser_name = os.environ.get("PINTEREST_DEFAULT_BROWSER", "chromium").lower()
+    if browser_name not in {"chromium", "firefox"}:
+        browser_name = "chromium"
+    from pinterest_automation.browser_utils import kill_browser_locks
 
+    lock_actions = kill_browser_locks(session_dir, browser_name)
+    await asyncio.sleep(2)
     try:
         async with async_playwright() as p:
-            browser = await p.firefox.launch_persistent_context(
+            # Use appropriate browser based on setting
+            if browser_name == "chromium":
+                browser_type = p.chromium
+                launch_args = ["--disable-dev-shm-usage", "--no-sandbox"]
+                user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                extra_prefs = {}
+            else:
+                browser_type = p.firefox
+                launch_args = ["--no-remote"]
+                user_agent = (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0"
+                )
+                extra_prefs = {
+                    "browser.startup.page": 0,
+                    "browser.cache.disk.enable": False,
+                }
+
+            browser = await browser_type.launch_persistent_context(
                 str(session_dir),
                 headless=True,
                 locale="es-ES",
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0"
-                ),
+                user_agent=user_agent,
                 viewport={"width": 1280, "height": 900},
-                args=["--no-remote"],
-                firefox_user_prefs={
-                    "browser.startup.page": 0,
-                    "browser.cache.disk.enable": False,
-                },
+                args=launch_args,
+                **({"firefox_user_prefs": extra_prefs} if browser_name == "firefox" else {}),
                 timeout=45000,
             )
 
             page = browser.pages[0] if browser.pages else await browser.new_page()
 
             try:
-                await page.goto("https://www.pinterest.com/", timeout=30000)
-                await page.wait_for_timeout(3000)
-                avatar = await page.query_selector('[data-test-id="header-avatar"]')
-                if avatar or "pinterest.com/home" in page.url:
+                if await _pinterest_search_session_authenticated(page):
                     await browser.close()
                     return {
                         "success": True,
-                        "message": "Already logged in — session still valid.",
+                        "message": "Already logged in — canonical Pinterest search pins verified",
                         "actions_taken": lock_actions,
                     }
             except PlaywrightError:
                 pass  # try login page directly
 
-            await page.goto("https://www.pinterest.com/login/", timeout=30000)
+            await page.goto("https://es.pinterest.com/login/", timeout=30000)
             await page.wait_for_timeout(2000)
 
-            try:
-                await page.wait_for_selector('input[name="id"]', timeout=10000)
-            except PlaywrightError:
-                await page.wait_for_selector('input[type="email"]', timeout=5000)
+            if "/login" not in page.url and "pinterest.com" in page.url:
+                if await _pinterest_search_session_authenticated(page):
+                    await browser.close()
+                    return {
+                        "success": True,
+                        "message": "Already logged in — canonical Pinterest search pins verified",
+                        "actions_taken": lock_actions,
+                    }
+                await page.goto("https://es.pinterest.com/login/", timeout=30000)
+                await page.wait_for_timeout(2000)
 
-            email_sel = (
-                'input[name="id"]' if await page.query_selector('input[name="id"]') else 'input[type="email"]'
+            # Dismiss signup/landing overlays that block login fields
+            for _ in range(12):
+                email_loc = page.locator('input[type="email"], input#email, input[name="id"]').first
+                password_loc = page.locator(
+                    'input[type="password"], input#password, input[name="password"]'
+                ).first
+
+                if await email_loc.count() > 0 and await password_loc.count() > 0:
+                    if await email_loc.is_visible() and await password_loc.is_visible():
+                        break
+
+                # Evaluate JS to hide Google One Tap overlays
+                try:
+                    await page.evaluate("""
+                        () => {
+                            const selectors = [
+                                '#credential_picker_container',
+                                '.L5Fo6c-PQbLGe',
+                                '[title="Sign in with Google Dialog"]'
+                            ];
+                            selectors.forEach(sel => {
+                                const el = document.querySelector(sel);
+                                if (el) el.style.display = 'none';
+                            });
+                        }
+                    """)
+                except Exception:
+                    pass
+
+                # Try clicking Log in button overlay if visible
+                try:
+                    btn = page.locator(
+                        'div[data-test-id="login-button"], button:has-text("Log in"), button:has-text("Iniciar sesión"), a:has-text("Log in"), a:has-text("Iniciar sesión")'
+                    ).first
+                    if await btn.count() > 0 and await btn.is_visible():
+                        await btn.click(timeout=1000)
+                        await asyncio.sleep(1)
+                        continue
+                except Exception:
+                    pass
+
+                await asyncio.sleep(1)
+
+            async def first_visible(selectors, timeout_ms=15000):
+                deadline = asyncio.get_event_loop().time() + timeout_ms / 1000
+                while asyncio.get_event_loop().time() < deadline:
+                    for selector in selectors:
+                        try:
+                            loc = page.locator(selector).first
+                            if await loc.count() > 0 and await loc.is_visible(timeout=300):
+                                return selector
+                        except Exception:
+                            continue
+                    await page.wait_for_timeout(500)
+                return None
+
+            email_sel = await first_visible(
+                [
+                    "input#email",
+                    'input[name="id"]',
+                    'input[name="username"]',
+                    'input[type="email"]',
+                    'input[autocomplete="username"]',
+                    'input[autocomplete="email"]',
+                    'input[placeholder*="email" i]',
+                    'input[placeholder*="correo" i]',
+                    'input[aria-label*="email" i]',
+                    'input[aria-label*="correo" i]',
+                ]
             )
-            await page.fill(email_sel, email)
+            if not email_sel:
+                debug_prefix = str(PROJECT_ROOT / "data" / f"debug_mcp_login_no_email_{int(time.time())}")
+                try:
+                    await page.screenshot(path=f"{debug_prefix}.png", timeout=10000)
+                except Exception:
+                    pass
+                try:
+                    html_content = await page.content()
+                    Path(f"{debug_prefix}.html").write_text(html_content[:50000], encoding="utf-8")
+                except Exception:
+                    pass
+                await browser.close()
+                return {
+                    "success": False,
+                    "retryable": True,
+                    "message": f"Login form email field not found. URL: {page.url}",
+                    "actions_taken": lock_actions,
+                }
+            email_input = page.locator(email_sel).first
+            await email_input.click()
+            await email_input.fill("")
+            await email_input.press_sequentially(email, delay=35)
             await page.wait_for_timeout(600)
 
-            pwd_sel = (
-                'input[name="password"]'
-                if await page.query_selector('input[name="password"]')
-                else 'input[type="password"]'
+            pwd_inline = await first_visible(
+                [
+                    "input#password",
+                    'input[name="password"]',
+                    'input[type="password"]',
+                    'input[autocomplete="current-password"]',
+                ],
+                timeout_ms=3000,
             )
-            await page.fill(pwd_sel, password)
-            await page.wait_for_timeout(600)
 
-            try:
-                await page.click('button[type="submit"]')
-            except PlaywrightError:
-                await page.keyboard.press("Enter")
+            if pwd_inline:
+                password_input = page.locator(pwd_inline).first
+                await password_input.click()
+                await password_input.fill("")
+                await password_input.press_sequentially(password, delay=35)
+                await page.wait_for_timeout(600)
+                await password_input.press("Enter")
+                await page.wait_for_timeout(6000)
+            else:
+                await email_input.press("Enter")
+                await page.wait_for_timeout(5000)
 
-            await page.wait_for_timeout(6000)
+                pwd_sel = await first_visible(
+                    [
+                        "input#password",
+                        'input[name="password"]',
+                        'input[type="password"]',
+                        'input[autocomplete="current-password"]',
+                        'input[placeholder*="password" i]',
+                        'input[placeholder*="contraseña" i]',
+                        'input[aria-label*="password" i]',
+                        'input[aria-label*="contraseña" i]',
+                    ],
+                    timeout_ms=15000,
+                )
+                if not pwd_sel:
+                    debug_prefix = str(
+                        PROJECT_ROOT / "data" / f"debug_mcp_login_no_password_{int(time.time())}"
+                    )
+                    try:
+                        await page.screenshot(path=f"{debug_prefix}.png", timeout=10000)
+                    except Exception:
+                        pass
+                    await browser.close()
+                    return {
+                        "success": False,
+                        "retryable": True,
+                        "message": f"Login form password field not found. URL: {page.url}",
+                        "actions_taken": lock_actions,
+                    }
+                password_input = page.locator(pwd_sel).first
+                await password_input.click()
+                await password_input.fill("")
+                await password_input.press_sequentially(password, delay=35)
+                await page.wait_for_timeout(600)
+                await password_input.press("Enter")
+                await page.wait_for_timeout(6000)
 
-            logged_in = "login" not in page.url and "pinterest.com" in page.url
+            logged_in = await _pinterest_search_session_authenticated(page)
             current_url = page.url
+
+            # Upload profiles additionally prove access to the pin builder. A
+            # remaster profile only needs authenticated canonical search pins.
+            if logged_in and verification_mode != "remasterer":
+                try:
+                    await page.goto("https://es.pinterest.com/pin-creation-tool/", timeout=15000)
+                    await page.wait_for_timeout(2000)
+                    avatar = await page.query_selector('[data-test-id="header-avatar"]')
+                    builder = await page.query_selector(
+                        '#storyboard-selector-title, [data-test-id="pin-draft-title"]'
+                    )
+                    if "/login" in page.url or "/signup" in page.url or not (avatar or builder):
+                        logged_in = False
+                        current_url = page.url
+                except Exception:
+                    pass  # Keep the original logged_in result
+
             await browser.close()
 
             if logged_in:
+                proof = (
+                    "canonical Pinterest search pins verified"
+                    if verification_mode == "remasterer"
+                    else "Pinterest pin builder verified"
+                )
                 return {
                     "success": True,
-                    "message": f"Logged in. Session saved: {session_dir.name}",
+                    "message": f"Logged in and {proof}. Session saved: {session_dir.name}",
                     "actions_taken": lock_actions,
                 }
             return {
@@ -3471,8 +4550,8 @@ async def _do_pinterest_login_attempt(session_dir: Path, email: str, password: s
 @mcp.tool()
 async def pinterest_relogin(session_type: str = "uploader", domain_handle: str = "") -> dict:
     """
-    Auto-relogin to Pinterest using credentials from PINTEREST_EMAIL / PINTEREST_PASSWORD env vars.
-    Fully self-healing: kills stale Firefox processes, clears lock files, retries up to 3 times.
+    Auto-relogin to Pinterest using the account routed for the requested domain.
+    Fully self-healing: clears browser profile locks and retries up to 3 times.
     session_type: 'uploader' | 'remasterer' | 'harvester'
     Returns: {success, message, actions_taken}
     """
@@ -3480,26 +4559,11 @@ async def pinterest_relogin(session_type: str = "uploader", domain_handle: str =
 
     domain = get_registry().get(domain_handle)
 
-    # Use domain-specific creds if available, otherwise global env
-    email = domain.pinterest_email or os.environ.get("PINTEREST_EMAIL", "")
-    password = (
-        domain.pinterest_password.get_secret_value()
-        if domain.pinterest_password.get_secret_value()
-        else os.environ.get("PINTEREST_PASSWORD", "")
-    )
-
-    if not email or not password:
-        return {"success": False, "error": "Pinterest credentials not set for domain or environment"}
-
-    session_dirs = {
-        "uploader": domain.sessions_dir,
-        "remasterer": PROJECT_ROOT / "data" / "sessions" / "remasterer_v1",
-        "harvester": PROJECT_ROOT / "data" / "sessions" / "harvester_v1",
-    }
-    session_dir = session_dirs.get(session_type, session_dirs["uploader"])
-
-    if not session_dir.is_absolute():
-        session_dir = PROJECT_ROOT / session_dir
+    try:
+        email, password, account_handle = _pinterest_login_identity(session_type, domain)
+        session_dir = _pinterest_session_dir(session_type, domain)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
 
     session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -3507,7 +4571,13 @@ async def pinterest_relogin(session_type: str = "uploader", domain_handle: str =
     last_result: dict = {}
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            result = await _do_pinterest_login_attempt(session_dir, email, password, attempt)
+            result = await _do_pinterest_login_attempt(
+                session_dir,
+                email,
+                password,
+                attempt,
+                verification_mode=session_type,
+            )
         except Exception as e:
             result = {
                 "success": False,
@@ -3517,6 +4587,9 @@ async def pinterest_relogin(session_type: str = "uploader", domain_handle: str =
 
         if result.get("success"):
             result["attempt"] = attempt
+            result["domain_handle"] = domain.handle
+            result["account_handle"] = account_handle
+            result["session_name"] = session_dir.name
             return result
 
         if not result.get("retryable", True):
@@ -3527,36 +4600,101 @@ async def pinterest_relogin(session_type: str = "uploader", domain_handle: str =
         if attempt < MAX_ATTEMPTS:
             await asyncio.sleep(attempt * 3)
 
+    last_failure = str(last_result.get("message") or last_result.get("error") or "unknown failure")
+    last_result["last_failure"] = last_failure[:300]
     last_result["attempt"] = MAX_ATTEMPTS
     last_result["message"] = f"All {MAX_ATTEMPTS} attempts failed. Manual login may be required."
     return last_result
 
 
 @mcp.tool()
-def reset_stuck_keywords(domain_handle: str = "") -> dict:
+def reset_stuck_keywords(domain_handle: str = "", max_age_hours: int = 4, force: bool = False) -> dict:
     """
-    Startup watchdog: resets any keywords stuck in 'In Progress' back to 'Pending'.
-    Call this at the start of every session to ensure no keywords are permanently blocked.
-    Returns: {reset_count, keywords_reset}
+    Startup watchdog: resets keywords stuck in 'In Progress' back to 'Pending'.
+
+    By default only resets keywords that have been In Progress for more than
+    ``max_age_hours`` (default 4 h). If no timestamp is found in Notes, the
+    keyword is reset unconditionally (backwards compat).
+
+    If ``force`` is True, resets ALL In Progress keywords regardless of age.
+
+    Cross-checks with Supabase: if the keyword's slug already has a live article,
+    it is marked 'Live' instead of 'Pending'.
+
+    Returns: {reset_count, promoted_live, keywords_reset}
     """
+    from datetime import datetime as _dt
+
     domain = get_registry().get(domain_handle)
     kw_file = domain.keywords_file
     if not kw_file.exists():
         return {"reset_count": 0, "error": f"keywords file not found for {domain.handle}"}
+
+    now = _dt.now(UTC)
     content = kw_file.read_text(encoding="utf-8")
     lines = content.split("\n")
     reset = []
+    promoted_live = []
+
     for i, line in enumerate(lines):
-        if "In Progress" in line and "|" in line:
-            parts = line.split("|")
-            if len(parts) >= 7:
-                keyword = parts[1].strip()
-                parts[-2] = " Pending "
-                lines[i] = "|".join(parts)
-                reset.append(keyword)
-    if reset:
+        if "In Progress" not in line or "|" not in line:
+            continue
+        parts = line.split("|")
+        if len(parts) < 7:
+            continue
+        keyword = parts[1].strip()
+
+        # Age check (unless force=True)
+        if not force:
+            notes_col = parts[-1].strip() if len(parts) >= 8 else ""
+            import re as _re_ts
+
+            ts_match = _re_ts.search(r"reserved (\d{4}-\d{2}-\d{2}T\d{2}:\d{2})", notes_col)
+            if ts_match:
+                try:
+                    reserved_at = _dt.strptime(ts_match.group(1), "%Y-%m-%dT%H:%M").replace(tzinfo=UTC)
+                    age_hours = (now - reserved_at).total_seconds() / 3600
+                    if age_hours < max_age_hours:
+                        continue  # Not stale yet
+                except Exception:
+                    pass  # Parse error → treat as stale
+
+        # Cross-check with Supabase — if article already exists, mark Live
+        slug_val = slugify(keyword).get("slug", "")
+        is_live_in_supabase = False
+        if slug_val:
+            try:
+                sb_result = get_article_data_from_supabase_by_slug(slug_val, domain_handle=domain.handle)
+                if sb_result.get("found") and sb_result.get("article"):
+                    is_live_in_supabase = True
+            except Exception:
+                pass
+
+        if is_live_in_supabase:
+            parts[-2] = " Live "
+            promoted_live.append(keyword)
+        else:
+            parts[-2] = " Pending "
+            reset.append(keyword)
+
+        # Clear the lease timestamp from notes
+        if len(parts) >= 8:
+            import re as _re_clean
+
+            parts[-1] = _re_clean.sub(r"reserved \S+", "", parts[-1]).strip() + " "
+
+        lines[i] = "|".join(parts)
+
+    if reset or promoted_live:
         kw_file.write_text("\n".join(lines), encoding="utf-8")
-    return {"reset_count": len(reset), "keywords_reset": reset, "domain": domain.handle}
+
+    return {
+        "reset_count": len(reset),
+        "promoted_live": len(promoted_live),
+        "keywords_reset": reset,
+        "keywords_promoted_live": promoted_live,
+        "domain": domain.handle,
+    }
 
 
 @mcp.tool()
@@ -3636,10 +4774,7 @@ def get_project_status(domain_handle: str = "") -> dict:
 
 @mcp.tool()
 def build_supabase_content(
-    keyword: str, 
-    hero_image_url: str, 
-    article_json: str,
-    pinterest_pin_id: str = ""
+    keyword: str, hero_image_url: str, article_json: str, pinterest_pin_id: str = ""
 ) -> dict:
     """
     Merge a generated article JSON string with the hero image URL and
@@ -3658,7 +4793,7 @@ def build_supabase_content(
         content = article.get("content", "")
         content = content.replace("[HERO_IMAGE]", hero_html)
         content = content.replace("[HERO_IMAGE_URL]", hero_image_url)
-        
+
         # Pinterest Iframe Replacement
         pin_html = ""
         if pinterest_pin_id:
@@ -3666,26 +4801,26 @@ def build_supabase_content(
                 f'<div class="pinterest-container my-8 flex justify-center">\n'
                 f'  <iframe src="https://assets.pinterest.com/ext/embed.html?id={pinterest_pin_id}" '
                 f'height="714" width="450" frameborder="0" scrolling="no" class="rounded-xl shadow-md max-w-full"></iframe>\n'
-                f'</div>'
+                f"</div>"
             )
-        
+
         content = content.replace("[PINTEREST_IFRAME]", pin_html)
         content = content.replace("[PINTEREST_IFRAME_STEPS]", "")
         content = content.replace("[PINTEREST_IFRAME_FINAL]", "")
-        
+
         # New: YouTube Video placeholder replacement
         # Matches [YOUTUBE_VIDEO:https://www.youtube.com/embed/XXXXXX]
         video_pattern = r"\[YOUTUBE_VIDEO:(https?://(?:www\.)?youtube\.com/embed/[^\]]+)\]"
-        
+
         def _make_video_html(match):
             url = match.group(1)
             return (
                 f'<div class="video-container my-8 relative pb-[56.25%] h-0 overflow-hidden rounded-xl shadow-lg">\n'
                 f'  <iframe src="{url}" frameborder="0" allowfullscreen '
                 f'class="absolute top-0 left-0 w-full h-full"></iframe>\n'
-                f'</div>'
+                f"</div>"
             )
-            
+
         content = re.sub(video_pattern, _make_video_html, content)
         article["content"] = content
 
@@ -3696,7 +4831,7 @@ def build_supabase_content(
             schema = schema.replace("[HERO_IMAGE]", hero_image_url)
             try:
                 schema = json.loads(schema)
-            except:
+            except Exception:
                 pass  # Keep as string if it fails, publish_article_to_supabase will try again
         elif isinstance(schema, dict):
             # Surgical replacement in dictionary
@@ -3735,7 +4870,7 @@ def publish_from_payload(payload_json: str) -> dict:
             slug=p.get("slug", ""),
             content=p.get("content", ""),
             excerpt=p.get("excerpt", ""),
-            category=p.get("category", "Aperitivos"),
+            category=p.get("category") or "",
             featured_image_url=p.get("featured_image", ""),
             meta_title=p.get("meta_title", ""),
             meta_description=p.get("meta_description", ""),
@@ -3754,6 +4889,7 @@ def publish_from_payload(payload_json: str) -> dict:
             if isinstance(p.get("faq_schema"), list)
             else p.get("faq_schema", "[]"),
             pinterest_pin_id=p.get("pinterest_pin_id", ""),
+            domain_handle=p.get("domain_handle", ""),
         )
     except Exception as e:
         logger.error(f"publish_from_payload failed: {e}")
@@ -3774,6 +4910,7 @@ def _ensure_automation_on_path():
 _ensure_automation_on_path()
 
 try:
+    from pinterest_automation.config import normalize_board_name
     from pinterest_automation.mcp_integration import (
         enqueue_pin_mcp,
         get_automation_status,
@@ -3840,6 +4977,8 @@ def automation_enqueue_pin(
     alt_text: str = "",
     board_name: str = "",
     priority: int = 5,
+    account_handle: str = "",
+    domain_handle: str = "",
 ) -> dict:
     """
     Enqueue a pin upload job to the persistent queue.
@@ -3855,8 +4994,10 @@ def automation_enqueue_pin(
             description=description,
             link=link,
             alt_text=alt_text,
-            board_name=board_name,
+            board_name=normalize_board_name(board_name),
             priority=priority,
+            account_handle=account_handle,
+            domain_handle=domain_handle,
         )
     except Exception as e:
         logger.error(f"automation_enqueue_pin failed: {e}")
@@ -3871,23 +5012,95 @@ async def automation_upload_pin_direct(
     link: str = "",
     alt_text: str = "",
     board_name: str = "",
+    domain_handle: str = "",
+    account_handle: str = "",
 ) -> dict:
     """
     Upload a pin IMMEDIATELY using the new production driver with self-healing.
-    This bypasses the queue and runs synchronously.
+    This bypasses the queue for the primary upload, then enqueues cross-save
+    jobs for the other configured Pinterest accounts when a pin URL is returned.
     Returns: {success, pin_id, pin_url, error}
     """
     if not _AUTO_AVAILABLE:
         return {"success": False, "error": "Automation engine not available"}
+    if not domain_handle:
+        return {"success": False, "error": "domain_handle is required"}
     try:
-        return await upload_pin_via_driver(
+        normalized_board = normalize_board_name(board_name)
+        result = await upload_pin_via_driver(
             image_path=image_path,
             title=title,
             description=description,
             link=link,
             alt_text=alt_text,
-            board_name=board_name,
+            board_name=normalized_board,
+            domain_handle=domain_handle,
+            account_handle=account_handle,
         )
+        if result.get("success") and result.get("pin_url"):
+            try:
+                from pinterest_automation import get_config, get_job_queue
+                from pinterest_automation.job_queue import Job
+                from pinterest_automation.routing import cross_save_targets
+
+                cfg = get_config()
+                queue = get_job_queue()
+                from pinterest_automation.routing import select_upload_account
+
+                source_handle = account_handle.strip() or select_upload_account(
+                    domain_handle,
+                    link or image_path,
+                    config=cfg,
+                )
+                if not source_handle:
+                    source_handle = (
+                        os.environ.get("PINTEREST_DEFAULT_ACCOUNT_HANDLE")
+                        or os.environ.get("PINTEREST_ACCOUNT_HANDLE")
+                        or "rida"
+                    ).strip()
+
+                if source_handle not in cfg.accounts:
+                    if source_handle.startswith("r") and "rida" in cfg.accounts:
+                        source_handle = "rida"
+                    elif source_handle.startswith("m") and "media" in cfg.accounts:
+                        source_handle = "media"
+
+                cross_save_jobs = []
+                for target_handle in cross_save_targets(
+                    domain_handle,
+                    source_handle,
+                    config=cfg,
+                ):
+                    job_id = await queue.enqueue_async(
+                        Job(
+                            type="pin_save",
+                            payload={
+                                "pin_url": result["pin_url"],
+                                "account_handle": target_handle,
+                                "board_name": normalized_board,
+                                "domain_handle": domain_handle,
+                                "source": "automation_upload_pin_direct",
+                            },
+                            priority=3,
+                        )
+                    )
+                    cross_save_jobs.append({"job_id": job_id, "account_handle": target_handle})
+
+                result["cross_save_jobs"] = cross_save_jobs
+                if cross_save_jobs:
+                    logger.info(
+                        "automation_upload_pin_direct queued %d cross-save job(s) for %s",
+                        len(cross_save_jobs),
+                        result["pin_url"],
+                    )
+            except Exception as enqueue_exc:
+                logger.warning(
+                    "automation_upload_pin_direct primary upload succeeded but cross-save enqueue failed: %s",
+                    enqueue_exc,
+                )
+                result["cross_save_error"] = str(enqueue_exc)[:500]
+        return result
+
     except Exception as e:
         logger.error(f"automation_upload_pin_direct failed: {e}")
         return {"success": False, "error": str(e)}
@@ -3923,7 +5136,219 @@ def automation_purge_queue() -> dict:
         return {"success": False, "error": str(e)}
 
 
+@mcp.tool()
+def automation_requeue_dlq() -> dict:
+    """
+    Selectively requeue DLQ jobs whose errors are transient (timeout, lock, login,
+    publish button, etc.). Permanent failures (missing image, unknown account) are
+    skipped. Returns {requeued, skipped, details}.
+    """
+    if not _AUTO_AVAILABLE:
+        return {"success": False, "error": "Automation engine not available"}
+    try:
+        from pinterest_automation import get_job_queue
+
+        result = get_job_queue().requeue_transient_dlq()
+        return {"success": True, **result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
+@mcp.tool()
+def run_turbo_articles_pipeline(once: bool = True, all_domains: bool = True) -> dict:
+    """
+    Start the turbo_articles.py pipeline in the background.
+    This generates articles and hero images autonomously.
+    """
+    import subprocess
+    import sys
+
+    from rankstein.runtime_env import clean_python_env
+
+    PROJECT_ROOT = Path(__file__).resolve().parent
+    cmd = [sys.executable, str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py")]
+    if once:
+        cmd.append("--once")
+    if all_domains:
+        cmd.append("--all-domains")
+
+    cmd_str = " ".join(cmd)
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=clean_python_env(),
+            start_new_session=True,
+        )
+        logger.info("run_turbo_articles_pipeline: launched pid=%d", proc.pid)
+        return {
+            "success": True,
+            "pid": proc.pid,
+            "command": cmd_str,
+            "message": "Turbo articles pipeline started in the background.",
+        }
+    except Exception as e:
+        logger.error("run_turbo_articles_pipeline: failed to launch: %s", e)
+        return {"success": False, "error": str(e), "command": cmd_str}
+
+
+@mcp.tool()
+def run_bulk_pinterest_supervisor(limit: int = 0) -> dict:
+    """
+    Start the batch_upload_remastered.py pipeline in the background.
+    This cleans up the workspace and bulk uploads pending Pinterest pins.
+    """
+    import subprocess
+    import sys
+
+    from rankstein.runtime_env import clean_python_env
+
+    PROJECT_ROOT = Path(__file__).resolve().parent
+    cmd = [sys.executable, str(PROJECT_ROOT / "backend" / "scripts" / "batch_upload_remastered.py")]
+    if limit > 0:
+        cmd.extend(["--limit", str(limit)])
+
+    cmd_str = " ".join(cmd)
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=clean_python_env(),
+            start_new_session=True,
+        )
+        logger.info("run_bulk_pinterest_supervisor: launched pid=%d", proc.pid)
+        return {
+            "success": True,
+            "pid": proc.pid,
+            "command": cmd_str,
+            "message": "Bulk Pinterest supervisor started in the background.",
+        }
+    except Exception as e:
+        logger.error("run_bulk_pinterest_supervisor: failed to launch: %s", e)
+        return {"success": False, "error": str(e), "command": cmd_str}
+
+
+@mcp.tool()
+def run_article_remaster_campaign(
+    keyword: str,
+    title: str,
+    slug: str,
+    domain_handle: str = "",
+    category: str = "",
+    pins_per_keyword: int = 30,
+) -> dict:
+    """
+    Launch the article-specific Pinterest image scrape/remaster/enqueue campaign.
+
+    The campaign loads the published article's real recipe context, accepts 15
+    relevant source images, and creates two atomic domain-aware variants per
+    source for a 30-asset target.
+    """
+    import subprocess
+    import sys
+
+    from rankstein.domain import get_registry
+    from rankstein.prompts import build_recipe_image_scrape_brief
+    from rankstein.runtime_env import clean_python_env
+
+    try:
+        registry = get_registry()
+        domain = registry.get(domain_handle) if domain_handle else registry.default
+        article = get_article_data_from_supabase_by_slug(slug, domain.handle)
+        if not article.get("success"):
+            return {
+                "success": False,
+                "error": f"Cannot load published article recipe context: {article.get('error', '')}",
+                "domain": domain.handle,
+            }
+        recipe_schema = article.get("recipe_schema") or {}
+        ingredients = [
+            str(item).strip() for item in recipe_schema.get("recipeIngredient", []) if str(item).strip()
+        ]
+        steps = [
+            str(item.get("text", "") if isinstance(item, dict) else item).strip()
+            for item in recipe_schema.get("recipeInstructions", [])
+            if str(item.get("text", "") if isinstance(item, dict) else item).strip()
+        ]
+        if not ingredients or not steps:
+            return {
+                "success": False,
+                "error": "Published article is missing real recipe ingredients or preparation steps",
+                "domain": domain.handle,
+                "slug": slug,
+            }
+        actual_title = str(article.get("title") or title or keyword).strip()
+        actual_category = str(article.get("category") or category).strip()
+        brief = build_recipe_image_scrape_brief(
+            actual_title,
+            domain=domain,
+            category=actual_category,
+        )
+        # The production campaign is one indivisible proof unit.  Caller input
+        # may not weaken the required 15-source / 30-asset contract.
+        safe_count = 30
+        cmd = [
+            sys.executable,
+            str(PROJECT_ROOT / "backend" / "services" / "remasterer.py"),
+            actual_title,
+            actual_title,
+            "--pins-per-keyword",
+            str(safe_count),
+            "--search-query",
+            brief.get("search_query", keyword),
+            "--search-queries-json",
+            json.dumps(brief.get("search_queries", []), ensure_ascii=True),
+            "--core-terms",
+            ",".join(brief.get("core_terms", [])),
+            "--min-core-matches",
+            str(brief.get("min_core_matches", 1)),
+            "--expected-terms",
+            ",".join(brief.get("expected_terms", [])),
+            "--blocked-terms",
+            ",".join(brief.get("blocked_terms", [])),
+            "--enqueue-after",
+            "--slug",
+            slug,
+            "--domain-url",
+            domain.domain,
+            "--domain-handle",
+            domain.handle,
+            "--recipe-ingredients-json",
+            json.dumps(ingredients, ensure_ascii=False),
+            "--recipe-steps-json",
+            json.dumps(steps, ensure_ascii=False),
+            "--tip-text",
+            str(article.get("chef_tip") or ""),
+        ]
+        log_dir = PROJECT_ROOT / "data" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(PROJECT_ROOT),
+            stdout=open(str(log_dir / "remasterer.log"), "a", encoding="utf-8"),
+            stderr=open(str(log_dir / "remasterer_err.log"), "a", encoding="utf-8"),
+            stdin=subprocess.DEVNULL,
+            env=clean_python_env(),
+        )
+        return {
+            "success": True,
+            "pid": proc.pid,
+            "domain": domain.handle,
+            "pins_per_keyword": safe_count,
+            "source_target": safe_count // 2,
+            "variants": ["viral_visual", "recipe_card"],
+            "scrape_brief": brief,
+        }
+    except Exception as e:
+        logger.error("run_article_remaster_campaign failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
 if __name__ == "__main__":
     import sys
 

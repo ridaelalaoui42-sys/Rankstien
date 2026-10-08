@@ -40,6 +40,8 @@ from batch_upload_remastered import (
 batch_upload_remastered.PINTEREST_BASE = "https://www.pinterest.com"
 
 from pinterest_automation.circuit_breaker import get_circuit_breaker
+from pinterest_automation.config import resolve_account_board_name
+
 circuit = get_circuit_breaker()
 
 
@@ -112,7 +114,7 @@ DEFAULT_BROWSER_MAP = {
     "rida_v2_3": "chromium",
     "remasterer_v1": "firefox",
     "harvester_v1": "firefox",
-    "pinterest_rida_v7": "firefox",
+    "pinterest_rida_v7": "chromium",
 }
 SESSION_LOCK_FILES = ("parent.lock", ".parentlock", "lock")
 SESSION_STALE_GLOBS = ("*.pid", "*.tmp", "lock.*", "*-wal", "*-shm")
@@ -145,8 +147,10 @@ class PinterestAccount:
 class BrowserSessionLost(RuntimeError):
     """Raised when Playwright's Firefox context is no longer usable."""
 
+
 class PinCreationError(RuntimeError):
     """Raised when the pin automation flow fails cleanly."""
+
     """Raised when Playwright's Firefox context is no longer usable."""
 
 
@@ -445,7 +449,6 @@ def filter_available_accounts(accounts):
 def normalize_seo(text):
     if not text:
         return ""
-    import unicodedata
 
     text = "".join(c for c in unicodedata.normalize("NFD", str(text)) if unicodedata.category(c) != "Mn")
     return re.sub(r"[^a-z0-9\s]", "", text.lower()).strip()
@@ -759,10 +762,39 @@ async def wait_for_upload_ready(page, worker_id, timeout_seconds=120):
     """Wait until Pinterest has accepted the media and unlocked the editor."""
     deadline = time.time() + timeout_seconds
     last_state = {}
+
+    title_selectors = [
+        "#storyboard-selector-title",
+        '[data-test-id="pin-draft-title"] textarea',
+        'input[placeholder*="title" i]',
+        'input[placeholder*="titulo" i]',
+        'textarea[placeholder*="title" i]',
+        'textarea[placeholder*="titulo" i]',
+        'div[contenteditable="true"]',
+    ]
+
+    board_selectors = [
+        '[data-test-id="board-dropdown-select-button"]',
+        '[aria-label*="Select board" i]',
+        '[aria-label*="Choose a board" i]',
+        'button:has-text("Choose a board")',
+        'button:has-text("Selecciona un tablero")',
+    ]
+
     while time.time() < deadline:
         try:
-            title = await page.query_selector("#storyboard-selector-title")
-            board = await page.query_selector('[data-test-id="board-dropdown-select-button"]')
+            title = None
+            for sel in title_selectors:
+                title = await page.query_selector(sel)
+                if title:
+                    break
+
+            board = None
+            for sel in board_selectors:
+                board = await page.query_selector(sel)
+                if board:
+                    break
+
             upload_error = page.get_by_text(
                 re.compile(r"reached the limit|límite|limite|failed|error", re.I)
             ).first
@@ -772,17 +804,14 @@ async def wait_for_upload_ready(page, worker_id, timeout_seconds=120):
             except Exception:
                 error_visible = False
 
-            title_disabled = await is_disabled(title) if title else True
-            board_disabled = await is_disabled(board) if board else True
             last_state = {
                 "title_present": bool(title),
-                "title_disabled": title_disabled,
                 "board_present": bool(board),
-                "board_disabled": board_disabled,
                 "upload_error_visible": error_visible,
             }
-            if title and board and not title_disabled and not board_disabled and not error_visible:
+            if title and not error_visible:
                 return True
+
         except Exception as exc:
             last_state = {"error": str(exc)}
         await asyncio.sleep(2)
@@ -799,445 +828,95 @@ async def wait_for_upload_ready(page, worker_id, timeout_seconds=120):
 
 
 async def select_board(page, board_name, worker_id):
+    """
+    Select the configured live board, falling back only when Pinterest does not expose it.
+    """
     if not circuit.can_execute(f"board_selection:{worker_id}"):
         logger.warning(f"{worker_id}: circuit for board selection is OPEN; skipping interaction")
         return False
 
-    # Try multiple selectors for the board button
-    selectors = [
-        '[data-test-id="board-dropdown-select-button"]',
-        '[aria-label*="Select board" i]',
-        '[aria-label*="Choose a board" i]',
-        'button:has-text("Choose a board")',
-        'button:has-text("Selecciona un tablero")',
-    ]
+    try:
+        account_handle = str(worker_id).removeprefix("driver-")
+        board_name = resolve_account_board_name(board_name, account_handle)
+        logger.info(f"[{worker_id}] Selecting configured board: {board_name}")
 
-    board_button = None
-    for sel in selectors:
-        try:
-            el = await page.wait_for_selector(sel, timeout=3000, state="attached")
-            if el and await el.is_visible():
-                board_button = el
-                break
-        except:
-            continue
-
-    if not board_button:
-        # Fallback to the first one anyway if nothing visible
-        try:
-            board_button = await page.wait_for_selector(
-                '[data-test-id="board-dropdown-select-button"]', timeout=5000, state="attached"
-            )
-        except:
-            logger.error(f"{worker_id}: board button not found")
-            return False
-
-    async def board_label():
-        try:
-            text = await board_button.evaluate("(el) => (el.innerText || el.textContent || '').trim()")
-            return re.sub(r"\s+", " ", text or "")
-        except Exception:
-            return ""
-
-    async def board_selected():
-        label = await board_label()
-        # English: 'Choose a board', 'Board', etc.
-        if label and not re.search(r"Choose a board|Selecciona|Elige|Board|Select board", label, re.I):
-            return label
-        return ""
-
-    async def open_dropdown():
-        async def is_open():
-            try:
-                # English 'All boards', 'Found X boards', etc.
-                if await page.get_by_text(
-                    re.compile(r"All boards|Todos los tableros|Found \d+ boards", re.I)
-                ).first.is_visible(timeout=700):
-                    return True
-            except Exception:
-                return False
-            return False
-
-        for _ in range(3):
-            if await is_open():
-                return True
-            try:
-                await board_button.scroll_into_view_if_needed()
-                await board_button.click(force=True, timeout=3000)
-            except Exception:
-                # Try clicking by coordinates as fallback
-                try:
-                    box = await board_button.bounding_box()
-                    if box:
-                        await page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-                except:
-                    pass
-
-            await asyncio.sleep(1.5)
-            if await is_open():
-                return True
-        return False
-
-    async def log_board_diagnostics(reason):
-        try:
-            button_box = await board_button.bounding_box()
-            options = await page.evaluate(
-                """(buttonRect) => {
-                    const visible = (el) => {
-                        const r = el.getBoundingClientRect();
-                        const s = window.getComputedStyle(el);
-                        return !!(r.width && r.height) && s.display !== 'none' && s.visibility !== 'hidden';
-                    };
-                    return Array.from(document.querySelectorAll('button, [role="button"], [role="option"], [role="menuitem"], div, span, input'))
-                        .map((el) => {
-                            const r = el.getBoundingClientRect();
-                            const text = (el.innerText || el.textContent || el.value || '').trim().replace(/\\s+/g, ' ');
-                            return {
-                                tag: el.tagName,
-                                role: el.getAttribute('role') || '',
-                                testid: el.getAttribute('data-test-id') || '',
-                                aria: el.getAttribute('aria-label') || '',
-                                text: text.slice(0, 120),
-                                box: [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)],
-                                near: buttonRect && r.x >= buttonRect.x - 120 && r.x <= buttonRect.x + buttonRect.width + 240 && r.y >= buttonRect.y - 40 && r.y <= buttonRect.y + 520
-                            };
-                        })
-                        .filter((x) => x.text && (x.near || /Aperitivos|Arroces|Paella|All boards|Choose a board|Tag Products|Create board/i.test(x.text) || /board/i.test(x.testid)))
-                        .slice(0, 40);
-                }""",
-                button_box,
-            )
-            logger.error(
-                f"{worker_id}: board diagnostics ({reason}): {json.dumps(options, ensure_ascii=False)}"
-            )
-            await page.screenshot(
-                path=str(project_root / "data" / f"board_selection_failed_{_safe_worker_id(worker_id)}.png"),
-                full_page=True,
-            )
-        except Exception as exc:
-            logger.error(f"{worker_id}: board diagnostics failed: {exc}")
-
-    async def find_board_search_input():
-        """Return an enabled board-search input, avoiding Pinterest tag/product search fields."""
-        selectors = [
-            'input[data-test-id="search-boards-field"]',
-            '[data-test-id="search-boards-field"] input',
-            'input[placeholder*="board" i]',
-            'input[placeholder*="tablero" i]',
-            'input[aria-label*="board" i]',
-            'input[aria-label*="tablero" i]',
-            'input[placeholder*="search" i]',
-            'input[placeholder*="buscar" i]',
+        # 1. Open dropdown
+        dropdown_selectors = [
+            '[data-test-id="board-dropdown-select-button"]',
+            '[aria-label*="Choose a board" i]',
+            '[aria-label*="Select board" i]',
+            'div[role="button"]:has-text("Choose a board")',
+            'div[role="button"]:has-text("Selecciona un tablero")',
+            'button:has-text("Choose a board")',
+            'button:has-text("Selecciona un tablero")',
         ]
-        for sel in selectors:
+
+        board_btn = None
+        for sel in dropdown_selectors:
             try:
-                matches = page.locator(sel)
-                for index in range(await matches.count()):
-                    element = await matches.nth(index).element_handle()
-                    if not element:
-                        continue
-                    if await is_disabled(element):
-                        continue
-                    meta = await element.evaluate(
-                        """(el) => [
-                            el.id || '',
-                            el.name || '',
-                            el.placeholder || '',
-                            el.getAttribute('aria-label') || '',
-                            el.getAttribute('data-test-id') || '',
-                            el.getAttribute('role') || ''
-                        ].join(' ').toLowerCase()"""
-                    )
-                    if re.search(r"tag|interest|product|topic|etiqueta|producto|tema", meta):
-                        continue
-                    return element
-            except Exception:
-                continue
-        return None
-
-    async def create_board_from_picker():
-        """Create the requested board from Pinterest's board picker when no match exists."""
-        try:
-            create_button = page.locator('[data-test-id="create-board-button"]').first
-            if not await create_button.count():
-                create_button = page.get_by_text(re.compile(r"^Create board$|^Crear tablero$", re.I)).first
-            if not await create_button.count() or not await create_button.is_visible(timeout=1500):
-                return False
-            logger.info(f"{worker_id}: creating missing board {board_name}")
-            await create_button.click(force=True, timeout=3000)
-            await asyncio.sleep(2)
-
-            name_selectors = [
-                'input[name="name"]',
-                'input[placeholder*="Name" i]',
-                'input[placeholder*="Nombre" i]',
-                'input[aria-label*="Name" i]',
-                'input[aria-label*="Nombre" i]',
-                'input[type="text"]',
-            ]
-            name_input = None
-            for selector in name_selectors:
-                locator = page.locator(selector)
-                for index in range(await locator.count()):
-                    candidate = locator.nth(index)
-                    try:
-                        if await candidate.is_visible(timeout=1000) and await candidate.is_enabled(timeout=1000):
-                            name_input = candidate
-                            break
-                    except Exception:
-                        continue
-                if name_input:
+                loc = await page.query_selector(sel)
+                if loc and await loc.is_visible():
+                    board_btn = loc
                     break
-            if not name_input:
-                logger.error(f"{worker_id}: create-board name input not found")
-                return False
+            except:
+                continue
 
-            await name_input.fill(board_name)
-            await asyncio.sleep(0.5)
+        if not board_btn:
+            logger.warning(f"[{worker_id}] Board dropdown button not found or not visible")
+            return False
 
-            done_locators = [
-                page.get_by_role("button", name=re.compile(r"^Create$|^Done$|^Crear$|^Listo$", re.I)),
-                page.locator("button").filter(has_text=re.compile(r"^Create$|^Done$|^Crear$|^Listo$", re.I)),
-                page.locator('[data-test-id*="create" i] button'),
-            ]
-            for locator in done_locators:
-                for index in range(await locator.count()):
-                    button = locator.nth(index)
-                    try:
-                        if await button.is_visible(timeout=1000) and await button.is_enabled(timeout=1000):
-                            await button.click(force=True, timeout=3000)
-                            await asyncio.sleep(3)
-                            selected = await board_selected()
-                            if selected and board_matches(selected, board_name):
-                                logger.info(f"{worker_id}: created and selected board {selected}")
-                                return True
-                            # Some flows create the board but leave the picker open; select it by name.
-                            row = await page.query_selector(
-                                f'[data-test-id="boardWithoutSection"]:has-text("{board_name}"), [data-test-id="board-row"]:has-text("{board_name}"), [role="option"]:has-text("{board_name}")'
-                            )
-                            if row:
-                                await row.click(force=True)
-                                await asyncio.sleep(2)
-                                selected = await board_selected()
-                                if selected and board_matches(selected, board_name):
-                                    logger.info(f"{worker_id}: created then selected board {selected}")
-                                    return True
-                    except Exception:
-                        continue
+        logger.info(f"[{worker_id}] Clicking board dropdown...")
+        await board_btn.click(force=True)
+        await asyncio.sleep(2)
+
+        # 2. Search first because Pinterest virtualizes long board lists.
+        try:
+            search = await page.query_selector(
+                'input[placeholder*="Search" i], input[placeholder*="Buscar" i], input[aria-label*="Search" i], input[aria-label*="Buscar" i]'
+            )
+            if search:
+                await search.fill(board_name)
+                await asyncio.sleep(1.5)
         except Exception as exc:
-            logger.debug(f"{worker_id}: create-board fallback failed: {exc}")
+            if is_browser_session_lost(exc):
+                raise BrowserSessionLost(str(exc)) from exc
+            logger.warning(f"[{worker_id}] Board search failed for {board_name}: {exc}")
+
+        # 3. Match a concrete board row, click its button, then verify the field changed.
+        target = normalize_seo(board_name)
+        rows = page.locator('[data-test-id="boardWithoutSection"][role="listitem"], [role="option"]')
+        for index in range(await rows.count()):
+            row = rows.nth(index)
+            try:
+                if not await row.is_visible():
+                    continue
+                if normalize_seo(await row.inner_text()) != target:
+                    continue
+                clickable = row.locator('[role="button"]').first
+                if await clickable.count():
+                    await clickable.click(force=True)
+                else:
+                    await row.click(force=True)
+                await asyncio.sleep(1)
+                selected_text = normalize_seo(await board_btn.inner_text())
+                if target and target in selected_text:
+                    logger.info(f"[{worker_id}] Selected and verified configured board: {board_name}")
+                    circuit.record_success(f"board_selection:{worker_id}")
+                    return True
+                logger.warning(f"[{worker_id}] Board click did not update selection to {board_name}")
+            except Exception as exc:
+                if is_browser_session_lost(exc):
+                    raise BrowserSessionLost(str(exc)) from exc
+                logger.debug(f"[{worker_id}] Board row candidate failed: {exc}")
+
+        logger.warning(f"[{worker_id}] Board selection failed: no options found")
+        circuit.record_failure(f"board_selection:{worker_id}")
         return False
 
-    def candidate_boards():
-        candidates = [
-            board_name,
-            board_name.split(" y ")[0],
-            board_name.split(" & ")[0],
-            "Aperitivos",
-            "Arroces",
-            "Arroces & Paella",
-            "Postres",
-            "Ensaladas",
-            "Carnes",
-        ]
-        deduped = []
-        seen = set()
-        for candidate in candidates:
-            candidate = re.sub(r"\s+", " ", str(candidate or "").strip())
-            if not candidate:
-                continue
-            key = candidate.casefold()
-            if key not in seen:
-                seen.add(key)
-                deduped.append(candidate)
-        return deduped
-
-    def board_norm(value):
-        value = str(value or "").casefold()
-        value = "".join(
-            c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c)
-        )
-        value = re.sub(r"[^a-z0-9]+", " ", value)
-        return re.sub(r"\s+", " ", value).strip()
-
-    def board_matches(selected, candidate):
-        selected_norm = board_norm(selected)
-        candidate_norm = board_norm(candidate)
-        if not selected_norm or not candidate_norm:
-            return False
-        if candidate_norm in selected_norm or selected_norm in candidate_norm:
-            return True
-        selected_tokens = {token for token in selected_norm.split() if len(token) >= 4}
-        candidate_tokens = {token for token in candidate_norm.split() if len(token) >= 4}
-        return bool(selected_tokens & candidate_tokens)
-
-    for click_attempt in range(3):
-        opened = await open_dropdown()
-        if not opened:
-            logger.info(f"{worker_id}: board dropdown did not open on attempt {click_attempt + 1}")
-            continue
-
-        # Try search-based selection first
-        try:
-            search_input = await find_board_search_input()
-            if search_input:
-                logger.info(f"{worker_id}: using search to find board {board_name}")
-                await search_input.fill(board_name)
-                await asyncio.sleep(2)
-                for candidate in candidate_boards():
-                    first_row = await page.query_selector(
-                        f'[data-test-id="boardWithoutSection"]:has-text("{candidate}"), [data-test-id="board-row"]:has-text("{candidate}"), [role="option"]:has-text("{candidate}")'
-                    )
-                    if not first_row:
-                        continue
-                    await first_row.click(force=True)
-                    await asyncio.sleep(2)
-                    selected = await board_selected()
-                    if selected and board_matches(selected, candidate):
-                        logger.info(f"{worker_id}: selected board {selected} via search")
-                        return True
-                    if selected:
-                        logger.warning(
-                            f"{worker_id}: rejected board mismatch via search: requested={candidate}, selected={selected}"
-                        )
-                if await create_board_from_picker():
-                    return True
-        except Exception as e:
-            logger.debug(f"{worker_id}: search selection failed: {e}")
-
-        button_box = await board_button.bounding_box()
-        for candidate in candidate_boards():
-            try:
-                # Prioritize board rows with the candidate name
-                selectors = [
-                    f'[data-test-id="boardWithoutSection"]:has-text("{candidate}")',
-                    f'[data-test-id="board-row"]:has-text("{candidate}")',
-                    f'div[role="option"]:has-text("{candidate}")',
-                    f'div[role="listitem"]:has-text("{candidate}")',
-                ]
-
-                for sel in selectors:
-                    matches = page.locator(sel)
-                    count = await matches.count()
-                    if count > 0:
-                        for index in range(count):
-                            option = matches.nth(index)
-                            try:
-                                box = await option.bounding_box(timeout=1000)
-                            except:
-                                box = None
-
-                            if not box or not button_box:
-                                continue
-                            # Ensure it's in the dropdown (below the button or near it)
-                            if box["y"] < button_box["y"]:
-                                continue
-
-                            await option.click(force=True, timeout=3000)
-                            await asyncio.sleep(2)
-                            selected = await board_selected()
-                            if selected and board_matches(selected, candidate):
-                                logger.info(f"{worker_id}: selected board {selected} via {sel}")
-                                return True
-                            if selected:
-                                logger.warning(
-                                    f"{worker_id}: rejected board mismatch via {sel}: requested={candidate}, selected={selected}"
-                                )
-
-                # Fallback to pure text match if no specific selectors found
-                matches = page.get_by_text(candidate, exact=True)
-                count = await matches.count()
-                for index in range(count - 1, -1, -1):
-                    option = matches.nth(index)
-                    try:
-                        box = await option.bounding_box(timeout=1000)
-                    except Exception:
-                        box = None
-                    if not box or not button_box:
-                        pass
-                    elif box["x"] < button_box["x"] - 80 or box["y"] < button_box["y"] + button_box["height"]:
-                        continue
-                    try:
-                        await option.click(force=True, timeout=3000)
-                    except Exception:
-                        await page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-                    await asyncio.sleep(2)
-                    selected = await board_selected()
-                    if selected and board_matches(selected, candidate):
-                        logger.info(f"{worker_id}: selected board {selected} via text match")
-                        return True
-                    if selected:
-                        logger.warning(
-                            f"{worker_id}: rejected board mismatch via text match: requested={candidate}, selected={selected}"
-                        )
-                if count:
-                    logger.info(f"{worker_id}: tried board candidate {candidate} ({count} exact matches)")
-            except Exception:
-                continue
-
-        if button_box:
-            try:
-                clicked = await page.evaluate(
-                    """({buttonRect, candidates}) => {
-                        const norm = (value) => (value || '')
-                            .toLowerCase()
-                            .normalize('NFD')
-                            .replace(/[\\u0300-\\u036f]/g, '')
-                            .replace(/[^a-z0-9]+/g, ' ')
-                            .trim();
-                        const wanted = candidates.map((candidate) => norm(candidate)).filter(Boolean);
-                        const nodes = Array.from(document.querySelectorAll('div, span, button, [role="option"], [role="menuitem"]'));
-                        const visible = (el) => {
-                            const r = el.getBoundingClientRect();
-                            const s = window.getComputedStyle(el);
-                            return !!(r.width && r.height) && s.display !== 'none' && s.visibility !== 'hidden';
-                        };
-                        const matches = nodes
-                            .filter((el) => visible(el))
-                            .map((el) => ({el, text: (el.innerText || el.textContent || '').trim(), rect: el.getBoundingClientRect(), testid: el.getAttribute('data-test-id') || ''}))
-                            .filter((x) =>
-                                x.rect.x >= buttonRect.x - 80 &&
-                                x.rect.y >= buttonRect.y + buttonRect.height &&
-                                x.rect.y <= buttonRect.y + buttonRect.height + 420 &&
-                                x.text &&
-                                x.text.length <= 80 &&
-                                // STRICTER FILTER: must look like a board option
-                                (x.testid === 'board-row' || x.el.getAttribute('role') === 'option' || x.el.closest('[data-test-id="board-row"]')) &&
-                                !/^All boards$/i.test(x.text) &&
-                                !/^Create board$/i.test(x.text) &&
-                                !/^Tag Products/i.test(x.text) &&
-                                !/^Add products/i.test(x.text) &&
-                                !/^Tagged topics/i.test(x.text) &&
-                                !/^Choose a board/i.test(x.text) &&
-                                wanted.some((candidate) => {
-                                    const text = norm(x.text);
-                                    return text.includes(candidate) || candidate.includes(text);
-                                })
-                            );
-                        if (!matches.length) return '';
-                        matches.sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
-                        const target = matches[0].el.closest('button, [role="option"], [role="menuitem"]') || matches[0].el;
-                        target.click();
-                        return matches[0].text;
-                    }""",
-                    {"buttonRect": button_box, "candidates": candidate_boards()},
-                )
-                if clicked:
-                    await asyncio.sleep(2)
-                    selected = await board_selected()
-                    if selected and any(board_matches(selected, candidate) for candidate in candidate_boards()):
-                        logger.info(f"{worker_id}: selected board {selected}")
-                        return True
-                    if selected:
-                        logger.warning(
-                            f"{worker_id}: rejected board mismatch via coordinate fallback: clicked={clicked}, selected={selected}"
-                        )
-                    logger.info(f"{worker_id}: clicked board option {clicked}, but field did not update")
-            except Exception:
-                pass
-    await log_board_diagnostics(f"failed for {board_name}")
-    logger.error(f"{worker_id}: board selection failed for {board_name}")
-    return False
+    except Exception as e:
+        logger.error(f"[{worker_id}] Error in simplified select_board: {e}")
+        circuit.record_failure(f"board_selection:{worker_id}")
+        return False
 
 
 async def log_publish_diagnostics(page, worker_id):
@@ -1265,6 +944,87 @@ async def log_publish_diagnostics(page, worker_id):
         logger.error(f"{worker_id}: publish diagnostics failed: {exc}")
 
 
+async def dismiss_publish_success_overlays(page):
+    """Dismiss non-critical Pinterest prompts that can cover the published toast."""
+    try:
+        await page.keyboard.press("Escape")
+        await asyncio.sleep(0.3)
+    except Exception:
+        pass
+    try:
+        await page.evaluate(
+            """() => {
+                const needles = [
+                    'install the pinterest browser extension',
+                    'find it. love it. save it.',
+                    'install now'
+                ];
+                for (const el of Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"], div'))) {
+                    const text = (el.innerText || el.textContent || '').toLowerCase();
+                    if (needles.some((needle) => text.includes(needle))) {
+                        el.style.display = 'none';
+                        el.setAttribute('aria-hidden', 'true');
+                    }
+                }
+            }"""
+        )
+    except Exception:
+        pass
+
+
+async def extract_published_pin_id(page, worker_id, click_view=True):
+    """Return the published pin id from current URL, toast links, or the success View button."""
+    try:
+        match = re.search(r"/pin/(\d+)", page.url)
+        if match:
+            return match.group(1)
+
+        links = await page.query_selector_all('a[href*="/pin/"]')
+        for link in links:
+            href = await link.get_attribute("href")
+            match = re.search(r"/pin/(\d+)", href or "")
+            if match:
+                return match.group(1)
+
+        success_msg = page.get_by_text(re.compile(r"published|publicado|guardado", re.I)).first
+        success_visible = False
+        try:
+            success_visible = await success_msg.count() > 0 and await success_msg.is_visible(timeout=500)
+        except Exception:
+            success_visible = False
+
+        if success_visible and click_view:
+            await dismiss_publish_success_overlays(page)
+            for locator in (
+                page.get_by_role("button", name=re.compile(r"^(View|Ver)$", re.I)).first,
+                page.get_by_text(re.compile(r"^(View|Ver)$", re.I)).first,
+            ):
+                try:
+                    if await locator.count() > 0 and await locator.is_visible(timeout=700):
+                        logger.info(f"[{worker_id}] Published toast visible; opening View to capture pin id")
+                        await locator.click(force=True)
+                        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                        await asyncio.sleep(2)
+                        match = re.search(r"/pin/(\d+)", page.url)
+                        if match:
+                            return match.group(1)
+                        links = await page.query_selector_all('a[href*="/pin/"]')
+                        for link in links:
+                            href = await link.get_attribute("href")
+                            match = re.search(r"/pin/(\d+)", href or "")
+                            if match:
+                                return match.group(1)
+                except Exception as exc:
+                    if is_browser_session_lost(exc):
+                        raise BrowserSessionLost(str(exc)) from exc
+                    continue
+    except Exception as exc:
+        if is_browser_session_lost(exc):
+            raise BrowserSessionLost(str(exc)) from exc
+        logger.warning(f"{worker_id}: success pin id extraction failed: {exc}")
+    return None
+
+
 async def turbo_create_pin(
     page,
     post,
@@ -1277,10 +1037,6 @@ async def turbo_create_pin(
     title = post["title"]
     url = url_override or f"https://recetadolce.com/{post['slug']}"
     desc = description_override if description_override is not None else build_pin_description(post)
-
-    ext = image_path.suffix
-    safe_id = _safe_worker_id(worker_id)
-    temp_img = (
 
     ext = image_path.suffix
     safe_id = _safe_worker_id(worker_id)
@@ -1343,83 +1099,158 @@ async def turbo_create_pin(
         if not await fill_destination_link(page, url, worker_id):
             raise PinCreationError(f"{worker_id}: destination link field not filled for {url}")
 
-        if not await wait_for_pinterest_save(page):
-            logger.error(f"{worker_id}: Pinterest did not finish saving after link fill")
-            try:
-                await page.screenshot(
-                    path=str(project_root / "data" / f"save_stuck_{_safe_worker_id(worker_id)}.png"),
-                    full_page=True,
-                )
-            except Exception:
-                pass
-            raise PinCreationError(
-                f"{worker_id}: Pinterest did not finish saving after link fill"
-            )
-
-        if not await select_board(page, board_name, worker_id):
-            circuit.record_failure(f"board_selection:{worker_id}")
-            raise PinCreationError(f"{worker_id}: board selection failed for '{board_name}'")
-        circuit.record_success(f"board_selection:{worker_id}")
-
-        if not await wait_for_pinterest_save(page):
-            logger.error(f"{worker_id}: Pinterest did not finish saving after board selection")
-            try:
-                await page.screenshot(
-                    path=str(project_root / "data" / f"save_stuck_{_safe_worker_id(worker_id)}.png"),
-                    full_page=True,
-                )
-            except Exception:
-                pass
-            raise PinCreationError(
-                f"{worker_id}: Pinterest did not finish saving after board selection"
-            )
         await asyncio.sleep(2)
 
-        if not await link_guard_ok(page, url):
-            raise PinCreationError(
-                f"{worker_id}: link_guard_failed — destination link '{url}' was not committed "
-                f"to the form before publish; aborting to prevent wrong-URL pin"
-            )
+        # --- Aggressive Board Selection ---
+        if not await select_board(page, board_name, worker_id):
+            raise PinCreationError(f"{worker_id}: configured board selection failed for {board_name}")
 
-        publish_button = None
-        publish_locators = [
-            page.get_by_role("button", name=re.compile(r"Publish|Publicar", re.I)),
-            page.locator("button").filter(has_text=re.compile(r"Publish|Publicar", re.I)),
-            page.locator('[data-test-id="board-dropdown-save-button"]'),
-            page.locator('[data-test-id="storyboard-creation-nav-done"]'),
+        await asyncio.sleep(3)  # Ensure board selection is registered
+
+        # --- Ensure Immediate Publish (Switch OFF "Publish later") ---
+        try:
+            # Look for the switch container or the text
+            later_switch = page.locator(
+                '[data-test-id="pin-draft-switch-group"], [aria-label*="Publish at a later date" i], div:has-text("Publish at a later date")'
+            ).first
+            if await later_switch.count() > 0:
+                # Check if it's ON. Usually the input inside is checked.
+                is_on = await later_switch.evaluate("""el => {
+                    const inp = el.querySelector('input');
+                    return inp ? inp.checked : false;
+                }""")
+                if is_on:
+                    logger.info(f"[{worker_id}] 'Publish later' is ON, turning it OFF for immediate post...")
+                    await later_switch.click(force=True)
+                    await asyncio.sleep(1)
+        except:
+            pass
+
+        if not await link_guard_ok(page, url):
+            # Try filling link one more time as final guard
+            await fill_destination_link(page, url, worker_id)
+            await asyncio.sleep(1)
+
+        # --- Aggressive Publish ---
+        logger.info(f"[{worker_id}] Finalizing publish: strictly real publication...")
+
+        # 1. Reveal UI
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await asyncio.sleep(1)
+
+        # 2. Targeted Selectors (Strictly Publish - NO SAVE)
+        publish_selectors = [
+            'button:has-text("Publish")',
+            'button:has-text("Publicar")',
+            'button:has-text("Publish now")',
+            'button:has-text("Publicar ahora")',
+            '[data-test-id="storyboard-creation-nav-done"]',
         ]
-        for locator in publish_locators:
+
+        clicked = False
+        for sel in publish_selectors:
             try:
-                count = await locator.count()
-                for index in range(count):
-                    candidate = locator.nth(index)
-                    if await candidate.is_visible(timeout=1500) and await candidate.is_enabled(timeout=1500):
-                        publish_button = candidate
-                        break
-                if publish_button:
+                btn = page.locator(sel).first
+                if await btn.count() > 0 and await btn.is_visible(timeout=1000):
+                    # Filter out "save" buttons
+                    text = (await btn.inner_text()).lower()
+                    if "save" in text or "guardar" in text:
+                        continue
+
+                    logger.info(f"[{worker_id}] Clicking publish button via selector: {sel}")
+                    await btn.scroll_into_view_if_needed()
+                    await btn.click(force=True)
+                    clicked = True
                     break
-            except Exception:
+            except:
                 continue
 
-        if not publish_button:
-            logger.error(f"{worker_id}: publish button not found")
-            await log_publish_diagnostics(page, worker_id)
-            raise PinCreationError(f"{worker_id}: publish button not found after all locators")
+        # 3. Keyboard fallback only when no publish control was clickable.
+        await asyncio.sleep(5)
+        if not clicked:
+            logger.info(f"[{worker_id}] No clickable publish control, trying Ctrl+Enter...")
+            await page.keyboard.press("Control+Enter")
+            clicked = True
+            await asyncio.sleep(1)
 
-        await publish_button.click(force=True)
+        # 4. JS fallback is also single-shot and only runs if nothing clicked.
+        if not clicked:
+            logger.info(f"[{worker_id}] Keyboard fallback unavailable, trying Publish text...")
+            clicked = bool(
+                await page.evaluate("""() => {
+                const targets = ['publish', 'publicar', 'publish now', 'publicar ahora'];
+                const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+                    .filter(el => {
+                        const t = (el.innerText || el.textContent || '').toLowerCase();
+                        return targets.some(target => t.includes(target)) && !t.includes('save') && !t.includes('guardar');
+                    });
+                if (btns.length > 0) {
+                    btns[btns.length - 1].click();
+                    return true;
+                }
+                return false;
+            }""")
+            )
+
+        if not clicked:
+            raise PinCreationError(f"{worker_id}: publish button not found or not clickable")
+
+        # 5. Extraction loop
         for _ in range(50):
             await asyncio.sleep(1)
-            match = re.search(r"/pin/(\d+)", page.url)
-            if match:
-                return match.group(1)
+            pin_id = await extract_published_pin_id(page, worker_id)
+            if pin_id:
+                return pin_id
+
+            # B. Check for SPA success markers (The "Your Pin has been published!" toast)
+            try:
+                # Look for "Your Pin has been published!" or "View" button
+                success_msg = page.get_by_text(re.compile(r"published|publicado", re.I)).first
+
+                if await success_msg.count() > 0 and await success_msg.is_visible(timeout=500):
+                    logger.info(f"[{worker_id}] SPA Success marker found: 'Published'")
+                    pin_id = await extract_published_pin_id(page, worker_id)
+                    if pin_id:
+                        return pin_id
+                    logger.info(f"[{worker_id}] Success message seen, but no Pin ID link yet...")
+            except:
+                pass
+
+            # C. Check for generic view link
             view_pin = await page.query_selector('a[href*="/pin/"]')
             if view_pin:
                 href = await view_pin.get_attribute("href")
                 match = re.search(r"/pin/(\d+)", href or "")
                 if match:
                     return match.group(1)
-        
-        # If we reach here, we sent the click but never saw a resulting Pin ID
+
+            # D. Check for success toast specifically
+            try:
+                toast = await page.query_selector('[role="alert"], .Toastify__toast-body')
+                if toast:
+                    text = (await toast.inner_text()).lower()
+                    if "saved to" in text or "guardado" in text:
+                        if "draft" in text or "borrador" in text:
+                            logger.warning(
+                                f"[{worker_id}] Pin SAVED AS DRAFT instead of published. Retrying Ctrl+Enter..."
+                            )
+                            await page.keyboard.press("Control+Enter")
+                        else:
+                            # It was saved to a board! Try to find the link.
+                            view_link = await toast.query_selector('a[href*="/pin/"]')
+                            if view_link:
+                                href = await view_link.get_attribute("href")
+                                match = re.search(r"/pin/(\d+)", href or "")
+                                if match:
+                                    return match.group(1)
+            except:
+                pass
+
+        # If we reach here, check URL one last time
+        pin_id = await extract_published_pin_id(page, worker_id)
+        if pin_id:
+            return pin_id
+
         raise PinCreationError(f"{worker_id}: publish clicked but no Pin ID found within 50s timeout")
 
     except BrowserSessionLost:
@@ -1624,7 +1455,7 @@ async def worker(name, account: PinterestAccount, queue, manager, headless=True)
             finally:
                 queue.task_done()
                 if item is not None:
-                    await asyncio.sleep(random.uniform(12, 26))
+                    await asyncio.sleep(random.uniform(1, 3))
     finally:
         await close_turbo_browser(pw, context)
 

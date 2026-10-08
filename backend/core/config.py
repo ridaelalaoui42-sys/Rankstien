@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     google_api_key: str = Field(
         default="", description="Gemini API key (legacy - not needed for CLI pipeline)"
     )
-    adk_model: str = Field(default="auto")
+    adk_model: str = Field(default="gemini-3.1-flash-lite-preview")
     adk_fallback_model: str = Field(default="gemini-3.1-pro-preview", alias="RANKSTEIN_FALLBACK_MODEL")
     adk_temperature: float = Field(default=0.7, ge=0, le=2)
     gemini_cli_path: str = Field(default="", alias="GEMINI_CLI_PATH")

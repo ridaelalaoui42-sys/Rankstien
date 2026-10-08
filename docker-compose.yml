@@ -1,24 +1,33 @@
-version: '3.8'
-
 services:
   rankstein-api:
     build: .
-    container_name: rankstein_api
-    env_file:
-      - .env
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      RANKSTEIN_SECRET: ${RANKSTEIN_SECRET}
+      RANKSTEIN_ARTICLE_PROVIDER: hermes-codex
+      RANKSTEIN_HERMES_CODEX_URL: http://host.docker.internal:8642/v1
+      RANKSTEIN_HERMES_CODEX_MODEL: Hermes Agent
+      CORS_ORIGINS: http://127.0.0.1:3001,http://localhost:3001
     volumes:
-      - ./data:/app/data
+      - rankstein-data:/app/data
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.5'
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    cpus: 1.5
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  rankstein-data:

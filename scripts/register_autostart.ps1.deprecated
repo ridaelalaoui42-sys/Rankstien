@@ -1,0 +1,12 @@
+$ErrorActionPreference='SilentlyContinue'
+$scriptPath = 'C:\Users\REDX420\Desktop\Rankstein\launch_all.bat'
+$action = New-ScheduledTaskAction -Execute $scriptPath
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERNAME" -RunLevel Highest -LogonType Interactive
+try {
+  Register-ScheduledTask -TaskName 'RankStein_Launch_All' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+  Register-ScheduledTask -TaskName 'Odysseus_Server' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+  Write-Host 'CREATED'
+} catch {
+  Write-Host "CREATE_FAILED: $_"
+}

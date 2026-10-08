@@ -73,29 +73,57 @@ async def process_article(slug, title, semaphore, index):
         final_title = db_title or title
         print(f"--- [INFO] Domain: {domain_handle} | Brand: {brand_name} | Title: {final_title}")
         
+        # Clean keyword for Pinterest search (first 4 words or up to colon)
+        search_kw = final_title.split(":")[0].strip()
+        words = search_kw.split()
+        if len(words) > 5:
+            search_kw = " ".join(words[:4])
+            
         try:
             # Step 1: Remaster
-            pins = await run_remasterer(final_title, final_title, brand_name=brand_name, session_name=session_name)
+            pins = await run_remasterer(search_kw, final_title, brand_name=brand_name, session_name=session_name)
             print(f"✅ [DONE] Generated {len(pins) if pins else 0} pins for {slug}")
             
             # Step 2: Enqueue for upload
             from rankstein_mcp_server import automation_enqueue_pin
-            for pin in pins:
-                img_path = pin["remastered_path"]
-                try:
-                    automation_enqueue_pin(
-                        image_path=img_path,
-                        title=final_title,
-                        description=f"Descubre cómo preparar {final_title}. Receta premium de {brand_name}.",
-                        link=f"https://{domain_handle}.com/{slug}",
-                        board_name="Recetas Geniales"
-                    )
-                    print(f"   [+] Enqueued: {Path(img_path).name}")
-                except Exception as eq_err:
-                    print(f"   [!] Queue error: {eq_err}")
+            if pins:
+                for pin in pins:
+                    img_path = pin["remastered_path"]
+                    try:
+                        automation_enqueue_pin(
+                            image_path=img_path,
+                            title=final_title,
+                            description=f"Descubre cómo preparar {final_title}. Receta premium de {brand_name}.",
+                            link=f"https://{domain_handle}.com/{slug}",
+                            board_name="Recetas Geniales"
+                        )
+                        print(f"   [+] Enqueued: {Path(img_path).name}")
+                    except Exception as eq_err:
+                        print(f"   [!] Queue error: {eq_err}")
+                
+                # Update status in memory (mark as Queued in file)
+                await update_backlog_status(slug, "Queued")
+            else:
+                print(f"⚠️ [WARN] No pins generated for {slug}")
+                await update_backlog_status(slug, "Failed (0 pins)")
             
         except Exception as e:
             print(f"❌ [ERROR] Failed to siphon {slug}: {e}")
+            await update_backlog_status(slug, "Failed")
+
+async def update_backlog_status(slug, new_status):
+    if not BACKLOG_FILE.exists(): return
+    content = BACKLOG_FILE.read_text(encoding="utf-8")
+    lines = content.splitlines()
+    new_lines = []
+    for line in lines:
+        if f"| {slug} |" in line:
+            parts = line.split("|")
+            if len(parts) >= 4:
+                parts[3] = f" {new_status} "
+                line = "|".join(parts)
+        new_lines.append(line)
+    BACKLOG_FILE.write_text("\n".join(new_lines), encoding="utf-8")
 
 async def orchestrate_siphon():
     if not BACKLOG_FILE.exists():

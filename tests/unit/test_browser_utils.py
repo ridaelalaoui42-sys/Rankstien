@@ -17,6 +17,7 @@ import pytest
 
 from pinterest_automation.browser_utils import (
     _LOCK_FILES,
+    browser_pids_for_session,
     firefox_is_running,
     kill_firefox_locks,
     normalize_browser_type,
@@ -78,6 +79,17 @@ class TestBrowserTypeHelpers:
                 returncode=0,
             )
             assert firefox_is_running() is False
+
+    def test_finds_playwright_headless_shell_for_chromium_profile(
+        self, session_dir: Path
+    ) -> None:
+        command = (
+            "chrome-headless-shell.exe --headless "
+            f"--user-data-dir={session_dir.resolve()} --remote-debugging-pipe"
+        )
+        with patch("pinterest_automation.browser_utils.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout=f"4321\t{command}\n", returncode=0)
+            assert browser_pids_for_session(session_dir, "chromium") == [4321]
 
 
 @pytest.mark.unit

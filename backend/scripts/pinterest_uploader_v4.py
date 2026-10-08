@@ -13,6 +13,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv(override=False)
 
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from rankstein.domain import get_registry
 
 # ---------- Config ----------
@@ -36,6 +39,7 @@ EEAT_CITATIONS = {
 def get_supabase(domain):
     try:
         from supabase import create_client
+
         return create_client(domain.supabase_url, domain.supabase_service_role_key.get_secret_value())
     except Exception as e:
         print(f"❌ Failed to connect to Supabase for {domain.handle}: {e}")
@@ -263,32 +267,102 @@ async def create_stealth_browser(headless=True):
 
 async def ensure_logged_in(page, email, password):
     print("🔐 Checking session...")
-    for attempt in range(2):
-        try:
-            await page.goto(f"{PINTEREST_BASE}/login/", wait_until="domcontentloaded", timeout=60000)
-            await asyncio.sleep(15)
+    try:
+        await page.goto(f"{PINTEREST_BASE}/", wait_until="domcontentloaded")
+        await asyncio.sleep(5)
+        if await page.query_selector('[data-test-id="header-profile"], [data-test-id="header-avatar"]'):
+            print("✅ Session valid.")
+            return True
 
-            if await page.query_selector('[data-test-id="header-profile"]'):
-                return True
-            if "/home_feed/" in page.url or await page.query_selector('[data-test-id="home-header"]'):
-                return True
+        print("🔑 Not logged in. Attempting login flow...")
+        await page.goto(f"{PINTEREST_BASE}/login/", wait_until="domcontentloaded")
+        await asyncio.sleep(3)
 
-            f = await page.query_selector('input#email, input[name="id"]')
-            if f:
-                print(f"   👤 Filling login form (attempt {attempt + 1})...")
-                await f.fill(email)
-                await page.fill("input#password", password)
-                await page.click('button[type="submit"]')
-                await asyncio.sleep(25)
-                logged = await page.query_selector('[data-test-id="header-profile"]') is not None
-                if not logged:
-                    await page.screenshot(path=f"data/debug_login_fail_att{attempt}.png")
-                return logged
-        except Exception as e:
-            print(f"   ⚠️  Login attempt {attempt + 1} error: {e}")
-            await asyncio.sleep(5)
+        # Dismiss overlays and wait for input visibility
+        found = False
+        for _ in range(12):
+            email_loc = page.locator('input[type="email"], input#email, input[name="id"]').first
+            password_loc = page.locator(
+                'input[type="password"], input#password, input[name="password"]'
+            ).first
 
-    await page.screenshot(path="data/debug_login_not_found.png")
+            if await email_loc.count() > 0 and await password_loc.count() > 0:
+                if await email_loc.is_visible() and await password_loc.is_visible():
+                    found = True
+                    break
+
+            # Evaluate JS to hide Google One Tap overlays
+            try:
+                await page.evaluate("""
+                    () => {
+                        const selectors = [
+                            '#credential_picker_container',
+                            '.L5Fo6c-PQbLGe',
+                            '[title="Sign in with Google Dialog"]'
+                        ];
+                        selectors.forEach(sel => {
+                            const el = document.querySelector(sel);
+                            if (el) el.style.display = 'none';
+                        });
+                    }
+                """)
+            except Exception:
+                pass
+
+            # Try clicking Log in button overlay if visible
+            try:
+                btn = page.locator(
+                    'div[data-test-id="login-button"], button:has-text("Log in"), button:has-text("Iniciar sesión"), a:has-text("Log in"), a:has-text("Iniciar sesión")'
+                ).first
+                if await btn.count() > 0 and await btn.is_visible():
+                    await btn.click(timeout=1000)
+                    await asyncio.sleep(1)
+                    continue
+            except Exception:
+                pass
+
+            await asyncio.sleep(1)
+
+        if not found:
+            print("❌ Pinterest login form inputs not located.")
+            await page.screenshot(path="data/debug_login_fail_batch.jpg")
+            return False
+
+        await human_type(page, 'input#email, input[name="id"], input[type="email"]', email)
+        await human_type(page, "input#password, input[name='password']", password)
+
+        # Click submit
+        submit_clicked = False
+        for selector in [
+            'button[type="submit"]',
+            'button:has-text("Log in")',
+            'button:has-text("Iniciar sesión")',
+        ]:
+            try:
+                btn = page.locator(selector).first
+                if await btn.count() > 0 and await btn.is_visible():
+                    await btn.click(force=True, timeout=3000)
+                    submit_clicked = True
+                    break
+            except Exception:
+                continue
+
+        if not submit_clicked:
+            await page.keyboard.press("Enter")
+
+        await asyncio.sleep(10)
+        success = (
+            await page.query_selector('[data-test-id="header-profile"], [data-test-id="header-avatar"]')
+            is not None
+        )
+        if success:
+            print("✅ Login successful.")
+        else:
+            print("❌ Login failed.")
+            await page.screenshot(path="data/debug_login_fail_batch.jpg")
+        return success
+    except Exception as e:
+        print(f"Login error: {e}")
     return False
 
 
@@ -517,7 +591,7 @@ async def main():
 
     sb = get_supabase(domain)
     posts = fetch_unpinned_posts(sb)
-    
+
     # Optional filtering for specific slugs
     target_slugs = [
         "bizcocho-en-taza-mug-cake-de-zanahoria",
@@ -532,11 +606,11 @@ async def main():
     # If target_slugs is provided, filter. Otherwise process all unpinned.
     if target_slugs:
         posts = [p for p in posts if any(s in p["slug"] for s in target_slugs)]
-        
+
     matched = [
         (p, find_local_image_for_slug(p["slug"])) for p in posts if find_local_image_for_slug(p["slug"])
     ]
-    
+
     if not matched:
         print(f"✅ No targeted pins found for {domain.handle}. Everything looks live.")
         return
@@ -552,7 +626,7 @@ async def main():
         try:
             email = domain.pinterest_email
             password = domain.pinterest_password.get_secret_value()
-            
+
             if await ensure_logged_in(page, email, password):
                 pin_id = await create_pin(page, p, img, default_board, domain)
                 if pin_id:

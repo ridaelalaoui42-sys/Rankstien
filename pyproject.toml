@@ -20,9 +20,11 @@ extend-exclude = [
     "frontend/*.py",
     "Pinterest_Growth_Agent_core_repo",
     "Pinterest_Growth_Agent_core_tmp",
+    "projets",
     "data",
     "venv",
     ".venv",
+    "voxcpm_venv",
     "rankstein/condescending-bohr-4d2c28",
 
     # Root-level operational/debug scripts are local runbooks, not CI-owned

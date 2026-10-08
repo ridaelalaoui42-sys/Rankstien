@@ -96,7 +96,7 @@ class MCPClient:
         while True:
             try:
                 chunk = await asyncio.wait_for(self.process.stdout.readline(), timeout=120)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(f"MCP response timeout for request {req_id} ({method})")
                 return None
             if not chunk:
@@ -111,12 +111,12 @@ class MCPClient:
                     obj, end_idx = decoder.raw_decode(buf)
                     buf = buf[end_idx:].lstrip()
                 except json.JSONDecodeError:
-                    # Incomplete – need more data
+                    # Incomplete - need more data
                     break
 
                 frame_id = obj.get("id")
                 if frame_id is None:
-                    # Server notification (no id) – log and skip
+                    # Server notification (no id) - log and skip
                     logger.debug(f"MCP notification: {obj.get('method', '?')}")
                     continue
                 if frame_id != req_id:

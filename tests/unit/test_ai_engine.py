@@ -23,12 +23,13 @@ def test_backend_defaults_to_gemini_cli(monkeypatch: pytest.MonkeyPatch, tmp_pat
     monkeypatch.setenv("RANKSTEIN_SECRET", "x" * 32)
     monkeypatch.setenv("GEMINI_CLI_PATH", str(cli))
     monkeypatch.delenv("RANKSTEIN_AI_ENGINE", raising=False)
+    monkeypatch.delenv("ADK_MODEL", raising=False)
 
     client = engine.get_genai_client()
 
     assert client.engine == "gemini_cli"
     assert client.cli_path == str(cli)
-    assert get_settings().adk_model == "auto"
+    assert get_settings().adk_model == "gemini-3.1-flash-lite-preview"
 
 
 @pytest.mark.unit
@@ -85,7 +86,8 @@ def test_gemini_cli_falls_back_to_secondary_model(monkeypatch: pytest.MonkeyPatc
 def test_google_api_mode_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RANKSTEIN_SECRET", "x" * 32)
     monkeypatch.setenv("RANKSTEIN_AI_ENGINE", "google_api")
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
 
     with pytest.raises(RuntimeError, match="GOOGLE_API_KEY"):
         engine.get_genai_client()

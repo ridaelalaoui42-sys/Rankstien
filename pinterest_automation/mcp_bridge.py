@@ -7,12 +7,13 @@ from pathlib import Path
 from backend.core.config import get_settings
 from backend.core.engine import resolve_gemini_cli
 
+from .config import normalize_board_name
 from .mcp_client import get_mcp_client
 
 logger = logging.getLogger("rankstein.mcp_bridge")
 
 
-def publish_pin_agentic(image_path, title, description, link, board_name="recetas", model=None):
+def publish_pin_agentic(image_path, title, description, link, board_name="Aperitivos", model=None):
     """
     Delegates the pinning task to an AI agent equipped with Playwright MCP tools.
     This is the 'high-reliability' method that handles UI changes and stale locks automatically.
@@ -21,6 +22,7 @@ def publish_pin_agentic(image_path, title, description, link, board_name="receta
     async contexts to avoid stalling the event loop.
     """
     image_abs = str(Path(image_path).resolve())
+    board_name = normalize_board_name(board_name)
 
     # We still use the gemini CLI agent as the primary 'reasoner' because it can
     # dynamically react to the page state. However, we ensure it's using the
@@ -97,7 +99,9 @@ Instructions:
         return {"success": False, "error": str(e)}
 
 
-async def publish_pin_agentic_async(image_path, title, description, link, board_name="recetas", model=None):
+async def publish_pin_agentic_async(
+    image_path, title, description, link, board_name="Aperitivos", model=None
+):
     """
     Async-safe wrapper for publish_pin_agentic.
 
@@ -111,11 +115,12 @@ async def publish_pin_agentic_async(image_path, title, description, link, board_
     )
 
 
-async def publish_pin_direct_mcp(image_path, title, description, link, board_name="recetas"):
+async def publish_pin_direct_mcp(image_path, title, description, link, board_name="Aperitivos"):
     """
     Directly execute pinning using MCP tools without a full LLM agent loop.
     Faster but less resilient than publish_pin_agentic.
     """
+    board_name = normalize_board_name(board_name)
     try:
         from backend.scripts.pinterest_batch_core import (
             close_turbo_browser,
@@ -150,7 +155,12 @@ async def publish_pin_direct_mcp(image_path, title, description, link, board_nam
                     if pin_id:
                         pin_url = f"https://www.pinterest.com/pin/{pin_id}/"
                         logger.info(f"Direct MCP shared-core SUCCESS: {pin_url}")
-                        return {"success": True, "pin_url": pin_url, "pin_id": pin_id, "method": "shared-core"}
+                        return {
+                            "success": True,
+                            "pin_url": pin_url,
+                            "pin_id": pin_id,
+                            "method": "shared-core",
+                        }
             finally:
                 await close_turbo_browser(pw, context)
     except Exception as shared_exc:

@@ -169,3 +169,99 @@ class TestPollinationsFallback:
         assert result["success"] is True
         assert result["upscaled"] is False
         assert result["width"] == 1280 and result["height"] == 800
+
+
+@pytest.mark.unit
+class TestUnifiedHeroProviderRouting:
+    def test_codex_success_short_circuits_pollinations(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def codex(**kwargs):
+            calls.append("codex")
+            return {"success": True, "provider": "codex", "output_path": "hero.png"}
+
+        def pollinations(**kwargs):
+            calls.append("pollinations")
+            return {"success": True, "provider": "pollinations", "output_path": "hero.jpg"}
+
+        monkeypatch.setattr(rms, "create_hero_image_codex", codex)
+        monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+
+        result = rms.create_hero_image("finished paella", "paella")
+
+        assert result["success"] is True
+        assert result["provider"] == "codex"
+        assert calls == ["codex"]
+
+    def test_codex_failure_fails_closed_without_pollinations(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def codex(**kwargs):
+            calls.append("codex")
+            return {"success": False, "provider": "codex", "error": "quota exhausted"}
+
+        def pollinations(**kwargs):
+            calls.append("pollinations")
+            return {"success": True, "provider": "pollinations", "output_path": "hero.jpg"}
+
+        monkeypatch.setattr(rms, "create_hero_image_codex", codex)
+        monkeypatch.setattr(rms, "create_hero_image_pollinations", pollinations)
+
+        result = rms.create_hero_image("finished paella", "paella")
+
+        assert result["success"] is False
+        assert result["provider"] == "codex"
+        assert "quota exhausted" in result["error"]
+        assert calls == ["codex"]
+
+
+@pytest.mark.unit
+class TestCodexOAuthLoading:
+    def test_valid_codex_cli_access_token_is_used_for_image_generation(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import base64
+        import json
+        import time
+
+        def encode(value: dict) -> str:
+            raw = json.dumps(value, separators=(",", ":")).encode()
+            return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+        access_token = f"{encode({'alg': 'none'})}.{encode({'exp': int(time.time()) + 3600})}.sig"
+        codex_home = tmp_path / "codex"
+        codex_home.mkdir()
+        (codex_home / "auth.json").write_text(
+            json.dumps({"tokens": {"access_token": access_token}}),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+        assert rms._read_codex_token() == access_token
+
+
+@pytest.mark.unit
+def test_codex_hero_uses_the_current_account_model(tmp_path, monkeypatch) -> None:
+    codex_home = tmp_path / "codex"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-6.1-sol"\n', encoding="utf-8")
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    monkeypatch.delenv("RANKSTEIN_CODEX_IMAGE_CHAT_MODEL", raising=False)
+    assert rms._codex_image_chat_model() == "gpt-6.1-sol"
+
+
+@pytest.mark.unit
+def test_codex_hero_controller_override_remains_codex_only(monkeypatch) -> None:
+    monkeypatch.setenv("RANKSTEIN_CODEX_IMAGE_CHAT_MODEL", "gpt-5.6-sol")
+    assert rms._codex_image_chat_model() == "gpt-5.6-sol"
+    monkeypatch.setenv("RANKSTEIN_CODEX_IMAGE_CHAT_MODEL", "gemini-3.1-pro")
+    with pytest.raises(ValueError, match="OpenAI GPT"):
+        rms._codex_image_chat_model()

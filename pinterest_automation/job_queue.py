@@ -30,15 +30,13 @@ reference them. New code should not.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import random
 import sqlite3
-import aiosqlite
-
 import uuid
-import asyncio
 from collections.abc import Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import asdict, dataclass, field
@@ -47,12 +45,14 @@ from enum import Enum
 from pathlib import Path
 from threading import Lock
 
-from .config import QUEUE_DIR, get_config
+import aiosqlite
+
+from .config import QUEUE_DIR, get_config, normalize_board_name
 
 logger = logging.getLogger("rankstein.queue")
 
 # ── Storage paths ─────────────────────────────────────────────────────────────
-DB_FILE = QUEUE_DIR / "jobs.db"
+DB_FILE = Path(os.environ.get("PINTEREST_QUEUE_DB_FILE") or QUEUE_DIR / "jobs.db")
 
 # Legacy file paths — kept as module attrs for backwards compat. The migration
 # step below imports their content into SQLite and renames them to .migrated.
@@ -74,6 +74,7 @@ def _int_env(name: str, default: int) -> int:
 _PROCESSING_LEASE_TIMEOUT_SECONDS = max(300, _int_env("PINTEREST_PROCESSING_LEASE_TIMEOUT_SECONDS", 20 * 60))
 _RETRY_BASE_SECONDS = max(5, _int_env("PINTEREST_RETRY_BASE_SECONDS", 20))
 _RETRY_MAX_SECONDS = max(_RETRY_BASE_SECONDS, _int_env("PINTEREST_RETRY_MAX_SECONDS", 5 * 60))
+_SQLITE_TIMEOUT_SECONDS = max(30, _int_env("PINTEREST_SQLITE_TIMEOUT_SECONDS", 120))
 
 
 class JobStatus(Enum):
@@ -184,6 +185,64 @@ def _row_to_job(row: sqlite3.Row) -> Job:
     )
 
 
+def _job_identity(job: Job) -> tuple[str, str, str, str, str, str, str]:
+    payload = job.payload or {}
+    extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
+    return (
+        job.type or "",
+        str(payload.get("image_path") or ""),
+        str(payload.get("pin_url") or ""),
+        str(payload.get("link") or ""),
+        str(payload.get("account_handle") or extra.get("account_handle") or ""),
+        str(payload.get("board_name") or ""),
+        str(payload.get("title") or ""),
+    )
+
+
+def _normalize_job_payload_board(job: Job) -> None:
+    if isinstance(job.payload, dict) and "board_name" in job.payload:
+        job.payload["board_name"] = normalize_board_name(job.payload.get("board_name"))
+
+
+def _dedupe_identity_is_specific(identity: tuple[str, str, str, str, str, str, str]) -> bool:
+    """Only dedupe jobs that carry a real Pinterest publication identity."""
+    return any(part for part in identity[1:])
+
+
+_DUPLICATE_ACTIVE_SQL = """
+SELECT id FROM jobs
+WHERE type = ?
+  AND COALESCE(json_extract(payload_json, '$.image_path'), '') = ?
+  AND COALESCE(json_extract(payload_json, '$.pin_url'), '') = ?
+  AND COALESCE(json_extract(payload_json, '$.link'), '') = ?
+  AND COALESCE(
+        json_extract(payload_json, '$.account_handle'),
+        json_extract(payload_json, '$.extra.account_handle'),
+        ''
+      ) = ?
+  AND COALESCE(json_extract(payload_json, '$.board_name'), '') = ?
+  AND COALESCE(json_extract(payload_json, '$.title'), '') = ?
+LIMIT 1
+"""
+
+
+_DUPLICATE_DLQ_SQL = """
+SELECT id FROM dlq
+WHERE COALESCE(json_extract(job_json, '$.type'), '') = ?
+  AND COALESCE(json_extract(job_json, '$.payload.image_path'), '') = ?
+  AND COALESCE(json_extract(job_json, '$.payload.pin_url'), '') = ?
+  AND COALESCE(json_extract(job_json, '$.payload.link'), '') = ?
+  AND COALESCE(
+        json_extract(job_json, '$.payload.account_handle'),
+        json_extract(job_json, '$.payload.extra.account_handle'),
+        ''
+      ) = ?
+  AND COALESCE(json_extract(job_json, '$.payload.board_name'), '') = ?
+  AND COALESCE(json_extract(job_json, '$.payload.title'), '') = ?
+LIMIT 1
+"""
+
+
 _INSERT_OR_REPLACE_JOB = """
 INSERT OR REPLACE INTO jobs (
     id, type, payload_json, status, created_at, started_at, completed_at,
@@ -206,6 +265,7 @@ class JobQueue:
         # threading.Lock kept for symmetry with the old API; SQLite itself is
         # the real concurrency boundary thanks to BEGIN IMMEDIATE transactions.
         self._lock = Lock()
+        self._async_db_lock = asyncio.Lock()
         self._db_file = db_file or DB_FILE
         self._db_file.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
@@ -219,9 +279,10 @@ class JobQueue:
             self._db_file,
             isolation_level=None,  # explicit BEGIN/COMMIT
             check_same_thread=False,
-            timeout=30.0,
+            timeout=float(_SQLITE_TIMEOUT_SECONDS),
         )
         conn.row_factory = sqlite3.Row
+        conn.execute(f"PRAGMA busy_timeout = {_SQLITE_TIMEOUT_SECONDS * 1000};")
         try:
             yield conn
         finally:
@@ -229,9 +290,11 @@ class JobQueue:
 
     @asynccontextmanager
     async def _aconn(self):
-        async with aiosqlite.connect(self._db_file, timeout=30.0) as db:
-            db.row_factory = aiosqlite.Row
-            yield db
+        async with self._async_db_lock:
+            async with aiosqlite.connect(self._db_file, timeout=float(_SQLITE_TIMEOUT_SECONDS)) as db:
+                db.row_factory = aiosqlite.Row
+                await db.execute(f"PRAGMA busy_timeout = {_SQLITE_TIMEOUT_SECONDS * 1000};")
+                yield db
 
     def _init_db(self) -> None:
         with self._conn() as conn:
@@ -261,7 +324,10 @@ class JobQueue:
 
     def _import_legacy_pending(self, path: Path) -> int:
         data = json.loads(path.read_text(encoding="utf-8"))
-        rows = [_job_to_row(Job.from_dict(j)) for j in data.get("jobs", [])]
+        jobs = [Job.from_dict(j) for j in data.get("jobs", [])]
+        for job in jobs:
+            _normalize_job_payload_board(job)
+        rows = [_job_to_row(job) for job in jobs]
         if not rows:
             return 0
         with self._conn() as conn:
@@ -276,12 +342,23 @@ class JobQueue:
             conn.executemany(
                 "INSERT OR REPLACE INTO dlq (id, job_json, moved_at) VALUES (?, ?, ?)",
                 [
-                    (j["id"], json.dumps(j, ensure_ascii=False), j.get("completed_at") or 0.0)
+                    (
+                        j["id"],
+                        json.dumps(self._normalized_job_dict(j), ensure_ascii=False),
+                        j.get("completed_at") or 0.0,
+                    )
                     for j in data
                     if isinstance(j, dict) and "id" in j
                 ],
             )
         return len(data)
+
+    @staticmethod
+    def _normalized_job_dict(job_data: dict) -> dict:
+        payload = job_data.get("payload")
+        if isinstance(payload, dict) and "board_name" in payload:
+            payload["board_name"] = normalize_board_name(payload.get("board_name"))
+        return job_data
 
     def _import_legacy_completed(self, path: Path) -> int:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -300,18 +377,42 @@ class JobQueue:
 
     # ---------- Public API ----------------------------------------------------
     def enqueue(self, job: Job) -> str:
+        _normalize_job_payload_board(job)
         with self._lock, self._conn() as conn:
+            identity = _job_identity(job)
+            if _dedupe_identity_is_specific(identity):
+                existing = conn.execute(_DUPLICATE_ACTIVE_SQL, identity).fetchone()
+                if existing:
+                    logger.info("Skipped duplicate active job %s (existing=%s)", job.id, existing["id"])
+                    return str(existing["id"])
+                dead = conn.execute(_DUPLICATE_DLQ_SQL, identity).fetchone()
+                if dead:
+                    logger.info("Skipped duplicate DLQ job %s (dlq=%s)", job.id, dead["id"])
+                    return str(dead["id"])
             conn.execute(_INSERT_OR_REPLACE_JOB, _job_to_row(job))
         logger.info(f"Enqueued job {job.id} (type={job.type}, priority={job.priority})")
         return job.id
 
     async def enqueue_async(self, job: Job) -> str:
+        _normalize_job_payload_board(job)
+        identity = _job_identity(job)
         async with self._aconn() as db:
+            if _dedupe_identity_is_specific(identity):
+                cursor = await db.execute(_DUPLICATE_ACTIVE_SQL, identity)
+                existing = await cursor.fetchone()
+                if existing:
+                    logger.info("Skipped duplicate active job %s (existing=%s)", job.id, existing["id"])
+                    return str(existing["id"])
+                cursor = await db.execute(_DUPLICATE_DLQ_SQL, identity)
+                dead = await cursor.fetchone()
+                if dead:
+                    logger.info("Skipped duplicate DLQ job %s (dlq=%s)", job.id, dead["id"])
+                    return str(dead["id"])
             await db.execute(_INSERT_OR_REPLACE_JOB, _job_to_row(job))
             await db.commit()
         logger.info(f"Enqueued job {job.id} (type={job.type}, priority={job.priority})")
         return job.id
-    
+
     async def enqueue_pin_upload_async(
         self,
         image_path: str,
@@ -330,11 +431,13 @@ class JobQueue:
             "description": description,
             "link": link,
             "alt_text": alt_text,
-            "board_name": board_name or self.config.default_board,
+            "board_name": normalize_board_name(board_name or self.config.default_board),
             "extra": extra,
         }
         if extra.get("account_handle"):
             payload["account_handle"] = str(extra["account_handle"]).strip()
+        if extra.get("domain_handle"):
+            payload["domain_handle"] = str(extra["domain_handle"]).strip()
         job = Job(
             type="pin_upload",
             payload=payload,
@@ -361,11 +464,13 @@ class JobQueue:
             "description": description,
             "link": link,
             "alt_text": alt_text,
-            "board_name": board_name or self.config.default_board,
+            "board_name": normalize_board_name(board_name or self.config.default_board),
             "extra": extra,
         }
         if extra.get("account_handle"):
             payload["account_handle"] = str(extra["account_handle"]).strip()
+        if extra.get("domain_handle"):
+            payload["domain_handle"] = str(extra["domain_handle"]).strip()
         job = Job(
             type="pin_upload",
             payload=payload,
@@ -374,23 +479,40 @@ class JobQueue:
         )
         return self.enqueue(job)
 
-
-    def dequeue(self) -> Job | None:
-        """Atomically lease the next ready job. Returns None if nothing ready."""
+    def dequeue(self, locked_keys: set[str] | None = None, default_account: str = "rida") -> Job | None:
+        """Atomically lease the next ready job, skipping those matching locked keys."""
         now = datetime.now(UTC).timestamp()
+
+        exclude_sql = ""
+        params = [JobStatus.PENDING.value, JobStatus.RETRY.value, now]
+
+        if locked_keys:
+            clauses = []
+            for account_handle in locked_keys:
+                clauses.append(
+                    """
+                    NOT (
+                        json_extract(payload_json, '$.account_handle') = ?
+                        OR (? = ? AND json_extract(payload_json, '$.account_handle') IS NULL)
+                    )
+                    """
+                )
+                params.extend([account_handle, default_account, account_handle])
+            if clauses:
+                exclude_sql = " AND " + " AND ".join(clauses)
+
         with self._lock, self._conn() as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE;")
-                row = conn.execute(
-                    """
+                query = f"""
                     SELECT * FROM jobs
                     WHERE status IN (?, ?)
                       AND (next_retry_at IS NULL OR next_retry_at <= ?)
+                      {exclude_sql}
                     ORDER BY priority ASC, created_at ASC
                     LIMIT 1
-                    """,
-                    (JobStatus.PENDING.value, JobStatus.RETRY.value, now),
-                ).fetchone()
+                """
+                row = conn.execute(query, params).fetchone()
 
                 if row is None:
                     conn.execute("COMMIT;")
@@ -417,21 +539,42 @@ class JobQueue:
         logger.info(f"Dequeued job {job.id} (attempt={job.attempt})")
         return job
 
-    async def dequeue_async(self) -> Job | None:
-        """Atomically lease the next ready job. Returns None if nothing ready."""
+    async def dequeue_async(
+        self, locked_keys: set[str] | None = None, default_account: str = "rida"
+    ) -> Job | None:
+        """Atomically lease the next ready job asynchronously, skipping those matching locked keys."""
         now = datetime.now(UTC).timestamp()
+
+        exclude_sql = ""
+        params = [JobStatus.PENDING.value, JobStatus.RETRY.value, now]
+
+        if locked_keys:
+            clauses = []
+            for account_handle in locked_keys:
+                clauses.append(
+                    """
+                    NOT (
+                        json_extract(payload_json, '$.account_handle') = ?
+                        OR (? = ? AND json_extract(payload_json, '$.account_handle') IS NULL)
+                    )
+                    """
+                )
+                params.extend([account_handle, default_account, account_handle])
+            if clauses:
+                exclude_sql = " AND " + " AND ".join(clauses)
+
         async with self._aconn() as db:
             try:
                 await db.execute("BEGIN IMMEDIATE;")
-                cursor = await db.execute(
-                    """
+                query = f"""
                     SELECT * FROM jobs
-                    WHERE (status = ? OR (status = ? AND next_retry_at <= ?))
+                    WHERE status IN (?, ?)
+                      AND (next_retry_at IS NULL OR next_retry_at <= ?)
+                      {exclude_sql}
                     ORDER BY priority ASC, created_at ASC
                     LIMIT 1
-                    """,
-                    (JobStatus.PENDING.value, JobStatus.RETRY.value, now),
-                )
+                """
+                cursor = await db.execute(query, params)
                 row = await cursor.fetchone()
                 if not row:
                     await db.execute("COMMIT;")
@@ -502,7 +645,9 @@ class JobQueue:
         logger.warning("Requeued %s stale processing job(s)", len(rows))
         return len(rows)
 
-    async def requeue_stale_processing_async(self, max_age_seconds: int = _PROCESSING_LEASE_TIMEOUT_SECONDS) -> int:
+    async def requeue_stale_processing_async(
+        self, max_age_seconds: int = _PROCESSING_LEASE_TIMEOUT_SECONDS
+    ) -> int:
         return await asyncio.to_thread(self.requeue_stale_processing, max_age_seconds)
 
     def complete(self, job_id: str, result: dict) -> None:
@@ -577,6 +722,32 @@ class JobQueue:
                 await db.rollback()
                 raise
 
+    def complete_from_dlq(self, job_id: str, result: dict) -> bool:
+        """Reconcile a dead-lettered job after independent success verification."""
+        completed_at = datetime.now(UTC).timestamp()
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT job_json FROM dlq WHERE id = ?", (job_id,)).fetchone()
+            if row is None:
+                return False
+
+            job = Job.from_dict(json.loads(row["job_json"]))
+            job.status = JobStatus.COMPLETED.value
+            job.completed_at = completed_at
+            job.result = result
+            try:
+                conn.execute("BEGIN IMMEDIATE;")
+                conn.execute(
+                    "INSERT OR REPLACE INTO completed_log (id, job_json, completed_at) VALUES (?, ?, ?)",
+                    (job.id, json.dumps(job.to_dict(), ensure_ascii=False), completed_at),
+                )
+                conn.execute("DELETE FROM dlq WHERE id = ?", (job_id,))
+                conn.execute("COMMIT;")
+            except sqlite3.Error:
+                conn.execute("ROLLBACK;")
+                raise
+        logger.info("Reconciled independently verified DLQ job %s as completed", job_id)
+        return True
+
     def retry_or_fail(self, job_id: str, error: str) -> None:
         with self._lock, self._conn() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -607,7 +778,7 @@ class JobQueue:
                 # Exponential backoff with bounded ceiling + full jitter so multiple
                 # workers with failed jobs don't thunder-herd back at the same second.
                 backoff = min(_RETRY_MAX_SECONDS, (2 ** (job.attempt - 1)) * _RETRY_BASE_SECONDS)
-                backoff = backoff + random.uniform(0, 0.5 * backoff)  # +0–50% jitter
+                backoff = backoff + random.uniform(0, 0.5 * backoff)  # +0-50% jitter
                 job.next_retry_at = datetime.now(UTC).timestamp() + backoff
                 job.status = JobStatus.RETRY.value
                 conn.execute(
@@ -674,6 +845,67 @@ class JobQueue:
                 await db.commit()
                 logger.warning(f"Job {job_id} scheduled for retry in {backoff:.1f}s (attempt {job.attempt})")
 
+    def release(self, job_id: str, delay_seconds: float = 15.0) -> None:
+        """Release a leased job back to the queue (e.g. if lock couldn't be acquired).
+        Resets status to 'pending', schedules next retry, and decrements attempt count.
+        """
+        now = datetime.now(UTC).timestamp()
+        next_retry = now + delay_seconds
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if row is None:
+                return
+            job = _row_to_job(row)
+            new_attempt = max(0, job.attempt - 1)
+            try:
+                conn.execute("BEGIN IMMEDIATE;")
+                conn.execute(
+                    """
+                    UPDATE jobs
+                       SET status = ?, next_retry_at = ?, attempt = ?
+                     WHERE id = ?
+                    """,
+                    (JobStatus.PENDING.value, next_retry, new_attempt, job_id),
+                )
+                conn.execute("COMMIT;")
+            except sqlite3.Error:
+                conn.execute("ROLLBACK;")
+                raise
+        logger.info(
+            f"Released job {job_id} back to queue (retry in {delay_seconds}s, attempt reset to {new_attempt})"
+        )
+
+    async def release_async(self, job_id: str, delay_seconds: float = 15.0) -> None:
+        """Release a leased job back to the queue asynchronously.
+        Resets status to 'pending', schedules next retry, and decrements attempt count.
+        """
+        now = datetime.now(UTC).timestamp()
+        next_retry = now + delay_seconds
+        async with self._aconn() as db:
+            cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            row = await cursor.fetchone()
+            if row is None:
+                return
+            job = _row_to_job(row)
+            new_attempt = max(0, job.attempt - 1)
+            try:
+                await db.execute("BEGIN IMMEDIATE;")
+                await db.execute(
+                    """
+                    UPDATE jobs
+                       SET status = ?, next_retry_at = ?, attempt = ?
+                     WHERE id = ?
+                    """,
+                    (JobStatus.PENDING.value, next_retry, new_attempt, job_id),
+                )
+                await db.commit()
+                logger.info(
+                    f"Released job {job_id} back to queue (retry in {delay_seconds}s, attempt reset to {new_attempt})"
+                )
+            except Exception:
+                await db.rollback()
+                raise
+
     def get_stats(self) -> dict:
         with self._conn() as conn:
             rows = conn.execute("SELECT status, COUNT(*) AS n FROM jobs GROUP BY status").fetchall()
@@ -701,6 +933,52 @@ class JobQueue:
             "dlq_size": dlq_size,
         }
 
+    def get_job_outcome(self, job_id: str) -> dict:
+        """Return the current or terminal state for a job across all queue tables."""
+
+        def outcome(job: Job, state: str) -> dict:
+            return {
+                "found": True,
+                "state": state,
+                "type": job.type,
+                "priority": job.priority,
+                "payload": job.payload,
+                "result": job.result,
+                "errors": job.error_log,
+            }
+
+        with self._conn() as conn:
+            row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if row is not None:
+                job = _row_to_job(row)
+                return outcome(job, job.status)
+
+            row = conn.execute(
+                "SELECT job_json FROM completed_log WHERE id = ?",
+                (job_id,),
+            ).fetchone()
+            if row is not None:
+                job = Job.from_dict(json.loads(row["job_json"]))
+                return outcome(job, JobStatus.COMPLETED.value)
+
+            row = conn.execute("SELECT job_json FROM dlq WHERE id = ?", (job_id,)).fetchone()
+            if row is not None:
+                job = Job.from_dict(json.loads(row["job_json"]))
+                return outcome(job, JobStatus.DEAD.value)
+
+        return {
+            "found": False,
+            "state": "missing",
+            "type": None,
+            "priority": None,
+            "payload": {},
+            "result": None,
+            "errors": [],
+        }
+
+    async def get_job_outcome_async(self, job_id: str) -> dict:
+        return await asyncio.to_thread(self.get_job_outcome, job_id)
+
     def list_pending(self) -> list[Job]:
         with self._conn() as conn:
             rows = conn.execute(
@@ -725,6 +1003,7 @@ class JobQueue:
         supervisor has not yet processed earlier jobs.
         """
         import json
+
         norm = str(Path(image_path).resolve())
         # json.dumps() adds surrounding quotes, so we strip them to match the inner string
         # This handles Windows backslashes being escaped as double backslashes in JSON
@@ -770,11 +1049,189 @@ class JobQueue:
     async def image_path_already_queued_async(self, image_path: str) -> bool:
         return await asyncio.to_thread(self.image_path_already_queued, image_path)
 
+    def get_all_queued_image_paths(self) -> set[str]:
+        """Fetch all queued image paths in one SQL query to avoid N+1 full table scans."""
+        queued_paths = set()
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT payload_json FROM jobs
+                WHERE type = 'pin_upload'
+                  AND status IN (?, ?, ?)
+                """,
+                (JobStatus.PENDING.value, JobStatus.PROCESSING.value, JobStatus.RETRY.value),
+            ).fetchall()
+            for r in rows:
+                try:
+                    payload = json.loads(r["payload_json"])
+                    img_path = payload.get("image_path")
+                    if img_path:
+                        queued_paths.add(img_path)
+                        queued_paths.add(str(Path(img_path).resolve()))
+                except Exception:
+                    pass
+        return queued_paths
+
+    async def get_all_queued_image_paths_async(self) -> set[str]:
+        return await asyncio.to_thread(self.get_all_queued_image_paths)
+
     def purge_completed(self) -> None:
         """Delete completed_log entries older than the TTL."""
         cutoff = datetime.now(UTC).timestamp() - _COMPLETED_TTL_SECONDS
         with self._lock, self._conn() as conn:
             conn.execute("DELETE FROM completed_log WHERE completed_at < ?", (cutoff,))
+
+    def normalize_board_names_in_storage(self, include_dlq: bool = True) -> dict:
+        """Normalize legacy board names in active jobs and optionally DLQ rows."""
+        active_changed = 0
+        dlq_changed = 0
+        with self._lock, self._conn() as conn:
+            conn.execute("BEGIN IMMEDIATE;")
+            try:
+                rows = conn.execute("SELECT id, payload_json FROM jobs").fetchall()
+                for row in rows:
+                    try:
+                        payload = json.loads(row["payload_json"])
+                    except Exception:
+                        continue
+                    if not isinstance(payload, dict) or "board_name" not in payload:
+                        continue
+                    old_board = payload.get("board_name")
+                    payload["board_name"] = normalize_board_name(old_board)
+                    if payload.get("board_name") != old_board:
+                        conn.execute(
+                            "UPDATE jobs SET payload_json = ? WHERE id = ?",
+                            (json.dumps(payload, ensure_ascii=False), row["id"]),
+                        )
+                        active_changed += 1
+
+                if include_dlq:
+                    rows = conn.execute("SELECT id, job_json FROM dlq").fetchall()
+                    for row in rows:
+                        try:
+                            job_data = json.loads(row["job_json"])
+                        except Exception:
+                            continue
+                        payload = job_data.get("payload")
+                        if not isinstance(payload, dict) or "board_name" not in payload:
+                            continue
+                        old_board = payload.get("board_name")
+                        payload["board_name"] = normalize_board_name(old_board)
+                        if payload.get("board_name") != old_board:
+                            conn.execute(
+                                "UPDATE dlq SET job_json = ? WHERE id = ?",
+                                (json.dumps(job_data, ensure_ascii=False), row["id"]),
+                            )
+                            dlq_changed += 1
+
+                conn.execute("COMMIT;")
+            except sqlite3.Error:
+                conn.execute("ROLLBACK;")
+                raise
+        return {"active_changed": active_changed, "dlq_changed": dlq_changed}
+
+    def requeue_transient_dlq(self) -> dict:
+        """Selectively requeue DLQ jobs whose errors are transient.
+
+        Transient patterns (will be requeued):
+            timeout, lock acquisition, file input, publish button, login,
+            circuit breaker, navigation, timed out, session lost, connection.
+
+        Permanent patterns (will NOT be requeued):
+            missing image, file not found, unknown account, image not found,
+            abandoned.
+
+        Returns a dict with ``requeued``, ``skipped``, and ``details`` keys.
+        """
+        TRANSIENT_PATTERNS = [
+            "timeout",
+            "lock acquisition",
+            "file input",
+            "publish button",
+            "login",
+            "circuit breaker",
+            "navigation",
+            "timed out",
+            "session lost",
+            "connection closed",
+            "target page",
+            "browser has been closed",
+            "rate limit",
+            "abandoned processing lease",
+            "could not be verified",
+        ]
+        PERMANENT_PATTERNS = [
+            "missing image",
+            "file not found",
+            "image not found",
+            "unknown account",
+            "unknown pinterest",
+        ]
+
+        requeued = 0
+        skipped = 0
+        details: list[dict] = []
+        now = datetime.now(UTC).timestamp()
+
+        with self._lock, self._conn() as conn:
+            rows = conn.execute("SELECT id, job_json FROM dlq").fetchall()
+            if not rows:
+                return {"requeued": 0, "skipped": 0, "details": []}
+
+            to_requeue: list[tuple] = []
+            to_remove_ids: list[str] = []
+
+            for row in rows:
+                dlq_id = row["id"]
+                try:
+                    job_data = json.loads(row["job_json"])
+                except Exception:
+                    skipped += 1
+                    details.append({"id": dlq_id, "action": "skip", "reason": "invalid JSON"})
+                    continue
+
+                error_log = job_data.get("error_log", [])
+                error_text = " ".join(str(e) for e in error_log).lower()
+
+                # Check for permanent errors first
+                if any(p in error_text for p in PERMANENT_PATTERNS):
+                    skipped += 1
+                    details.append({"id": dlq_id, "action": "skip", "reason": "permanent error"})
+                    continue
+
+                # Check for transient errors
+                if any(p in error_text for p in TRANSIENT_PATTERNS):
+                    # Rebuild as a fresh pending job
+                    job_data["status"] = JobStatus.PENDING.value
+                    job_data["attempt"] = 0
+                    job_data["error_log"] = [f"Requeued from DLQ at {datetime.now(UTC).isoformat()}"]
+                    job_data["next_retry_at"] = None
+                    job_data["started_at"] = None
+                    job_data["completed_at"] = None
+
+                    job = Job.from_dict(job_data)
+                    _normalize_job_payload_board(job)
+                    to_requeue.append(_job_to_row(job))
+                    to_remove_ids.append(dlq_id)
+                    requeued += 1
+                    details.append({"id": dlq_id, "action": "requeue"})
+                else:
+                    skipped += 1
+                    details.append({"id": dlq_id, "action": "skip", "reason": "no transient pattern"})
+
+            if to_requeue:
+                try:
+                    conn.execute("BEGIN IMMEDIATE;")
+                    conn.executemany(_INSERT_OR_REPLACE_JOB, to_requeue)
+                    placeholders = ",".join("?" for _ in to_remove_ids)
+                    conn.execute(f"DELETE FROM dlq WHERE id IN ({placeholders})", to_remove_ids)
+                    conn.execute("COMMIT;")
+                except sqlite3.Error:
+                    conn.execute("ROLLBACK;")
+                    raise
+
+        logger.info("requeue_transient_dlq: requeued=%d, skipped=%d", requeued, skipped)
+        return {"requeued": requeued, "skipped": skipped, "details": details[:50]}
 
 
 # ── Singleton ────────────────────────────────────────────────────────────────

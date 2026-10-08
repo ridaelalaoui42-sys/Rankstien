@@ -56,8 +56,8 @@ class TestSynthesizedDefault:
         assert d.sessions_dir == tmp_path / "data" / "sessions"
         assert d.output_dir == tmp_path / "nanobanana-output"
         # Categories carried over from today's hardcoded list
-        assert "Aperitivos" in d.categories
-        assert "Postres" in d.categories
+        assert "fresas-y-nata" in d.categories
+        assert "chocolates" in d.categories
         # Synthesized → no manifest on disk
         assert d.is_synthesized is True
 

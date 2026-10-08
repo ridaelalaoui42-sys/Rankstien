@@ -1,5 +1,7 @@
 @echo off
 title RankStein Upload Monitor
+set PYTHONHOME=
+set UV_INTERNAL__PYTHONHOME=
 :loop
 cls
 echo ==================================================

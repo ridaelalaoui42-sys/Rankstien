@@ -12,12 +12,28 @@ Usage:
 The supervisor auto-enqueues the Pinterest backlog on every start.
 """
 
+import os
+import sys
+
+# Re-exec with a clean Python environment before importing modules such as re.
+# A mismatched PYTHONHOME inherited from uv/Hermes can point Python 3.12 at a
+# Python 3.11 stdlib and trigger "SRE module mismatch" during startup imports.
+_clean_env = dict(os.environ)
+_reexec_needed = False
+for _name in ("PYTHONHOME",):
+    if _clean_env.pop(_name, None):
+        _reexec_needed = True
+_clean_env.pop("UV_INTERNAL__PYTHONHOME", None)
+if _reexec_needed:
+    _exe = sys.executable.replace("\\", "/")
+    os.execve(_exe, [_exe, *sys.argv], _clean_env)  # noqa: S606
+
 import argparse
 import asyncio
 import json
 import logging
-import os
-import sys
+import re
+import subprocess as _subprocess
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -25,9 +41,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Stable production default: queued legacy jobs often have no explicit
-# account_handle, so high worker counts hammer one Pinterest account/session.
-os.environ.setdefault("PINTEREST_WORKER_COUNT", "2")
+# Article workers and Pinterest workers are separate.
+# We let config.py handle the loading from .env.
+
 
 from backend.services.memory_service import memory as agent_memory
 from pinterest_automation import (
@@ -36,8 +52,13 @@ from pinterest_automation import (
     get_health_monitor,
     get_job_queue,
 )
+from pinterest_automation.campaign import find_best_image as _find_best_image
+from pinterest_automation.config import normalize_board_name
+from rankstein.runtime_env import clean_python_env, sanitize_current_process_env
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+sanitize_current_process_env()
+
+# ── Logging
 LOG_DIR = PROJECT_ROOT / "data" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -57,6 +78,53 @@ logging.basicConfig(
 logger = logging.getLogger("rankstein.runner")
 
 
+def _bounded_int_env(name: str, default: int, max_env_name: str, max_default: int) -> int:
+    """Read a positive int env var, capped for unattended production launches."""
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except ValueError:
+        value = default
+    try:
+        max_value = int(os.environ.get(max_env_name, str(max_default)))
+    except ValueError:
+        max_value = max_default
+    return max(1, min(value, max(1, max_value)))
+
+
+def _env_enabled(name: str, default: bool = True) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _process_running(needle: str) -> bool:
+    if os.name == "nt":
+        safe = needle.replace("'", "''")
+        ps = (
+            f"$needle = '{safe}'; "
+            "Get-CimInstance Win32_Process | "
+            "Where-Object { $_.CommandLine -and $_.CommandLine.Contains($needle) "
+            "-and -not $_.CommandLine.Contains('Get-CimInstance Win32_Process') } | "
+            "Select-Object -First 1 ProcessId,CommandLine | ConvertTo-Json -Compress"
+        )
+        try:
+            result = _subprocess.run(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            return bool(result.stdout.strip())
+        except Exception:
+            return False
+    try:
+        result = _subprocess.run(["ps", "-eo", "args"], capture_output=True, text=True, timeout=10)
+        return needle in result.stdout
+    except Exception:
+        return False
+
+
 def enqueue_pin(args):
     queue = get_job_queue()
     job_id = queue.enqueue_pin_upload(
@@ -72,13 +140,9 @@ def enqueue_pin(args):
     return job_id
 
 
-from pinterest_automation.campaign import find_best_image as _find_best_image
-from pinterest_automation.utils import extract_slug_from_filename, get_title_from_slug
-
-
-
 # Global session for Supabase pooling
 _SUPABASE_SESSION = None
+
 
 def get_supabase_session():
     """Get or create a requests.Session with connection pooling for Supabase."""
@@ -86,7 +150,6 @@ def get_supabase_session():
     if _SUPABASE_SESSION is None:
         import requests
         from requests.adapters import HTTPAdapter
-        from urllib3.util.retry import Retry
 
         session = requests.Session()
         # pool_connections=10 because we might have many domains
@@ -116,8 +179,7 @@ def _fetch_unpinned_posts(supabase_url: str, supabase_key: str) -> list[dict]:
         if not isinstance(posts, list):
             return []
         return [
-            p for p in posts
-            if not p.get("pinterest_pin_id") or len(str(p.get("pinterest_pin_id", ""))) < 15
+            p for p in posts if not p.get("pinterest_pin_id") or len(str(p.get("pinterest_pin_id", ""))) < 15
         ]
     except Exception as e:
         logger.warning("Failed to fetch posts from %s: %s", supabase_url, e)
@@ -132,12 +194,12 @@ def _get_board_for_slug(slug: str, boards_default: dict[str, str], fallback: str
         if isinstance(keywords, list):
             for kw in keywords:
                 if kw in slug_lower:
-                    return board_name
+                    return normalize_board_name(board_name)
     # Try domain-specific boards
     for category, board in boards_default.items():
         if category != "_default" and category.lower() in slug_lower:
-            return board
-    return boards_default.get("_default", fallback)
+            return normalize_board_name(board)
+    return normalize_board_name(boards_default.get("_default", fallback))
 
 
 def enqueue_backlog(args=None) -> int:
@@ -145,7 +207,6 @@ def enqueue_backlog(args=None) -> int:
 
     Returns the number of jobs enqueued.
     """
-    import re
     from rankstein.domain import get_registry
 
     BACKLOG_FILE = PROJECT_ROOT / "memory" / "pinterest_backlog.md"
@@ -166,7 +227,9 @@ def enqueue_backlog(args=None) -> int:
     media_dirs = [REMASTER_DIR, MEDIA_DIR]
 
     # Parse backlog table rows
-    table_row = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(Failed|Pending|Missing)\s*\|", re.IGNORECASE)
+    table_row = re.compile(
+        r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(Failed|Pending|Missing)\s*\|", re.IGNORECASE
+    )
     enqueued = 0
     updated_lines = []
 
@@ -216,7 +279,9 @@ def enqueue_backlog(args=None) -> int:
         logger.info("backlog: enqueued '%s' (%s) for %d accounts", slug, status, len(account_handles))
 
     BACKLOG_FILE.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
-    print(f"Backlog: enqueued {enqueued} pin jobs ({enqueued // max(1, len(account_handles))} articles × {len(account_handles)} accounts)")
+    print(
+        f"Backlog: enqueued {enqueued} pin jobs ({enqueued // max(1, len(account_handles))} articles × {len(account_handles)} accounts)"
+    )
     return enqueued
 
 
@@ -246,12 +311,14 @@ def enqueue_batch(args):
 
     for domain in registry.all():
         supabase_url = domain.supabase_url
-        supabase_key = domain.supabase_service_role_key.get_secret_value() if domain.supabase_service_role_key else ""
+        supabase_key = (
+            domain.supabase_service_role_key.get_secret_value() if domain.supabase_service_role_key else ""
+        )
         if not supabase_key:
             print(f"  [{domain.handle}] Supabase key missing, skipping")
             continue
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  Domain: {domain.handle} ({domain.domain})")
         print(f"  Supabase: {supabase_url}")
 
@@ -296,15 +363,19 @@ def enqueue_batch(args):
                 domain_matched += 1
 
         total_matched += domain_matched
-        print(f"  Enqueued: {domain_matched} jobs ({domain_matched // max(1, len(account_handles))} posts × {len(account_handles)} accounts)")
+        print(
+            f"  Enqueued: {domain_matched} jobs ({domain_matched // max(1, len(account_handles))} posts × {len(account_handles)} accounts)"
+        )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"TOTAL: Enqueued {total_matched} pin jobs across all domains/accounts")
     if total_skipped:
         print(f"  Skipped {total_skipped} posts (no matching image found)")
 
 
 def show_status(args):
+    from pinterest_automation.runtime_state import supervisor_status
+
     health = get_health_monitor()
     queue = get_job_queue()
     snap = health.get_snapshot()
@@ -312,6 +383,7 @@ def show_status(args):
     print(
         json.dumps(
             {
+                "supervisor": supervisor_status(),
                 "health": {
                     "all_ok": snap.all_ok,
                     "checks": snap.checks,
@@ -323,6 +395,19 @@ def show_status(args):
             ensure_ascii=False,
         )
     )
+
+
+def stop_supervisor(args):
+    from pinterest_automation.runtime_state import request_supervisor_stop
+
+    print(json.dumps(request_supervisor_stop(), indent=2))
+
+
+def normalize_queue_boards(args):
+    queue = get_job_queue()
+    result = queue.normalize_board_names_in_storage(include_dlq=not args.active_only)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return result
 
 
 async def run_supervisor(args):
@@ -338,137 +423,114 @@ async def run_supervisor(args):
         logger.warning("[boot] Backlog enqueue failed (non-fatal): %s", e)
 
     # ── Step 2: Enqueue all unpinned posts from ALL domains ───────────────────
-    logger.info("[boot] Enqueuing unpinned posts from all domains...")
-    try:
-        import argparse as _argparse
-        enqueue_batch(_argparse.Namespace())
-    except Exception as e:
-        logger.warning("[boot] Batch enqueue failed (non-fatal): %s", e)
+    if _env_enabled("RANKSTEIN_ENQUEUE_UNPINNED_POSTS", False):
+        logger.info("[boot] Enqueuing unpinned posts from all domains...")
+        try:
+            import argparse as _argparse
+
+            enqueue_batch(_argparse.Namespace())
+        except Exception as e:
+            logger.warning("[boot] Batch enqueue failed (non-fatal): %s", e)
+    else:
+        logger.info("[boot] Unpinned post enqueue skipped by RANKSTEIN_ENQUEUE_UNPINNED_POSTS")
 
     # ── Step 2.5: Enqueue ALL remastered images from remaster_final ───────────
-    logger.info("[boot] Enqueuing remastered pins from data/media/remaster_final/...")
-    try:
-        from rankstein.domain import get_registry as _get_registry
-        import re as _re
+    if _env_enabled("RANKSTEIN_ENQUEUE_REMASTER_FOLDER", False):
+        logger.info("[boot] Enqueuing remastered pins from data/media/remaster_final/...")
+        try:
+            from pinterest_automation.campaign import enqueue_folder as _enqueue_folder
+            from rankstein.domain import get_registry
 
-        _config = get_config()
-        _queue = get_job_queue()
-        _registry = _get_registry()
-        _remaster_dir = PROJECT_ROOT / "data" / "media" / "remaster_final"
-        _remaster_dir.mkdir(parents=True, exist_ok=True)
-        _account_handles = sorted(_config.accounts.keys())
-        _domain = _registry.default
+            default_domain = get_registry().default.domain
+            result = _enqueue_folder(domain_url=default_domain)
+            agent_memory.log_event("startup", "Remaster folder enqueue complete", result)
+        except Exception as e:
+            logger.warning("[boot] Remaster folder enqueue failed (non-fatal): %s", e)
 
-        _images = [
-            f for f in _remaster_dir.iterdir()
-            if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
-        ] if _remaster_dir.exists() else []
-
-        # ── Generate new pins when folder is empty ─────────────────────────────
-        if not _images:
-            logger.info("[boot] remaster_final/ is empty — generating fresh pins via remasterer")
-            try:
-                from backend.services.remasterer import run_remasterer as _run_remasterer
-
-                # Pick a keyword from the first ready domain's roadmap
-                _kw, _title = "recetas virales 2026", "Recetas Virales"
-                for _d in _registry.all():
-                    _kf = _d.keywords_file
-                    if _kf and _kf.exists():
-                        for _line in _kf.read_text(encoding="utf-8").splitlines():
-                            if "Pending" in _line and "|" in _line:
-                                _parts = [p.strip() for p in _line.split("|")]
-                                if len(_parts) > 2 and _parts[1]:
-                                    _kw = _parts[1]
-                                    _title = _parts[1].replace("-", " ").title()
-                                    break
-                    if _kw != "recetas virales 2026":
-                        break
-
-                brand = getattr(_domain, "brand_name", None) or _domain.handle.replace("-", " ").title()
-                logger.info("[boot] Running remasterer for keyword: %s | brand: %s", _kw, brand)
-                import asyncio as _asyncio
-                _new_assets = _asyncio.run(_run_remasterer(_kw, _title, brand_name=brand))
-                _images = [
-                    f for f in _remaster_dir.iterdir()
-                    if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
-                ] if _remaster_dir.exists() else []
-                logger.info("[boot] Remasterer generated %d new pins", len(_new_assets))
-                agent_memory.log_event("startup", f"Remasterer generated {len(_new_assets)} pins for '{_kw}'", {})
-            except Exception as _re_err:
-                logger.warning("[boot] Remasterer generation failed (non-fatal): %s", _re_err)
-
-        # ── Enqueue images, skipping those already in queue ────────────────────
-        if _images and _account_handles:
-            _enqueued = 0
-            _skipped = 0
-            for _img in _images:
-                # Skip images already in queue (prevents duplicate jobs on re-boot)
-                if _queue.image_path_already_queued(str(_img)):
-                    _skipped += 1
-                    logger.debug("[boot] Skipping already-queued remaster: %s", _img.name)
-                    continue
-
-                # Extract slug from filename using unified utility
-                _slug = extract_slug_from_filename(_img.name)
-                _link = f"https://{_domain.domain}/{_slug}"
-                
-                # Resolve board name correctly - handle both dict and string
-                _board = _config.default_board
-                if _domain.boards_default:
-                    if isinstance(_domain.boards_default, dict):
-                        _board = _get_board_for_slug(_slug, _domain.boards_default, _config.default_board)
-                    else:
-                        _board = _domain.boards_default
-
-                _desc = f"Receta auténtica paso a paso. {_slug.replace('-', ' ').title()}"
-
-                for _account in _account_handles:
-                    _queue.enqueue_pin_upload(
-                        image_path=str(_img),
-                        title=get_title_from_slug(_slug)[:100],
-                        description=_desc[:499],
-                        link=_link,
-                        board_name=_board,
-                        priority=2,
-                        extra={
-                            "slug": _slug,
-                            "account_handle": _account,
-                            "domain_handle": _domain.handle,
-                            "source": "remaster_final",
-                        },
-                    )
-                    _enqueued += 1
-
-            logger.info(
-                "[boot] Remaster folder: enqueued %d new pin jobs | skipped %d already-queued | from %d images",
-                _enqueued, _skipped, len(_images),
-            )
-            agent_memory.log_event("startup", f"Remaster enqueued: {_enqueued} new | {_skipped} skipped", {"images": len(_images)})
+    # ── Step 2.6: Launch social siphon worker as background process ────────────
+    if _env_enabled("RANKSTEIN_ENABLE_REMASTER_SIPHON", False):
+        if _process_running("backend\\services\\remasterer.py") or _process_running(
+            "backend/services/remasterer.py"
+        ):
+            logger.info("[boot] Social siphon already running; not starting a duplicate")
         else:
-            logger.info("[boot] Remaster folder still empty after generation attempt or no accounts configured — skipping")
-    except Exception as e:
-        logger.warning("[boot] Remaster folder enqueue failed (non-fatal): %s", e)
+            pins_per_keyword = _bounded_int_env(
+                "RANKSTEIN_REMASTER_PINS_PER_KEYWORD",
+                default=30,
+                max_env_name="RANKSTEIN_MAX_REMASTER_PINS_PER_KEYWORD",
+                max_default=30,
+            )
+            keyword_limit = _bounded_int_env(
+                "RANKSTEIN_REMASTER_KEYWORDS_PER_CYCLE",
+                default=3,
+                max_env_name="RANKSTEIN_MAX_REMASTER_KEYWORDS_PER_CYCLE",
+                max_default=10,
+            )
+            logger.info(
+                "[boot] Launching social siphon: limit=%s pins_per_keyword=%s",
+                keyword_limit,
+                pins_per_keyword,
+            )
+            try:
+                _subprocess.Popen(
+                    [
+                        sys.executable,
+                        str(PROJECT_ROOT / "backend" / "services" / "remasterer.py"),
+                        "--all-domains",
+                        "--continuous",
+                        "--limit",
+                        str(keyword_limit),
+                        "--pins-per-keyword",
+                        str(pins_per_keyword),
+                    ],
+                    cwd=str(PROJECT_ROOT),
+                    stdout=open(str(LOG_DIR / "remasterer.log"), "a", encoding="utf-8"),
+                    stderr=open(str(LOG_DIR / "remasterer_err.log"), "a", encoding="utf-8"),
+                    env=clean_python_env(),
+                )
+            except Exception as e:
+                logger.warning("[boot] Social siphon launch failed (non-fatal): %s", e)
 
     # ── Step 2.7: Launch article workers for ALL domains as background process ─
-    logger.info("[boot] Launching turbo_articles --all-domains...")
-    try:
-        import subprocess as _subprocess
-        _subprocess.Popen(
-            [
-                sys.executable,
-                str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
-                "--all-domains",
-                "--workers", os.environ.get("RANKSTEIN_ARTICLE_WORKERS", "2"),
-                "--limit", os.environ.get("RANKSTEIN_KEYWORDS_PER_CYCLE", "3"),
-            ],
-            cwd=str(PROJECT_ROOT),
-            stdout=open(str(LOG_DIR / "articles.log"), "a"),
-            stderr=open(str(LOG_DIR / "articles_err.log"), "a"),
-        )
-        logger.info("[boot] Article workers started (log: data/logs/articles.log)")
-    except Exception as e:
-        logger.warning("[boot] Article worker launch failed (non-fatal): %s", e)
+    if os.environ.get("RANKSTEIN_SKIP_SUPERVISOR_ARTICLES", "").lower() in {"1", "true", "yes"}:
+        logger.info("[boot] Article worker launch skipped by RANKSTEIN_SKIP_SUPERVISOR_ARTICLES")
+    else:
+        logger.info("[boot] Launching turbo_articles --all-domains...")
+        try:
+            article_workers = _bounded_int_env(
+                "RANKSTEIN_ARTICLE_WORKERS",
+                default=2,
+                max_env_name="RANKSTEIN_MAX_ARTICLE_WORKERS",
+                max_default=3,
+            )
+            keywords_per_cycle = _bounded_int_env(
+                "RANKSTEIN_KEYWORDS_PER_CYCLE",
+                default=3,
+                max_env_name="RANKSTEIN_MAX_KEYWORDS_PER_CYCLE",
+                max_default=5,
+            )
+            _subprocess.Popen(
+                [
+                    sys.executable,
+                    str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+                    "--all-domains",
+                    "--workers",
+                    str(article_workers),
+                    "--limit",
+                    str(keywords_per_cycle),
+                ],
+                cwd=str(PROJECT_ROOT),
+                stdout=open(str(LOG_DIR / "articles.log"), "a"),
+                stderr=open(str(LOG_DIR / "articles_err.log"), "a"),
+                env=clean_python_env(),
+            )
+            logger.info(
+                "[boot] Article workers started: workers=%s limit=%s (log: data/logs/articles.log)",
+                article_workers,
+                keywords_per_cycle,
+            )
+        except Exception as e:
+            logger.warning("[boot] Article worker launch failed (non-fatal): %s", e)
 
     # ── Step 3: Start Pinterest supervisor ────────────────────────────────────
     try:
@@ -477,7 +539,6 @@ async def run_supervisor(args):
     except Exception as e:
         agent_memory.log_event("failure", f"Supervisor crashed: {str(e)}", {"error": str(e)})
         raise e
-
 
 
 def main():
@@ -508,12 +569,29 @@ def main():
     sub.add_parser("enqueue-backlog", help="Process memory/pinterest_backlog.md into the job queue")
 
     # enqueue-folder
-    folder_p = sub.add_parser("enqueue-folder", help="Enqueue ALL images from remaster_final for all accounts")
-    folder_p.add_argument("--folder", default="", help="Override image folder (default: data/media/remaster_final)")
+    folder_p = sub.add_parser(
+        "enqueue-folder", help="Enqueue ALL images from remaster_final for all accounts"
+    )
+    folder_p.add_argument(
+        "--folder", default="", help="Override image folder (default: data/media/remaster_final)"
+    )
     folder_p.add_argument("--domain", default="", help="Domain URL for pin links")
+
+    # siphon
+    siphon_p = sub.add_parser("siphon", help="Start social siphon worker (download, remaster, enqueue)")
+    siphon_p.add_argument("--once", action="store_true", help="Run one cycle and exit")
+    siphon_p.add_argument("--limit", type=int, default=0, help="Max keywords per cycle")
+    siphon_p.add_argument("--domain", type=str, default="", help="Filter by domain handle")
 
     # status
     sub.add_parser("status", help="Show system status")
+    sub.add_parser("stop", help="Request a graceful supervisor shutdown")
+
+    # normalize-queue-boards
+    normalize_p = sub.add_parser(
+        "normalize-queue-boards", help="Normalize legacy Pinterest board names in queued jobs"
+    )
+    normalize_p.add_argument("--active-only", action="store_true", help="Skip DLQ rows")
 
     args = parser.parse_args()
 
@@ -528,11 +606,30 @@ def main():
         from rankstein.domain import get_registry
 
         folder_path = Path(args.folder) if args.folder else None
-        default_domain = get_registry().default.domain
-        result = _enqueue_folder(folder=folder_path, domain_url=args.domain or default_domain)
+        reg = get_registry()
+        domain_obj = reg.get(args.domain) if args.domain else reg.default
+        result = _enqueue_folder(
+            folder=folder_path,
+            domain_url=domain_obj.domain,
+            domain_handle=domain_obj.handle,
+            boards_default=domain_obj.boards_default,
+        )
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.command == "siphon":
+        from backend.services.remasterer import run_all_domains
+
+        asyncio.run(
+            run_all_domains(
+                limit=args.limit,
+                enqueue=not args.once,  # auto-enqueue unless --once
+            )
+        )
     elif args.command == "status":
         show_status(args)
+    elif args.command == "stop":
+        stop_supervisor(args)
+    elif args.command == "normalize-queue-boards":
+        normalize_queue_boards(args)
     else:
         # Default (no subcommand OR explicit 'run'): boot the full autonomous pipeline
         asyncio.run(run_supervisor(args))

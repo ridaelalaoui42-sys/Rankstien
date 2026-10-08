@@ -1,5 +1,7 @@
 @echo off
 setlocal
+set PYTHONHOME=
+set UV_INTERNAL__PYTHONHOME=
 echo ==============================================================
 echo RankStein AI Engine - Single Cycle Execution
 echo ==============================================================

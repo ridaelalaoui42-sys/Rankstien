@@ -1,8 +1,8 @@
 # Autonomous Agentic System
 
-Updated: 2026-05-14
+Updated: 2026-07-27
 
-RankStein's autonomous loop is production-oriented but credential-dependent. It is designed to run with Gemini CLI subscription/OAuth as the core AI engine and MCP servers as the action layer.
+RankStein's autonomous loop is production-oriented but credential-dependent. Hermes Codex is the primary article provider, Python owns orchestration and validation, and MCP servers form the bounded action layer.
 
 ## Runtime Sequence
 
@@ -11,7 +11,7 @@ sequenceDiagram
     participant O as Operator
     participant R as Runner
     participant M as AgentMemory
-    participant G as Gemini CLI
+    participant H as Hermes Codex
     participant T as MCP Tools
     participant X as Trend Intel
     participant S as Supabase
@@ -22,13 +22,13 @@ sequenceDiagram
     R->>X: refresh Pinterest/Google News trend lists
     R->>R: audit DB, queue, domains, keyword roadmaps
     R->>R: dedupe keywords, reset stale rows, seed campaigns
-    R->>G: launch domain workers through Gemini CLI
-    G->>T: health, memory, keyword, research
-    G->>T: image, quality, publish, pin tools
+    R->>H: request complete article JSON
+    H->>T: generated article candidate
+    T->>T: schema and quality validation
     T->>S: publish article and media
     S->>T: auto-create Pinterest campaign
     T->>P: upload pin with configured account
-    P->>T: cross-save to all other accounts
+    P->>T: return verified pin proof
     T->>M: remember run outcome
 ```
 
@@ -40,10 +40,10 @@ sequenceDiagram
 - Use real source research before article generation.
 - Treat quality validation as a hard gate.
 - Use configured Pinterest account handles only.
-- Route legacy Pinterest jobs without account handles to `PINTEREST_DEFAULT_ACCOUNT_HANDLE`, or to `r1` when that configured rida handle exists.
+- Reject queue jobs without configured domain and account handles.
 - Use live Pinterest board names in queue payloads. For `r1`, remap content to `Aperitivos`, `Arroces`, `Carnes`, `Chocolate`, `ENSALADES`, `Fresas`, or `Pescados`; `recetas` is not a valid live board.
 - Keep a per-account lock around Pinterest create/save flows so multi-worker runs can scale across accounts without colliding inside one account's draft editor.
-- Use Firefox and Chromium through shared Playwright helpers.
+- Use persistent Chromium profiles for unattended Pinterest automation.
 - Keep Pinterest pinning bounded: short publish confirmation, per-job timeout, stale queue lease recovery, and capped retry backoff are required before unattended batches.
 - Keep batch worker count aligned with account distribution. Jobs without account handles should run with the stable default of 2 workers; higher concurrency belongs to queues that spread work across configured Pinterest accounts.
 - Treat a Pinterest upload as failed unless a real `pin_id` or `pin_url` was captured.
@@ -74,7 +74,7 @@ sequenceDiagram
 
 ## Image Prompt Standard
 
-All agents and Gemini prompts that create visual assets must follow `docs/templates/IMAGE_GENERATION_CONTRACT.md`.
+All agents and prompts that create visual assets must follow `docs/templates/IMAGE_GENERATION_CONTRACT.md`.
 
 - Hero and OG prompts describe realistic finished food with no embedded text.
 - Pinterest prompts are vertical `2:3`, keep URLs/account handles in metadata, and use short overlay concepts only.
@@ -92,4 +92,4 @@ Daily trend intelligence is domain-aware:
 5. Write `data/domains/<handle>/daily_best_keywords.json` and `.md`.
 6. Append only new keywords to `data/domains/<handle>/keywords.md`.
 
-Gemini-side agents can call the same logic through the RankStein MCP tool `refresh_trend_keywords`.
+Connected agents can call the same logic through the RankStein MCP tool `refresh_trend_keywords`.

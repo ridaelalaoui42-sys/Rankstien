@@ -3,7 +3,7 @@ import asyncio
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "scripts"))
 
-from backend.scripts.pinterest_batch_core import (  # noqa: E402
+from backend.scripts.pinterest_batch_core import (
     close_turbo_browser,
     create_turbo_browser,
     ensure_account_logged_in,
@@ -21,7 +21,7 @@ from backend.scripts.pinterest_batch_core import (  # noqa: E402
 
 
 def now_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
 
 async def click_first_visible(page, locators, timeout=1200) -> bool:
@@ -156,12 +156,16 @@ async def confirm_delete(page) -> bool:
     return await click_first_visible(
         page,
         [
-            page.locator('[role="dialog"] button').filter(has_text=re.compile(r"^Delete$|^Eliminar$|^Remove$", re.I)),
+            page.locator('[role="dialog"] button').filter(
+                has_text=re.compile(r"^Delete$|^Eliminar$|^Remove$", re.I)
+            ),
             page.get_by_role("button", name=re.compile(r"^Delete$|^Eliminar$|^Remove$", re.I)),
             page.locator('[data-test-id*="confirm" i] button').filter(
                 has_text=re.compile(r"Delete|Eliminar|Remove", re.I)
             ),
-            page.locator('button[type="submit"]').filter(has_text=re.compile(r"Delete|Eliminar|Remove", re.I)),
+            page.locator('button[type="submit"]').filter(
+                has_text=re.compile(r"Delete|Eliminar|Remove", re.I)
+            ),
         ],
         timeout=1800,
     )
@@ -194,7 +198,7 @@ async def clear_account(account, run_id: str) -> dict:
         "account": account.name,
         "session": account.session_dir.name,
         "browser": account.browser,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
     }
     pw = context = page = None
     try:
@@ -230,7 +234,9 @@ async def clear_account(account, run_id: str) -> dict:
         try:
             await page.reload(wait_until="domcontentloaded", timeout=60000)
         except Exception:
-            await page.goto("https://www.pinterest.com/pin-creation-tool/", wait_until="commit", timeout=60000)
+            await page.goto(
+                "https://www.pinterest.com/pin-creation-tool/", wait_until="commit", timeout=60000
+            )
         await asyncio.sleep(5)
         after = await draft_count(page)
         result["drafts_after"] = after
@@ -252,7 +258,7 @@ async def clear_account(account, run_id: str) -> dict:
         try:
             await close_turbo_browser(pw, context)
         finally:
-            result["finished_at"] = datetime.now(timezone.utc).isoformat()
+            result["finished_at"] = datetime.now(UTC).isoformat()
 
 
 async def main() -> int:
@@ -271,17 +277,19 @@ async def main() -> int:
     run_id = now_id()
     report = {
         "run_id": run_id,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
         "accounts": [],
     }
     for account in accounts:
         report["accounts"].append(await clear_account(account, run_id))
-    report["finished_at"] = datetime.now(timezone.utc).isoformat()
+    report["finished_at"] = datetime.now(UTC).isoformat()
 
     report_path = PROJECT_ROOT / "data" / "reports" / f"pinterest_draft_clear_{run_id}.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps({"report": str(report_path), "accounts": report["accounts"]}, indent=2, ensure_ascii=False))
+    print(
+        json.dumps({"report": str(report_path), "accounts": report["accounts"]}, indent=2, ensure_ascii=False)
+    )
     return 0 if all(item.get("success") for item in report["accounts"]) else 1
 
 

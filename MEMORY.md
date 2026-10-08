@@ -10,12 +10,12 @@ RankStein automates recipe content production and Pinterest distribution for mul
 
 ## Current Architecture
 
-- Reasoning engine: Gemini CLI subscription/OAuth.
+- Production content engine: OpenAI Codex CLI/OAuth. Article workers fail closed if direct Codex or an explicitly attested Hermes OpenAI-Codex route is unavailable.
 - Tool layer: RankStein MCP, Supabase MCP, Playwright Firefox/Chromium MCP, NanoBanana MCP, AgentMemory MCP.
 - Long-term memory: AgentMemory MCP plus local REST worker on port `3111`.
 - Publishing: Supabase posts/storage through guarded RankStein tools.
 - Browser automation: Playwright with configured Pinterest accounts only; pin uploads use bounded confirmation waits, per-job timeouts, stale lease recovery, capped retry backoff, and a stable default of 2 queue workers unless payloads are explicitly spread across account handles.
-- Trend intelligence: `python rankstein.py trends` and the MCP tool `refresh_trend_keywords` use Playwright-first Pinterest discovery, Google News validation, and unique roadmap appends.
+- Trend intelligence: `python rankstein.py trends` defaults to the strict `pinterest_required` policy: targeted Pinterest Trends/Search evidence supplies every candidate, then independent demand and optional freshness signals validate it. `refresh_trend_keywords` can still use the explicit `multi_source` policy for broad production discovery. Both modes retain provenance, reject vague phrases, require specificity plus independent demand evidence, and write fresh authorization before roadmap reservation or article research.
 - Startup path: `python rankstein.py run` refreshes trends, audits DB/domain/queue state, cleans keyword roadmaps, seeds campaigns, then launches domain workers.
 - Autonomous loop: `python rankstein.py autonomous` repeats the startup cycle and logs cycle reports through AgentMemory.
 - Image prompts: hero, OG, inline, and Pinterest briefs follow `docs/templates/IMAGE_GENERATION_CONTRACT.md`.
@@ -44,9 +44,12 @@ These files are workflow state, not duplicate docs. Keep them concise and machin
 - Pinterest upload success requires a verified `pin_id` or `pin_url`; uncertain publishes must retry and must not be marked complete.
 - Pinterest board names must match live account boards. For `r1`, use `Aperitivos`, `Arroces`, `Carnes`, `Chocolate`, `ENSALADES`, `Fresas`, or `Pescados`; `recetas` is obsolete and should be remapped before posting.
 - Multi-worker Pinterest runs need per-account locking. Parallel workers may run different accounts, but never two simultaneous create/save flows for the same account.
+- Article remaster production is scraped-only: accept 15 unique relevant Pinterest pin IDs, create exactly `viral_visual` and `recipe_card` for each source, then prove 30 unique queue jobs. If source intake or any pair is incomplete, create/queue nothing and leave the article `Needs Verification`; Codex image generation is reserved for the article hero.
 - Pinterest publish fallback should prefer deterministic selectors and Ctrl+Enter before optional Gemini selector healing; avoid API-key-based Gemini calls in the pinning path.
 - Shared MCP fallback should stay disabled during high-volume batch pinning unless explicitly tested with serialized access.
 - Domain identity must flow into every prompt: handle, public domain, niche, brand voice, boards, and account.
+- Autonomous article work may reserve only a `Pending` keyword present in a fresh `daily_best_keywords.json` row with recorded discovery provenance, positive specificity, and the configured minimum external demand score. Missing/stale evidence, vague candidates, and static seed fallback fail closed; individual discovery providers fail soft so another independent source can refill an empty queue.
+- Source extraction must yield at least two independently relevant recipe articles before LLM article writing begins.
 
 ## AgentMemory Usage
 

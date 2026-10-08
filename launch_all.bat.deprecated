@@ -1,0 +1,40 @@
+@echo off
+REM RankStein all-services launcher for Windows
+REM Starts Odysseus proxy, RankStein supervisor, and optionally the web UI.
+setlocal
+
+set "SCRIPT_DIR=%~dp0"
+pushd "%SCRIPT_DIR%" || exit /b 1
+
+set PYTHONHOME=
+set UV_INTERNAL__PYTHONHOME=
+
+set PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe
+
+if not exist "%PYTHON_EXE%" (
+  echo [launch_all] Missing %PYTHON_EXE%
+  popd
+  exit /b 1
+)
+
+echo [launch_all] Starting RankStein stack from %SCRIPT_DIR% ...
+
+REM 1) Odysseus proxy (uses local OAuth; no API keys)
+echo [launch_all] Launching Odysseus proxy ...
+start "Odysseus Proxy" cmd /s /c ""%PYTHON_EXE%" "%SCRIPT_DIR%ody_proxy.py""
+
+REM 2) RankStein supervisor
+echo [launch_all] Launching RankStein supervisor ...
+start "RankStein Supervisor" cmd /s /c ""%PYTHON_EXE%" -u "%SCRIPT_DIR%run_autonomous.py" run"
+
+REM 3) Next.js frontend (optional - only if node_modules exists)
+if exist "%SCRIPT_DIR%frontend\node_modules" (
+  echo [launch_all] Launching RankStein web UI ...
+  start "RankStein Web UI" cmd /s /c "cd /d ""%SCRIPT_DIR%frontend"" && npm run start"
+) else (
+  echo [launch_all] Skipping web UI: node_modules not found
+)
+
+echo [launch_all] All services queued.
+popd
+endlocal

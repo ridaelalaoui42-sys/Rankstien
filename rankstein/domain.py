@@ -46,20 +46,18 @@ if _env_path.exists():
 
 # ── Categories / boards default for the synthesized recetadolce domain ────
 _RECETADOLCE_CATEGORIES: tuple[str, ...] = (
-    "Aperitivos",
-    "Postres",
-    "Carnes",
-    "Pescados",
-    "Ensaladas",
+    "fresas-y-nata",
+    "tartas-y-pasteles",
+    "chocolates",
+    "dulces-saludables",
 )
 
 _RECETADOLCE_BOARDS_DEFAULT: dict[str, str] = {
-    "Aperitivos": "Aperitivos y Tapas",
-    "Postres": "Postres y Dulces",
-    "Carnes": "Carnes y Tradición",
-    "Pescados": "Pescados y Mariscos",
-    "Ensaladas": "Ensaladas y Saludable",
-    "_default": "Recetas Españolas",
+    "fresas-y-nata": "Fresas",
+    "tartas-y-pasteles": "Chocolate",
+    "chocolates": "Chocolate",
+    "dulces-saludables": "Chocolate",
+    "_default": "Chocolate",
 }
 
 

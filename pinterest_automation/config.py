@@ -28,14 +28,52 @@ for d in [DATA_DIR, SESSION_DIR, LOG_DIR, QUEUE_DIR, HEALING_CACHE_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 
+LIVE_BOARD_ALIASES = {
+    "Arroces y Paellas": "Arroces",
+    "Postres y Dulces": "Chocolate",
+    "Ensaladas y Saludable": "ENSALADES",
+    "Aperitivos y Tapas": "Aperitivos",
+    "Carnes y Tradición": "Carnes",
+    "Carnes y TradiciÃ³n": "Carnes",
+    "Pescados y Mariscos": "Pescados",
+    "Recetas Españolas": "Aperitivos",
+    "Recetas EspaÃ±olas": "Aperitivos",
+    "recetas": "Aperitivos",
+}
+LIVE_BOARD_NAMES = {"Aperitivos", "Arroces", "Carnes", "Chocolate", "ENSALADES", "Fresas", "Pescados"}
+
+
+def normalize_board_name(board_name: str | None) -> str:
+    """Map legacy board labels to the current live Pinterest board names."""
+    value = str(board_name or "").strip()
+    if not value:
+        return "Aperitivos"
+    return LIVE_BOARD_ALIASES.get(value, value if value in LIVE_BOARD_NAMES else "Aperitivos")
+
+
+def resolve_account_board_name(board_name: str | None, account_handle: str | None) -> str:
+    """Resolve a canonical board label to the exact live label for one account."""
+    canonical = normalize_board_name(board_name)
+    handle = str(account_handle or "").strip()
+    if not handle:
+        return canonical
+    try:
+        mappings = json.loads(os.environ.get("PINTEREST_ACCOUNT_BOARD_MAP", "{}"))
+    except (TypeError, json.JSONDecodeError):
+        return canonical
+    account_mapping = mappings.get(handle, {}) if isinstance(mappings, dict) else {}
+    resolved = account_mapping.get(canonical) if isinstance(account_mapping, dict) else None
+    return str(resolved).strip() if resolved else canonical
+
+
 @dataclass
 class RateLimitConfig:
-    base_delay_seconds: float = 2.0
-    jitter_percent: float = 0.1
-    max_delay_seconds: float = 30.0
-    daily_pin_limit: int = 5000
-    hourly_pin_limit: int = 500
-    burst_limit: int = 100
+    base_delay_seconds: float = 20.0
+    jitter_percent: float = 0.35
+    max_delay_seconds: float = 180.0
+    daily_pin_limit: int = 50
+    hourly_pin_limit: int = 20
+    burst_limit: int = 2
     cooldown_after_failures: int = 5
     cooldown_duration_minutes: int = 5
 
@@ -62,15 +100,33 @@ class BrowserConfig:
     locale: str = "es-ES"
     user_agent: str = FIREFOX_USER_AGENT
     session_name: str = "pinterest_rida_v7"
-    max_sessions: int = 20
+    max_sessions: int = 2
     session_ttl_minutes: int = 120
     launch_timeout_ms: int = 120000
     navigation_timeout_ms: int = 120000
     action_timeout_ms: int = 60000
 
     def __post_init__(self):
-        # Enforce headless mode strictly
         self.headless = True
+        try:
+            self.max_sessions = max(
+                1,
+                min(
+                    int(os.environ.get("PINTEREST_MAX_SESSIONS", str(self.max_sessions))),
+                    int(os.environ.get("PINTEREST_MAX_WORKERS", "3")),
+                ),
+            )
+            self.session_ttl_minutes = max(
+                30,
+                int(
+                    os.environ.get(
+                        "PINTEREST_SESSION_TTL_MINUTES",
+                        str(self.session_ttl_minutes),
+                    )
+                ),
+            )
+        except ValueError:
+            pass
 
 
 @dataclass
@@ -121,7 +177,12 @@ class SupervisorConfig:
             env_workers = os.environ.get("WORKER_COUNT")
         if env_workers:
             try:
-                self.worker_count = max(1, int(env_workers))
+                # Pinterest browser automation is session-bound. Large worker
+                # counts create lock convoys, page navigation races, and DLQ
+                # storms. Keep unattended concurrency safely bounded unless the
+                # operator explicitly raises PINTEREST_MAX_WORKERS.
+                max_workers = int(os.environ.get("PINTEREST_MAX_WORKERS", "3"))
+                self.worker_count = max(1, min(int(env_workers), max_workers))
             except ValueError:
                 pass
 
@@ -173,8 +234,8 @@ class AutomationConfig:
     accounts: dict[str, PinterestCredentials] = field(default_factory=dict)
     boards: dict = field(
         default_factory=lambda: {
-            "Arroces y Paellas": ["arroz", "paella", "fideua", "bogavante", "marisco", "caldoso"],
-            "Postres y Dulces": [
+            "Arroces": ["arroz", "paella", "fideua", "bogavante", "marisco", "caldoso"],
+            "Chocolate": [
                 "churros",
                 "tarta",
                 "helado",
@@ -190,7 +251,7 @@ class AutomationConfig:
                 "mermelada",
                 "mantequilla",
             ],
-            "Ensaladas y Saludable": [
+            "ENSALADES": [
                 "ensalada",
                 "vegetariano",
                 "quinoa",
@@ -202,7 +263,7 @@ class AutomationConfig:
                 "saludable",
                 "fresca",
             ],
-            "Aperitivos y Tapas": [
+            "Aperitivos": [
                 "pasabocas",
                 "tapa",
                 "aperitivo",
@@ -214,8 +275,12 @@ class AutomationConfig:
                 "pulpo",
                 "tortilla",
                 "chips",
+                "receta",
+                "comida",
+                "cocina",
+                "dumpling",
             ],
-            "Carnes y Tradición": [
+            "Carnes": [
                 "pollo",
                 "carne",
                 "cocido",
@@ -225,9 +290,8 @@ class AutomationConfig:
                 "casera",
                 "iberico",
             ],
-            "Aperitivos": ["receta", "comida", "cocina", "tapa", "aperitivo", "dumpling"],
             "Fresas": ["fresa", "fresas", "fruta"],
-            "Chocolate": ["galletas", "dulce", "postre", "chocolate"],
+            "Pescados": ["pescado", "pescados", "merluza", "bacalao", "salmon", "salmón", "atun", "atún"],
         }
     )
     default_board: str = "Aperitivos"
@@ -245,7 +309,10 @@ class AutomationConfig:
                 data = data.get("accounts")
 
             if data and isinstance(data, list):
-                default_browser = normalize_browser_type(os.environ.get("PINTEREST_BROWSER"), "firefox")
+                default_browser = normalize_browser_type(
+                    os.environ.get("PINTEREST_DEFAULT_BROWSER") or os.environ.get("PINTEREST_BROWSER"),
+                    "chromium",
+                )
                 for idx, acc in enumerate(data, 1):
                     if not isinstance(acc, dict):
                         continue
@@ -282,9 +349,12 @@ class AutomationConfig:
             return json.loads(raw.replace('\\"', '"'))
 
     def _load_indexed_accounts(self) -> None:
-        default_browser = normalize_browser_type(os.environ.get("PINTEREST_BROWSER"), "firefox")
+        default_browser = normalize_browser_type(
+            os.environ.get("PINTEREST_DEFAULT_BROWSER") or os.environ.get("PINTEREST_BROWSER"), "chromium"
+        )
         for idx in range(1, 21):
             prefix = f"PINTEREST_ACCOUNT_{idx}_"
+
             if not any(
                 os.environ.get(prefix + key)
                 for key in ("SESSION", "SESSION_DIR", "NAME", "EMAIL", "PASSWORD", "BROWSER")

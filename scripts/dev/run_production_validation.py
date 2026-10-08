@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +35,7 @@ import sys
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "scripts"))
 
-from backend.scripts.pinterest_batch_core import (  # noqa: E402
+from backend.scripts.pinterest_batch_core import (
     PinterestAccount,
     close_turbo_browser,
     create_pin_from_fields,
@@ -43,8 +43,7 @@ from backend.scripts.pinterest_batch_core import (  # noqa: E402
     ensure_account_logged_in,
     load_accounts,
 )
-from pinterest_automation.pinterest_driver import PinterestDriver  # noqa: E402
-
+from pinterest_automation.pinterest_driver import PinterestDriver
 
 POST_CASES = {
     "single": {
@@ -69,7 +68,7 @@ POST_CASES = {
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def setup_logger(run_id: str) -> tuple[logging.Logger, Path]:
@@ -312,7 +311,9 @@ async def main() -> int:
     logger.info("production validation finished; report=%s", report_path)
     print(json.dumps(report["summary"], indent=2))
     print(str(report_path))
-    uploads_ok = not upload_results or report["summary"]["upload_successes"] == report["summary"]["upload_total"]
+    uploads_ok = (
+        not upload_results or report["summary"]["upload_successes"] == report["summary"]["upload_total"]
+    )
     syphon_ok = report["syphon"] is None or bool(report["syphon"].get("success"))
     return 0 if uploads_ok and syphon_ok else 1
 

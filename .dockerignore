@@ -51,6 +51,19 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.sqlite
+data/runtime/
+data/reports/
+data/run_logs/
+data/worker_home/
+data/generated_recipe_images/
+data/images/
+data/articles/
+data/staging/
+data/domains/**/.env
+data/domains/**/data/
+data/domains/**/nanobanana-output/
+data/domains/**/*.bak
+data/domains/**/jobs.db
 
 # ── Generated images / scratch output ─────────────────────────────────
 nanobanana-output

@@ -41,7 +41,7 @@ DEFAULT_BROWSER_MAP: dict[str, str] = {
     # Legacy / single-use Firefox profiles (manual or harvester use only)
     "remasterer_v1": "firefox",
     "harvester_v1": "firefox",
-    "pinterest_rida_v7": "firefox",
+    "pinterest_rida_v7": "chromium",
 }
 
 FIREFOX_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
@@ -51,7 +51,7 @@ CHROMIUM_USER_AGENT = (
 )
 
 
-def normalize_browser_type(browser_type: str | None, default: str = "firefox") -> str:
+def normalize_browser_type(browser_type: str | None, default: str = "chromium") -> str:
     """Return a Playwright browser family supported by the automation."""
     value = (browser_type or default or "firefox").strip().lower()
     if value in {"chrome", "chromium", "msedge", "edge"}:
@@ -98,15 +98,22 @@ _STALE_GLOBS: tuple[str, ...] = ("*.pid", "*.tmp", "lock.*")
 
 def browser_is_running(browser_type: str = "firefox") -> bool:
     """Best-effort check: is any browser process running on this machine?"""
-    proc_name = "chrome.exe" if browser_type == "chromium" else "firefox.exe"
+    proc_names = (
+        ("chrome.exe", "chrome-headless-shell.exe", "msedge.exe")
+        if browser_type == "chromium"
+        else ("firefox.exe",)
+    )
     try:
-        out = subprocess.run(
-            ["tasklist", "/NH", "/FI", f"IMAGENAME eq {proc_name}"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return proc_name in (out.stdout or "").lower()
+        for proc_name in proc_names:
+            out = subprocess.run(
+                ["tasklist", "/NH", "/FI", f"IMAGENAME eq {proc_name}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if proc_name in (out.stdout or "").lower():
+                return True
+        return False
     except Exception:
         return False
 
@@ -119,13 +126,18 @@ def firefox_is_running() -> bool:
 def browser_pids_for_session(session_dir: Path, browser_type: str = "firefox") -> list[int]:
     """Find process IDs running with a specific session dir."""
     target = str(session_dir.resolve())
-    proc_name = "chrome.exe" if browser_type == "chromium" else "firefox.exe"
+    proc_names = (
+        ("chrome.exe", "chrome-headless-shell.exe", "msedge.exe")
+        if browser_type == "chromium"
+        else ("firefox.exe",)
+    )
 
     # We use PowerShell to inspect command lines on Windows
+    process_filter = " -or ".join(f"$_.Name -eq '{name}'" for name in proc_names)
     script = (
-        f"Get-CimInstance Win32_Process -Filter \"Name='{proc_name}'\" | "
-        "Where-Object {{ $_.CommandLine }} | "
-        'ForEach-Object {{ "$($_.ProcessId)`t$($_.CommandLine)" }}'
+        "Get-CimInstance Win32_Process | "
+        f"Where-Object {{ ($_.CommandLine) -and ({process_filter}) }} | "
+        'ForEach-Object { "$($_.ProcessId)`t$($_.CommandLine)" }'
     )
     try:
         result = subprocess.run(
@@ -154,7 +166,7 @@ def browser_pids_for_session(session_dir: Path, browser_type: str = "firefox") -
                 or (browser_type == "chromium" and target_lower in command_lower)
             ):
                 pids.append(int(pid_text.strip()))
-        return pids
+        return sorted(set(pids))
     except Exception:
         return []
 

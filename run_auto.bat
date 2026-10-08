@@ -10,6 +10,9 @@
 echo [RankStein Auto] Starting continuous autonomous mode...
 echo.
 
+set PYTHONHOME=
+set UV_INTERNAL__PYTHONHOME=
+
 set DELAY=%1
 if "%DELAY%"=="" set DELAY=14400
 

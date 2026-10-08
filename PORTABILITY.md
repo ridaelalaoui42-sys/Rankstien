@@ -73,4 +73,4 @@ python scripts/dev/validate_gemini_runtime.py
 python scripts/dev/validate_automation.py
 ```
 
-Browser sessions in `data/sessions/` and `data/domains/*/data/sessions/` are regenerated locally. They are intentionally not portable through Git.
+Browser sessions in `data/sessions/` and `data/domains/*/data/sessions/` are regenerated locally. They are intentionally not portable.

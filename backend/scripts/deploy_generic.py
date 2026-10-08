@@ -1,11 +1,11 @@
 import asyncio
 import json
-import os
-import sys
 import random
+import sys
 from pathlib import Path
 
 import requests
+
 from rankstein.domain import get_registry
 
 # ---------- CONFIG ----------

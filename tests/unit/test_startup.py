@@ -9,7 +9,12 @@ from pydantic import SecretStr
 from backend.core import database as db
 from backend.core.config import get_settings
 from rankstein.domain import Domain
-from rankstein.keyword_roadmap import KeywordRow, read_keyword_rows, write_keyword_rows
+from rankstein.keyword_roadmap import (
+    KeywordRow,
+    append_keyword_rows,
+    read_keyword_rows,
+    write_keyword_rows,
+)
 from rankstein.startup import StartupOptions, build_startup_plan
 
 
@@ -67,6 +72,10 @@ async def test_startup_creates_domain_project_and_seeds_campaign(
     monkeypatch.setattr("rankstein.startup._resolve_domains", lambda handles: [domain])
     monkeypatch.setattr("rankstein.startup.agent_memory", FakeMemory())
     monkeypatch.setattr("rankstein.startup.get_job_queue", lambda domain_handle: FakeQueue())
+    monkeypatch.setattr(
+        "rankstein.startup.load_qualified_keyword_keys",
+        lambda domain: ({"one keyword"}, "ok"),
+    )
 
     report = await build_startup_plan(StartupOptions(launch=False, keywords_per_domain=1))
 
@@ -133,9 +142,145 @@ async def test_startup_cleans_roadmap_before_trend_append(tmp_path: Path, monkey
     monkeypatch.setattr("rankstein.startup.agent_memory", FakeMemory())
     monkeypatch.setattr("rankstein.startup.get_job_queue", lambda domain_handle: FakeQueue())
     monkeypatch.setattr("rankstein.startup.refresh_domain_trend_lists", fake_refresh)
-
-    report = await build_startup_plan(StartupOptions(launch=False, keywords_per_domain=1, refresh_trends=True))
+    report = await build_startup_plan(
+        StartupOptions(launch=False, keywords_per_domain=1, refresh_trends=True)
+    )
 
     assert report["brief"]["trends_refreshed"] is True
     assert report["pre_trend_cleanup"][0]["cleanup"]["duplicates_removed"] == 1
     assert report["pre_trend_cleanup"][0]["cleanup"]["reset_in_progress"] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_startup_researches_empty_roadmap_and_launches_only_when_work_is_found(
+    tmp_path: Path, monkeypatch, isolated_db
+) -> None:
+    keywords_file = tmp_path / "keywords.md"
+    write_keyword_rows(
+        keywords_file,
+        "Test Site Keyword Roadmap",
+        [KeywordRow("completed recipe", status="Live")],
+    )
+    domain = Domain(
+        handle="testsite",
+        domain="test.example",
+        display_name="Test Site",
+        language="en",
+        niche="recipe testing",
+        root=tmp_path,
+        keywords_file=keywords_file,
+        sessions_dir=tmp_path / "sessions",
+        output_dir=tmp_path / "output",
+        branding_dir=tmp_path / "branding",
+        pinterest_email="user@example.com",
+        pinterest_password=SecretStr("secret"),
+        supabase_url="https://supabase.example",
+        supabase_service_role_key=SecretStr("service-role"),
+    )
+
+    class FakeMemory:
+        def health(self):
+            return {"ok": True}
+
+        def search(self, query, limit=5):
+            return []
+
+        def log_event(self, event_type, message, metadata=None):
+            return {"success": True}
+
+    class FakeQueue:
+        def get_stats(self):
+            return {"total": 0}
+
+    def fake_refresh(domains, **kwargs):
+        added = append_keyword_rows(
+            domains[0].keywords_file,
+            "Test Site Keyword Roadmap",
+            [KeywordRow("new seasonal recipe")],
+        )
+        return {"domains": {"testsite": {"roadmap_added": added}}}
+
+    monkeypatch.setattr("rankstein.startup.reload_registry", lambda: None)
+    monkeypatch.setattr("rankstein.startup._resolve_domains", lambda handles: [domain])
+    monkeypatch.setattr("rankstein.startup.agent_memory", FakeMemory())
+    monkeypatch.setattr("rankstein.startup.get_job_queue", lambda domain_handle: FakeQueue())
+    monkeypatch.setattr("rankstein.startup.refresh_domain_trend_lists", fake_refresh)
+    monkeypatch.setattr(
+        "rankstein.startup.load_qualified_keyword_keys",
+        lambda domain: ({"new seasonal recipe"}, "ok"),
+    )
+    monkeypatch.setattr(
+        "rankstein.startup._launch_article_worker",
+        lambda **kwargs: {"domain": "all", "pid": 1234, "detached": True},
+    )
+
+    report = await build_startup_plan(StartupOptions(launch=True, keywords_per_domain=1, refresh_trends=True))
+
+    assert report["brief"]["research_triggered"] is True
+    assert report["brief"]["keywords_discovered"] == 1
+    assert report["brief"]["publishable_pending"] == 1
+    assert report["brief"]["work_ready"] is True
+    assert report["launched"] == [{"domain": "all", "pid": 1234, "detached": True}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_startup_does_not_launch_empty_worker(tmp_path: Path, monkeypatch, isolated_db) -> None:
+    keywords_file = tmp_path / "keywords.md"
+    write_keyword_rows(
+        keywords_file,
+        "Test Site Keyword Roadmap",
+        [KeywordRow("completed recipe", status="Live")],
+    )
+    domain = Domain(
+        handle="testsite",
+        domain="test.example",
+        display_name="Test Site",
+        language="en",
+        niche="recipe testing",
+        root=tmp_path,
+        keywords_file=keywords_file,
+        sessions_dir=tmp_path / "sessions",
+        output_dir=tmp_path / "output",
+        branding_dir=tmp_path / "branding",
+        pinterest_email="user@example.com",
+        pinterest_password=SecretStr("secret"),
+        supabase_url="https://supabase.example",
+        supabase_service_role_key=SecretStr("service-role"),
+    )
+
+    class FakeMemory:
+        def health(self):
+            return {"ok": True}
+
+        def search(self, query, limit=5):
+            return []
+
+        def log_event(self, event_type, message, metadata=None):
+            return {"success": True}
+
+    class FakeQueue:
+        def get_stats(self):
+            return {"total": 0}
+
+    monkeypatch.setattr("rankstein.startup.reload_registry", lambda: None)
+    monkeypatch.setattr("rankstein.startup._resolve_domains", lambda handles: [domain])
+    monkeypatch.setattr("rankstein.startup.agent_memory", FakeMemory())
+    monkeypatch.setattr("rankstein.startup.get_job_queue", lambda domain_handle: FakeQueue())
+    monkeypatch.setattr(
+        "rankstein.startup.refresh_domain_trend_lists",
+        lambda domains, **kwargs: {"domains": {"testsite": {"roadmap_added": 0}}},
+    )
+
+    def unexpected_launch(**kwargs):
+        raise AssertionError("empty startup must not launch an article worker")
+
+    monkeypatch.setattr("rankstein.startup._launch_article_worker", unexpected_launch)
+
+    report = await build_startup_plan(StartupOptions(launch=True, keywords_per_domain=1, refresh_trends=True))
+
+    assert report["brief"]["work_ready"] is False
+    assert report["brief"]["publishable_pending"] == 0
+    assert "No qualified Pending keywords" in report["brief"]["launch_blocked_reason"]
+    assert report["launched"] == []

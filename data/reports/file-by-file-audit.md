@@ -1,14 +1,14 @@
 # File-by-file Project Audit
 
-Generated: 2026-05-15T05:03:43.101930+00:00
+Generated: 2026-10-07T01:29:57.273989+00:00
 Root: `C:\Users\REDX420\Desktop\Rankstein`
 
 ## Summary
 
-- Files audited: 483
-- OK: 456
-- Review: 26
-- Fail: 1
+- Files audited: 370
+- OK: 345
+- Review: 25
+- Fail: 0
 
 ## Scope
 
@@ -19,11 +19,11 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 
 | Status | Kind | Lines | Bytes | File | Findings |
 |---|---|---:|---:|---|---|
-| fail | agent-config | 67 | 1970 | `.gemini/settings.json` | possible API key or API-key workflow reference |
-| ok | docs | 107 | 6630 | `README.md` |  |
+| ok | agent-config | 65 | 1824 | `.gemini/settings.json` |  |
+| ok | docs | 133 | 10378 | `README.md` |  |
 | ok | backend | 2 | 48 | `backend/__init__.py` |  |
 | ok | backend | 2 | 25 | `backend/agents/__init__.py` |  |
-| ok | backend | 64 | 3024 | `backend/agents/author.py` |  |
+| ok | backend | 72 | 3633 | `backend/agents/author.py` |  |
 | ok | backend | 81 | 3014 | `backend/agents/base.py` |  |
 | ok | backend | 35 | 1530 | `backend/agents/ceo.py` |  |
 | ok | backend | 36 | 1445 | `backend/agents/layout_agent.py` |  |
@@ -31,46 +31,49 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 33 | 1569 | `backend/agents/manager.py` |  |
 | ok | backend | 219 | 9967 | `backend/agents/orchestrator.py` |  |
 | ok | backend | 38 | 2091 | `backend/agents/pinterest.py` |  |
-| ok | backend | 326 | 12560 | `backend/agents/pinterest_uploader_v4.py` |  |
-| ok | backend | 17 | 1519 | `backend/agents/production_contract.py` |  |
+| ok | backend | 389 | 15199 | `backend/agents/pinterest_uploader_v4.py` |  |
+| ok | backend | 20 | 2042 | `backend/agents/production_contract.py` |  |
 | ok | backend | 36 | 1264 | `backend/agents/publisher.py` |  |
 | ok | backend | 36 | 1663 | `backend/agents/researcher.py` |  |
 | ok | backend | 37 | 1673 | `backend/agents/strategist.py` |  |
 | ok | backend | 37 | 2150 | `backend/agents/studio.py` |  |
 | ok | backend | 40 | 1609 | `backend/agents/validator.py` |  |
 | ok | backend | 2 | 29 | `backend/api/__init__.py` |  |
-| ok | backend | 418 | 16892 | `backend/api/routes.py` |  |
+| ok | backend | 435 | 17098 | `backend/api/routes.py` |  |
 | ok | backend | 2 | 31 | `backend/core/__init__.py` |  |
 | ok | backend | 124 | 4836 | `backend/core/a2a_protocol.py` |  |
-| ok | backend | 81 | 3074 | `backend/core/config.py` |  |
+| ok | backend | 81 | 3099 | `backend/core/config.py` |  |
 | ok | backend | 633 | 22958 | `backend/core/database.py` |  |
 | ok | backend | 239 | 8254 | `backend/core/engine.py` |  |
 | ok | backend | 63 | 2087 | `backend/core/security.py` |  |
 | ok | backend | 86 | 2824 | `backend/main.py` |  |
-| ok | backend | 23 | 420 | `backend/requirements.txt` |  |
-| ok | backend | 177 | 6467 | `backend/scripts/batch_upload_all_remastered.py` |  |
-| ok | backend | 653 | 22362 | `backend/scripts/batch_upload_remastered.py` |  |
+| ok | backend | 23 | 432 | `backend/requirements.txt` |  |
+| ok | backend | 179 | 6471 | `backend/scripts/batch_upload_all_remastered.py` |  |
+| ok | backend | 695 | 24074 | `backend/scripts/batch_upload_remastered.py` |  |
 | ok | backend | 7 | 112 | `backend/scripts/batch_upload_turbo.py` |  |
 | ok | backend | 27 | 932 | `backend/scripts/check_unpinned.py` |  |
-| ok | backend | 290 | 11025 | `backend/scripts/clear_pinterest_drafts.py` |  |
-| ok | backend | 410 | 17727 | `backend/scripts/daily_engine.py` |  |
+| ok | backend | 298 | 11065 | `backend/scripts/clear_pinterest_drafts.py` |  |
+| ok | backend | 82 | 2632 | `backend/scripts/daily_engine.py` |  |
 | ok | backend | 109 | 3561 | `backend/scripts/deploy_asset.py` |  |
-| ok | backend | 116 | 4390 | `backend/scripts/deploy_generic.py` |  |
+| ok | backend | 116 | 4381 | `backend/scripts/deploy_generic.py` |  |
 | ok | backend | 110 | 4271 | `backend/scripts/deploy_v2.py` |  |
 | ok | backend | 33 | 1199 | `backend/scripts/dual_turbo.py` |  |
-| ok | backend | 129 | 4120 | `backend/scripts/fix_post.py` |  |
+| ok | backend | 48 | 1405 | `backend/scripts/fix_post.py` |  |
 | ok | backend | 50 | 1799 | `backend/scripts/force_fix_visibility.py` |  |
-| ok | backend | 1751 | 71755 | `backend/scripts/pinterest_batch_core.py` |  |
-| ok | backend | 582 | 22424 | `backend/scripts/pinterest_uploader_v4.py` |  |
+| ok | backend | 106 | 2872 | `backend/scripts/gemini_token_rotator.py` |  |
+| ok | backend | 591 | 18365 | `backend/scripts/hero_image_pipeline.py` |  |
+| ok | backend | 1615 | 63458 | `backend/scripts/pinterest_batch_core.py` |  |
+| ok | backend | 656 | 25121 | `backend/scripts/pinterest_uploader_v4.py` |  |
 | ok | backend | 33 | 806 | `backend/scripts/trigger_funnel.py` |  |
-| ok | backend | 431 | 22699 | `backend/scripts/turbo_articles.py` |  |
+| ok | backend | 3699 | 148316 | `backend/scripts/turbo_articles.py` |  |
 | ok | backend | 2 | 27 | `backend/services/__init__.py` |  |
 | ok | backend | 75 | 2665 | `backend/services/competitor_analyzer.py` |  |
-| ok | backend | 140 | 5319 | `backend/services/harvester.py` |  |
+| ok | backend | 140 | 5324 | `backend/services/harvester.py` |  |
 | ok | backend | 109 | 3900 | `backend/services/keyword_mapper.py` |  |
-| ok | backend | 151 | 5791 | `backend/services/memory_service.py` |  |
-| ok | backend | 534 | 19455 | `backend/services/news_scraper.py` |  |
-| ok | backend | 599 | 25797 | `backend/services/remasterer.py` |  |
+| ok | backend | 161 | 6215 | `backend/services/memory_service.py` |  |
+| ok | backend | 642 | 24384 | `backend/services/news_scraper.py` |  |
+| ok | backend | 89 | 3017 | `backend/services/nvidia_client.py` |  |
+| ok | backend | 2067 | 84093 | `backend/services/remasterer.py` |  |
 | ok | backend | 167 | 6802 | `backend/services/scraper.py` |  |
 | ok | backend | 147 | 4748 | `backend/services/seo_tools.py` |  |
 | ok | backend | 108 | 4271 | `backend/services/site_auditor.py` |  |
@@ -80,92 +83,32 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | project | 4 | 104 | `cli-harness/cli_anything_rankstein/__init__.py` |  |
 | ok | project | 471 | 19685 | `cli-harness/cli_anything_rankstein/__main__.py` |  |
 | ok | project | 23 | 546 | `cli-harness/pyproject.toml` |  |
-| ok | domain-data | 176 | 8334 | `data/domains/recetadolce/daily_best_keywords.json` |  |
-| ok | docs | 17 | 761 | `data/domains/recetadolce/daily_best_keywords.md` |  |
-| ok | domain-data | 39 | 1209 | `data/domains/recetadolce/domain.json` |  |
-| ok | docs | 35 | 3355 | `data/domains/recetadolce/keywords.md` |  |
-| ok | domain-data | 176 | 8497 | `data/domains/recetagenial/daily_best_keywords.json` |  |
-| ok | docs | 17 | 764 | `data/domains/recetagenial/daily_best_keywords.md` |  |
-| ok | domain-data | 22 | 594 | `data/domains/recetagenial/domain.json` |  |
-| ok | docs | 25 | 2188 | `data/domains/recetagenial/keywords.md` |  |
-| ok | docs | 96 | 4968 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
-| ok | docs | 69 | 2170 | `docs/system/PROJECT_HYGIENE.md` |  |
-| ok | docs | 66 | 3186 | `docs/system/PROJECT_MAP.md` |  |
-| ok | docs | 94 | 4024 | `docs/system/SYSTEM_ARCHITECTURE.md` |  |
+| ok | domain-data | 243 | 11765 | `data/domains/recetadolce/daily_best_keywords.json` |  |
+| ok | docs | 17 | 1036 | `data/domains/recetadolce/daily_best_keywords.md` |  |
+| ok | domain-data | 36 | 1138 | `data/domains/recetadolce/domain.json` |  |
+| ok | docs | 733 | 84091 | `data/domains/recetadolce/keywords.md` |  |
+| ok | domain-data | 243 | 11690 | `data/domains/recetagenial/daily_best_keywords.json` |  |
+| ok | docs | 17 | 956 | `data/domains/recetagenial/daily_best_keywords.md` |  |
+| ok | domain-data | 40 | 1174 | `data/domains/recetagenial/domain.json` |  |
+| ok | docs | 496 | 55865 | `data/domains/recetagenial/keywords.md` |  |
+| ok | docs | 96 | 4883 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
+| ok | docs | 109 | 10589 | `docs/system/CAMPAIGN_PIPELINE.md` |  |
+| ok | docs | 0 | 0 | `docs/system/HERMES_SOUL.md` |  |
+| ok | docs | 200 | 9578 | `docs/system/PRODUCTION_RUNTIME_PLAN.md` |  |
+| ok | docs | 70 | 2201 | `docs/system/PROJECT_HYGIENE.md` |  |
+| ok | docs | 73 | 4083 | `docs/system/PROJECT_MAP.md` |  |
+| ok | docs | 325 | 16048 | `docs/system/SYSTEM_ARCHITECTURE.md` |  |
 | ok | docs | 398 | 12595 | `docs/templates/GENERIC_PINTEREST_PIN_TEMPLATE.md` |  |
-| ok | docs | 67 | 3117 | `docs/templates/IMAGE_GENERATION_CONTRACT.md` |  |
+| ok | docs | 94 | 6682 | `docs/templates/IMAGE_GENERATION_CONTRACT.md` |  |
 | ok | docs | 104 | 3427 | `docs/templates/TRIGGER_RECIPE_BRAIN.md` |  |
-| ok | docs | 69 | 2693 | `docs/templates/UPCOMING_DOMAIN_SYSTEM_PROMPT.md` |  |
-| ok | frontend | 143 | 5404 | `frontend/.graphify_temp_corpus/scratch/advanced_recipe_factory.py` |  |
-| ok | frontend | 114 | 4153 | `frontend/.graphify_temp_corpus/scratch/ai_recipe_publisher.py` |  |
-| ok | frontend | 48 | 1577 | `frontend/.graphify_temp_corpus/scratch/apply_correct_constraint.js` |  |
-| ok | frontend | 98 | 3498 | `frontend/.graphify_temp_corpus/scratch/apply_links.js` |  |
-| ok | frontend | 128 | 3948 | `frontend/.graphify_temp_corpus/scratch/audit_supabase.js` |  |
-| ok | frontend | 33 | 900 | `frontend/.graphify_temp_corpus/scratch/check_categories.js` |  |
-| ok | frontend | 26 | 713 | `frontend/.graphify_temp_corpus/scratch/check_db_categories_actual.js` |  |
-| ok | frontend | 47 | 1172 | `frontend/.graphify_temp_corpus/scratch/check_invalid_categories.js` |  |
-| ok | frontend | 20 | 579 | `frontend/.graphify_temp_corpus/scratch/check_posts_columns.js` |  |
-| ok | frontend | 25 | 605 | `frontend/.graphify_temp_corpus/scratch/check_schema.js` |  |
-| ok | frontend | 96 | 3021 | `frontend/.graphify_temp_corpus/scratch/cleanup_supabase.js` |  |
-| ok | frontend | 107 | 3386 | `frontend/.graphify_temp_corpus/scratch/cleanup_supabase_v2.js` |  |
-| ok | frontend | 128 | 4027 | `frontend/.graphify_temp_corpus/scratch/cleanup_supabase_v3.js` |  |
-| ok | frontend | 52 | 1509 | `frontend/.graphify_temp_corpus/scratch/cloudinary_upload.js` |  |
-| ok | frontend | 90 | 3740 | `frontend/.graphify_temp_corpus/scratch/create_listicles.js` |  |
-| ok | frontend | 42 | 1366 | `frontend/.graphify_temp_corpus/scratch/final_audit.js` |  |
-| ok | frontend | 87 | 3671 | `frontend/.graphify_temp_corpus/scratch/finalize_batch_processing.py` |  |
-| ok | frontend | 54 | 1413 | `frontend/.graphify_temp_corpus/scratch/find_listicles.js` |  |
-| ok | frontend | 30 | 758 | `frontend/.graphify_temp_corpus/scratch/find_unsplash.js` |  |
-| ok | frontend | 54 | 1890 | `frontend/.graphify_temp_corpus/scratch/fix-db-data.js` |  |
-| ok | frontend | 65 | 2555 | `frontend/.graphify_temp_corpus/scratch/fix_categories.js` |  |
-| ok | frontend | 54 | 1732 | `frontend/.graphify_temp_corpus/scratch/fix_database_categories.js` |  |
-| ok | frontend | 47 | 1821 | `frontend/.graphify_temp_corpus/scratch/fix_db_constraint.js` |  |
-| ok | frontend | 166 | 6020 | `frontend/.graphify_temp_corpus/scratch/full_automation_pipeline.py` |  |
-| ok | frontend | 16 | 1646 | `frontend/.graphify_temp_corpus/scratch/image-urls.json` |  |
-| ok | frontend | 276 | 9611 | `frontend/.graphify_temp_corpus/scratch/listicle_ideas.json` |  |
-| ok | frontend | 137 | 7270 | `frontend/.graphify_temp_corpus/scratch/publish-crema-catalana.js` |  |
-| ok | frontend | 131 | 6851 | `frontend/.graphify_temp_corpus/scratch/publish-direct.js` |  |
-| ok | frontend | 301 | 12834 | `frontend/.graphify_temp_corpus/scratch/publish-helado-pistacho.js` |  |
-| ok | frontend | 124 | 6639 | `frontend/.graphify_temp_corpus/scratch/publish-paella.js` |  |
-| ok | frontend | 94 | 4368 | `frontend/.graphify_temp_corpus/scratch/publish-pistachio.js` |  |
-| ok | frontend | 132 | 6886 | `frontend/.graphify_temp_corpus/scratch/publish-tortilla.js` |  |
-| ok | frontend | 257 | 13440 | `frontend/.graphify_temp_corpus/scratch/publish_batch_icecreams.js` |  |
-| ok | frontend | 440 | 23312 | `frontend/.graphify_temp_corpus/scratch/publish_helados.js` |  |
-| ok | frontend | 150 | 6245 | `frontend/.graphify_temp_corpus/scratch/publish_icecream.js` |  |
-| ok | frontend | 121 | 5597 | `frontend/.graphify_temp_corpus/scratch/publish_strawberry.js` |  |
-| ok | frontend | 407 | 23337 | `frontend/.graphify_temp_corpus/scratch/publish_variety_batch.js` |  |
-| ok | frontend | 122 | 4162 | `frontend/.graphify_temp_corpus/scratch/rebuild_categories.js` |  |
-| ok | frontend | 41 | 1479 | `frontend/.graphify_temp_corpus/scratch/repair_list.js` |  |
-| ok | frontend | 201 | 5210 | `frontend/.graphify_temp_corpus/scratch/repair_queue.json` |  |
-| ok | frontend | 65 | 2061 | `frontend/.graphify_temp_corpus/scratch/replace_images.js` |  |
-| ok | frontend | 37 | 1693 | `frontend/.graphify_temp_corpus/scratch/run_migrations.js` |  |
-| ok | frontend | 76 | 2480 | `frontend/.graphify_temp_corpus/scratch/seo_analysis.js` |  |
-| ok | frontend | 3935 | 185236 | `frontend/.graphify_temp_corpus/scratch/seo_analysis.json` |  |
-| ok | frontend | 100 | 3430 | `frontend/.graphify_temp_corpus/scratch/seo_bulk_repair.js` |  |
-| ok | frontend | 96 | 3051 | `frontend/.graphify_temp_corpus/scratch/test-publish.js` |  |
-| ok | frontend | 19 | 520 | `frontend/.graphify_temp_corpus/scratch/test_gemini.js` |  |
-| ok | frontend | 40 | 1171 | `frontend/.graphify_temp_corpus/scratch/test_lowercase_allowed.js` |  |
-| ok | frontend | 6 | 400 | `frontend/.graphify_temp_corpus/scratch/tortilla-urls.json` |  |
-| ok | frontend | 34 | 1073 | `frontend/.graphify_temp_corpus/scratch/upload-image.js` |  |
-| ok | frontend | 95 | 3647 | `frontend/.graphify_temp_corpus/scratch/upload-images-to-supabase.js` |  |
-| ok | frontend | 50 | 1786 | `frontend/.graphify_temp_corpus/scratch/upload-tortilla-images.js` |  |
-| ok | frontend | 40 | 1157 | `frontend/.graphify_temp_corpus/scripts/batch_publish.js` |  |
-| ok | frontend | 494 | 21480 | `frontend/.graphify_temp_corpus/scripts/campaign_manager.py` |  |
-| ok | frontend | 138 | 3703 | `frontend/.graphify_temp_corpus/scripts/campaigns/fresas_campaign.json` |  |
-| ok | frontend | 329 | 12864 | `frontend/.graphify_temp_corpus/scripts/content_wizard.py` |  |
-| ok | frontend | 50 | 1749 | `frontend/.graphify_temp_corpus/scripts/debug_db.js` |  |
-| ok | frontend | 211 | 10009 | `frontend/.graphify_temp_corpus/scripts/generate_pins.py` |  |
-| ok | frontend | 134 | 19202 | `frontend/.graphify_temp_corpus/scripts/publish_fresas.py` |  |
-| ok | frontend | 130 | 22530 | `frontend/.graphify_temp_corpus/scripts/publish_tapas.py` |  |
-| ok | frontend | 60 | 2574 | `frontend/.graphify_temp_corpus/scripts/seed_admin.js` |  |
-| ok | frontend | 51 | 1738 | `frontend/.graphify_temp_corpus/scripts/sync_nexus.py` |  |
-| ok | frontend | 46 | 1401 | `frontend/.graphify_temp_corpus/scripts/update_analytics.js` |  |
-| ok | frontend | 49 | 1589 | `frontend/.graphify_temp_corpus/scripts/update_head_code.js` |  |
-| ok | docs | 16 | 1220 | `frontend/AGENTS.md` |  |
+| ok | docs | 0 | 0 | `docs/templates/UPCOMING_DOMAIN_SYSTEM_PROMPT.md` |  |
+| ok | frontend | 12 | 520 | `frontend/.vercel/README.txt` |  |
+| ok | frontend | 1 | 122 | `frontend/.vercel/project.json` |  |
+| ok | docs | 18 | 1805 | `frontend/AGENTS.md` |  |
 | ok | docs | 6 | 292 | `frontend/CLAUDE.md` |  |
 | ok | docs | 44 | 2103 | `frontend/CONTENT_WIZARD.md` |  |
 | ok | docs | 34 | 1921 | `frontend/PLUGINS.md` |  |
 | ok | docs | 42 | 1055 | `frontend/README.md` |  |
-| ok | frontend | 6 | 344 | `frontend/add_chef_tip.sql` |  |
 | ok | frontend | 48 | 1713 | `frontend/app/[slug]/error.tsx` |  |
 | ok | frontend | 42 | 1857 | `frontend/app/[slug]/loading.tsx` |  |
 | ok | frontend | 529 | 20776 | `frontend/app/[slug]/page.tsx` |  |
@@ -204,17 +147,6 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | frontend | 106 | 6381 | `frontend/app/seguridad-alimentaria/page.tsx` |  |
 | ok | frontend | 48 | 2018 | `frontend/app/sitemap.ts` |  |
 | ok | frontend | 66 | 3649 | `frontend/app/terms/page.tsx` |  |
-| ok | frontend | 23 | 791 | `frontend/check_legacy_migrated.js` |  |
-| ok | frontend | 23 | 657 | `frontend/check_macarons.js` |  |
-| ok | frontend | 28 | 862 | `frontend/check_new_posts_sample.js` |  |
-| ok | frontend | 25 | 1181 | `frontend/check_old_db.js` |  |
-| ok | frontend | 25 | 849 | `frontend/check_pins_db.js` |  |
-| ok | frontend | 27 | 1311 | `frontend/check_post_diff.js` |  |
-| ok | frontend | 19 | 583 | `frontend/check_posts.js` |  |
-| ok | frontend | 22 | 690 | `frontend/check_settings_cols.js` |  |
-| ok | frontend | 21 | 699 | `frontend/check_subs_table.js` |  |
-| ok | frontend | 35 | 1409 | `frontend/check_tables.js` |  |
-| ok | frontend | 21 | 796 | `frontend/check_tables_existence.js` |  |
 | ok | frontend | 69 | 2296 | `frontend/components/AdUnit.tsx` |  |
 | ok | frontend | 21 | 446 | `frontend/components/AdminCheck.tsx` |  |
 | ok | frontend | 84 | 5777 | `frontend/components/AuthorBio.tsx` |  |
@@ -251,7 +183,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | frontend | 103 | 3764 | `frontend/components/ShareMenu.tsx` |  |
 | ok | frontend | 145 | 6648 | `frontend/components/Sidebar.tsx` |  |
 | ok | frontend | 30 | 1151 | `frontend/components/SocialStats.tsx` |  |
-| ok | frontend | 72 | 3225 | `frontend/components/StandardRecipeCard.tsx` |  |
+| ok | frontend | 68 | 3025 | `frontend/components/StandardRecipeCard.tsx` |  |
 | ok | frontend | 102 | 3548 | `frontend/components/StarRating.tsx` |  |
 | ok | frontend | 93 | 3511 | `frontend/components/newsletter/NewsletterBox.tsx` |  |
 | ok | frontend | 28 | 898 | `frontend/components/recipe/FAQSection.tsx` |  |
@@ -263,120 +195,30 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | frontend | 66 | 2375 | `frontend/components/recipe/StepByStep.tsx` |  |
 | ok | frontend | 25 | 521 | `frontend/context/SettingsContext.tsx` |  |
 | ok | frontend | 31 | 731 | `frontend/eslint.config.mjs` |  |
-| ok | frontend | 42 | 1517 | `frontend/fix_categories_and_constraints.sql` |  |
-| ok | frontend | 506 | 16893 | `frontend/graphify-out/.graphify_analysis.json` |  |
-| ok | frontend | 3212 | 113819 | `frontend/graphify-out/.graphify_ast.json` |  |
-| ok | frontend | 2 | 88696 | `frontend/graphify-out/.graphify_cached.json` |  |
-| ok | frontend | 42 | 1265 | `frontend/graphify-out/.graphify_chunk_01.json` |  |
-| ok | frontend | 2 | 978 | `frontend/graphify-out/.graphify_chunk_02.json` |  |
-| ok | frontend | 2 | 2962 | `frontend/graphify-out/.graphify_chunk_03.json` |  |
-| ok | frontend | 2 | 2580 | `frontend/graphify-out/.graphify_chunk_04.json` |  |
-| ok | frontend | 2 | 1026 | `frontend/graphify-out/.graphify_chunk_05.json` |  |
-| ok | frontend | 119 | 4128 | `frontend/graphify-out/.graphify_chunk_06.json` |  |
-| ok | frontend | 42 | 1322 | `frontend/graphify-out/.graphify_chunk_07.json` |  |
-| ok | frontend | 2 | 1611 | `frontend/graphify-out/.graphify_chunk_08.json` |  |
-| ok | frontend | 2 | 1559 | `frontend/graphify-out/.graphify_chunk_09.json` |  |
-| ok | frontend | 2 | 1004 | `frontend/graphify-out/.graphify_chunk_10.json` |  |
-| ok | frontend | 2 | 4452 | `frontend/graphify-out/.graphify_detect.json` |  |
-| ok | frontend | 3643 | 131290 | `frontend/graphify-out/.graphify_extract.json` |  |
-| ok | frontend | 440 | 17559 | `frontend/graphify-out/.graphify_semantic.json` |  |
-| ok | frontend | 11 | 788 | `frontend/graphify-out/.graphify_uncached.txt` |  |
-| ok | docs | 405 | 18179 | `frontend/graphify-out/GRAPH_REPORT.md` |  |
-| ok | frontend | 2 | 11876 | `frontend/graphify-out/cache/02ba78cc7811f3960cab0d1fbb90006e33b91bba34b78f508d6dd4f4c1e65bbe.json` |  |
-| ok | frontend | 2 | 2075 | `frontend/graphify-out/cache/038be5cae692c575b6f20d71305a7201aa9475f63268e0f4ce8adcb3bb4cce9d.json` |  |
-| ok | frontend | 2 | 4855 | `frontend/graphify-out/cache/039b9e714f14f5a0c64d805eab7ab152d4d12582419364aa3f09e13515bf92e6.json` |  |
-| ok | frontend | 2 | 4276 | `frontend/graphify-out/cache/062f4ede650299fd44d73ea7f4515628fbc74219a9e940ef79b973ddbc7e74c1.json` |  |
-| ok | frontend | 2 | 3237 | `frontend/graphify-out/cache/07e63532732a343e3016ffe966637eb9d31abacfda7d7ede9f4a5748fb9c33c9.json` |  |
-| ok | frontend | 2 | 5322 | `frontend/graphify-out/cache/0f4eac58e9852d06e2bbcea8afc30d2cda0f4e7596dded7f71101df887d5f7f5.json` |  |
-| ok | frontend | 2 | 1816 | `frontend/graphify-out/cache/0fc928e45c0ea494058d187dc2f5166f2131cc5ff72d28d56997cbd7548352b5.json` |  |
-| ok | frontend | 2 | 3475 | `frontend/graphify-out/cache/13280804c7ac5a3f9ea7cc0d9a1347e3530dba67ef197caf6698117b8da45fbc.json` |  |
-| ok | frontend | 2 | 3348 | `frontend/graphify-out/cache/1797c227888e3f0f971a34e6ef0db6f607b1500cf2e68f0e8136754442ccb9ba.json` |  |
-| ok | frontend | 2 | 5578 | `frontend/graphify-out/cache/1c152181a729874dcdc5c76ba04778e916c2a7465671589ad13e20dfa02b2cb9.json` |  |
-| ok | frontend | 2 | 3913 | `frontend/graphify-out/cache/1d55a63a8f6b748581f1840bc11302029ec239d15f5b331bb42bc1686f1970e1.json` |  |
-| ok | frontend | 2 | 1742 | `frontend/graphify-out/cache/220dad91c04fcbae497a0b26e3e6d712201b01f2a1595dcbee35e98b9cd330f0.json` |  |
-| ok | frontend | 2 | 2998 | `frontend/graphify-out/cache/221e0c12b7ad78e60128b1787abbd1a1af4c18a867eecbc988d9b8ef826290ec.json` |  |
-| ok | frontend | 2 | 1589 | `frontend/graphify-out/cache/267e61c3ae167e4c683f42701fda3d108b77878c0eaf9626de894935b5a476b5.json` |  |
-| ok | frontend | 2 | 1721 | `frontend/graphify-out/cache/33344c2bd3dd09238e1f09e1e53c148b1716180c3f0401f7b8c8c5ac5b23811e.json` |  |
-| ok | frontend | 2 | 6218 | `frontend/graphify-out/cache/34240524f38b5d4c3db2ccd8cb9bc51053d80c0967c48fad681a9df2118163a0.json` |  |
-| ok | frontend | 2 | 5925 | `frontend/graphify-out/cache/384617e15bcc43de8b8cbebdbaf0bd4798ab85b4e7e85b8c9027b449d14f9121.json` |  |
-| ok | frontend | 2 | 2769 | `frontend/graphify-out/cache/45fd31cb95e4695ca52dba89e5bfc74cd6be69f657036b47637574038cd46655.json` |  |
-| ok | frontend | 2 | 3235 | `frontend/graphify-out/cache/4629539d787e37df8c0843f698d58dd1345da451719b9a0d8567ef0cae2e5f87.json` |  |
-| ok | frontend | 2 | 3046 | `frontend/graphify-out/cache/47470ffc46a6a480d3eb9687ba4944600a1bac0dbb2e758865afd1c885af8286.json` |  |
-| ok | frontend | 2 | 5909 | `frontend/graphify-out/cache/4d55b029ace45c91feb212cb345b411d8cef3afc418e2703f3cf1f35ee79ed6d.json` |  |
-| ok | frontend | 2 | 3198 | `frontend/graphify-out/cache/4e32d5489a7382b1a19c208744a65b00fb808d335ce57f34a134722181de5738.json` |  |
-| ok | frontend | 2 | 1507 | `frontend/graphify-out/cache/50dc1c8e69b9f7fdeaf75c04b39963264a8277ba9f91dd418f52911dc1ee1fa6.json` |  |
-| ok | frontend | 2 | 1561 | `frontend/graphify-out/cache/5aed2e14bf93a1849e83f7bda11320a23f7f7ca5d49fb06b8812f0fbbe279c96.json` |  |
-| ok | frontend | 2 | 5778 | `frontend/graphify-out/cache/5d46a61d437645a77ce4f7a9989b7d11dd298aa91d65270a5803762fab713fc1.json` |  |
-| ok | frontend | 2 | 2231 | `frontend/graphify-out/cache/6590b345840e5fba39e63fb1e3f338c39f8930c422691844f466f71dee84e616.json` |  |
-| ok | frontend | 2 | 38224 | `frontend/graphify-out/cache/73aacde4ed7d74f00045cd3f7c9968098c71cf174e62e34d49d42aeb5de5801f.json` |  |
-| ok | frontend | 2 | 2203 | `frontend/graphify-out/cache/7659061b3c9043c2c41551d9983188b7f8e590f1412ec01618ae93901a90af06.json` |  |
-| ok | frontend | 2 | 4523 | `frontend/graphify-out/cache/7d4d72a20ba0536d850cc4c1db15a5a7d3694494b8e034cc560e0f743a3d2396.json` |  |
-| ok | frontend | 2 | 3132 | `frontend/graphify-out/cache/8060c589e43856f5b84943522be6329a7dc9836ed0bab98a06c0ac080490cf0a.json` |  |
-| ok | frontend | 2 | 4059 | `frontend/graphify-out/cache/83265aa5f89e2bdca5b59382069ca277ffcfe3e81d2a1b4a53f0c84b995f9c67.json` |  |
-| ok | frontend | 2 | 1871 | `frontend/graphify-out/cache/84965fad11bf37ef28b29996ad63f631f1262687e52c9f02a5cde178c01de319.json` |  |
-| ok | frontend | 2 | 4612 | `frontend/graphify-out/cache/858de5d063584f288be204d7576ce103784ee4feb977fe6d310ee1a08d0ac6ef.json` |  |
-| ok | frontend | 2 | 3358 | `frontend/graphify-out/cache/8c43eb9d5e6b1f9f67145071f9dbedcfdb612b7422fd579797de6a330a0bea35.json` |  |
-| ok | frontend | 2 | 3809 | `frontend/graphify-out/cache/907c1cc097e0f4120e7b37ecfb877ef48a0b6a2877d2d3620fa2eb8574d7bbc4.json` |  |
-| ok | frontend | 2 | 10731 | `frontend/graphify-out/cache/9286d26c5191a2a793976defaee77b25095eef97f9931b352c47a916f067b63d.json` |  |
-| ok | frontend | 2 | 2992 | `frontend/graphify-out/cache/92d5680967262e7c271fbde66c5823a6cdea5ae91cb9565f267abba41e702005.json` |  |
-| ok | frontend | 2 | 3515 | `frontend/graphify-out/cache/a08bdb1e4e848553a0fb377f6f5a99a30833e955ab3a39488d25a9718a1c8b95.json` |  |
-| ok | frontend | 2 | 15533 | `frontend/graphify-out/cache/a6244b507b9626a16048bb2c19742fdf67ca09a28da83142fd7c751058e0e815.json` |  |
-| ok | frontend | 2 | 2371 | `frontend/graphify-out/cache/b20af0a333c6ee61641e7b09ccf2dece2e5c1ef27842b0a0c298ec056be8d849.json` |  |
-| ok | frontend | 2 | 2580 | `frontend/graphify-out/cache/b2ed65e7dbb04f471b6e5b479d3e53f372d85e6a97bf71e1314768a3f567c441.json` |  |
-| ok | frontend | 2 | 1944 | `frontend/graphify-out/cache/b3f787047b32247c33c18a0ddabd3299d55812ee97c2e000da0ad9032468faf5.json` |  |
-| ok | frontend | 2 | 6327 | `frontend/graphify-out/cache/bd197894a5535d779cc38511b311a65ccec8fdcc2ac24c20c1184430f792d53b.json` |  |
-| ok | frontend | 2 | 1689 | `frontend/graphify-out/cache/bd43e82ce95ab40b097257452178ebaabdd34e2d78a651521c1cf834ffb136f7.json` |  |
-| ok | frontend | 2 | 3027 | `frontend/graphify-out/cache/bea1e33b93df5ad81df9c7fc25469e0847afe7101093280c3b4bb0287b9701f3.json` |  |
-| ok | frontend | 2 | 2054 | `frontend/graphify-out/cache/c0c123817b4c16b422beb04a3f38cf0d14306b43bc54dbc8c94f928f9930a706.json` |  |
-| ok | frontend | 2 | 4408 | `frontend/graphify-out/cache/cb624e1d3ca34525e0388185df3479d8850a78176bb5ae91676464935ffe5331.json` |  |
-| ok | frontend | 2 | 1643 | `frontend/graphify-out/cache/cc14984f718074d4f9858c8c6edf0f90eb8a7e44437f809d84e9ef8e25f867bb.json` |  |
-| ok | frontend | 2 | 1385 | `frontend/graphify-out/cache/dc663a73fe9fc8bcf550e2ab7997d8f098ca60049b756f6d504da318a3ec9b92.json` |  |
-| ok | frontend | 2 | 6375 | `frontend/graphify-out/cache/dda7d3dd3d6d72fe79f491d6d493f4de1a306d29d2bf03a9123211eb29b5f3bb.json` |  |
-| ok | frontend | 2 | 1917 | `frontend/graphify-out/cache/df53589af121495eace1e196adc129e928598ff5fa3a96effed50960e1170d9f.json` |  |
-| ok | frontend | 2 | 1785 | `frontend/graphify-out/cache/e363bbf22556ed83c3dd511cf9c58f8d0595987f7ec7712f8e8debfd32851719.json` |  |
-| ok | frontend | 2 | 14271 | `frontend/graphify-out/cache/e41a288030b46451a57f41f39ac15bc49d28769274835b5cc8cc238b119cddbd.json` |  |
-| ok | frontend | 2 | 1833 | `frontend/graphify-out/cache/e955cb7932f07a9254b1d93c7ecf71465ff941a50c9d91b543700e181e87455a.json` |  |
-| ok | frontend | 2 | 3499 | `frontend/graphify-out/cache/ec70a8f6140b35eaec0c8086e871efa3805b9c48503572e17ac79ac125bc879a.json` |  |
-| ok | frontend | 2 | 2129 | `frontend/graphify-out/cache/faa599ebb6588c1f807785e9c8900f1bd3039a0082209289bd692ab0d9a0bd75.json` |  |
-| ok | frontend | 2 | 3762 | `frontend/graphify-out/cache/fb082861d84fde259e32ba4b56715b9e54cbaf6101a27a9d9eeaaf2e94603b0f.json` |  |
-| ok | frontend | 2 | 14335 | `frontend/graphify-out/cache/fd722c527a76bb98c868221663fa652a831b8ecc8a16b2145675458768a59b15.json` |  |
-| ok | frontend | 4033 | 152531 | `frontend/graphify-out/graph.json` |  |
-| ok | frontend | 56 | 1960 | `frontend/graphify_query.py` |  |
-| ok | frontend | 34 | 1590 | `frontend/graphify_step4.py` |  |
-| ok | frontend | 23 | 729 | `frontend/inspect_migrated_post.js` |  |
-| ok | frontend | 20 | 748 | `frontend/inspect_new_sample.js` |  |
-| ok | frontend | 18 | 667 | `frontend/inspect_new_settings.js` |  |
-| ok | frontend | 19 | 726 | `frontend/inspect_old_categories.js` |  |
-| ok | frontend | 15 | 631 | `frontend/inspect_old_sample.js` |  |
-| ok | frontend | 25 | 1146 | `frontend/inspect_old_sample_links.js` |  |
-| ok | frontend | 28 | 1290 | `frontend/inspect_old_schema.js` |  |
-| ok | frontend | 18 | 642 | `frontend/inspect_old_settings.js` |  |
-| ok | frontend | 18 | 648 | `frontend/inspect_old_subs.js` |  |
-| ok | frontend | 26 | 822 | `frontend/inspect_schema.js` |  |
+| ok | frontend | 16 | 692 | `frontend/fetch_slug.js` |  |
+| ok | frontend | 16 | 671 | `frontend/fetch_slug_genial.js` |  |
+| ok | frontend | 33 | 1226 | `frontend/fix_db_content.js` |  |
+| ok | frontend | 36 | 1407 | `frontend/fix_db_content2.js` |  |
+| ok | frontend | 36 | 1341 | `frontend/fix_recetagenial_db.js` |  |
 | ok | frontend | 63 | 2421 | `frontend/lib/categories.ts` |  |
+| ok | frontend | 74 | 2174 | `frontend/lib/imageHelper.ts` |  |
 | ok | frontend | 67 | 2515 | `frontend/lib/sanitize.ts` |  |
 | ok | frontend | 23 | 524 | `frontend/lib/settings.ts` |  |
 | ok | frontend | 14 | 1165 | `frontend/lib/siteImages.ts` |  |
 | ok | frontend | 77 | 2813 | `frontend/lib/supabase.ts` |  |
 | ok | frontend | 38 | 896 | `frontend/lib/utils.ts` |  |
-| ok | frontend | 41 | 1657 | `frontend/list_all_tables.js` |  |
-| ok | frontend | 19 | 589 | `frontend/list_categories.js` |  |
-| ok | frontend | 23 | 711 | `frontend/list_more_slugs.js` |  |
-| ok | frontend | 18 | 655 | `frontend/list_rpcs.js` |  |
-| ok | frontend | 62 | 15861 | `frontend/merge_graphify.py` |  |
+| ok | frontend | 50 | 2200 | `frontend/migrate_post.js` |  |
 | ok | frontend | 38 | 1423 | `frontend/models.json` |  |
 | ok | frontend | 7 | 253 | `frontend/next-env.d.ts` |  |
 | ok | frontend | 106 | 3067 | `frontend/next.config.ts` |  |
 | ok | frontend | 12 | 303 | `frontend/nexus_config.json` |  |
 | ok | frontend | 7133 | 254173 | `frontend/package-lock.json` |  |
 | ok | frontend | 47 | 1100 | `frontend/package.json` |  |
+| ok | frontend | 62 | 7727 | `frontend/post_content.txt` |  |
+| ok | frontend | 62 | 7727 | `frontend/post_content_recetagenial.txt` |  |
 | ok | frontend | 8 | 101 | `frontend/postcss.config.mjs` |  |
-| ok | frontend | 27 | 1247 | `frontend/premium_migration.sql` |  |
-| ok | frontend | 21 | 807 | `frontend/probe_old_tables.js` |  |
-| ok | frontend | 27 | 969 | `frontend/probe_tables.js` |  |
 | ok | frontend | 23 | 633 | `frontend/proxy.ts` |  |
 | ok | frontend | 27 | 1002 | `frontend/public/llms.txt` |  |
-| ok | frontend | 32 | 1572 | `frontend/run_graphify_part_ab.py` |  |
 | ok | frontend | 177 | 6186 | `frontend/schema.sql` |  |
 | ok | frontend | 40 | 1157 | `frontend/scripts/batch_publish.js` |  |
 | ok | frontend | 196 | 9555 | `frontend/scripts/campaign_manager.py` |  |
@@ -390,115 +232,160 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | frontend | 51 | 1738 | `frontend/scripts/sync_nexus.py` |  |
 | ok | frontend | 46 | 1401 | `frontend/scripts/update_analytics.js` |  |
 | ok | frontend | 49 | 1589 | `frontend/scripts/update_head_code.js` |  |
-| ok | frontend | 45 | 1158 | `frontend/settings_migration.sql` |  |
-| ok | frontend | 39 | 1652 | `frontend/sync_discovery.js` |  |
-| ok | frontend | 64 | 2566 | `frontend/sync_settings.js` |  |
-| ok | frontend | 21 | 709 | `frontend/test_supabase.js` |  |
+| ok | frontend | 22 | 622 | `frontend/test_marked.js` |  |
+| ok | frontend | 23 | 872 | `frontend/test_marked2.js` |  |
 | ok | frontend | 45 | 818 | `frontend/tsconfig.json` |  |
 | ok | frontend | 129 | 2847 | `frontend/types/index.ts` |  |
-| ok | frontend | 135 | 5650 | `frontend/unify_supabase.js` |  |
 | ok | frontend | 17 | 419 | `frontend/vercel.json` |  |
+| ok | docs | 32 | 1898 | `memory/gold_config.md` |  |
 | ok | project | 180 | 5302 | `memory/keyword_clusters.json` |  |
-| ok | docs | 203 | 22406 | `memory/keywords.md` |  |
-| ok | docs | 34 | 3295 | `memory/pinterest_backlog.md` |  |
+| ok | docs | 214 | 23347 | `memory/keywords.md` |  |
+| ok | docs | 22 | 1615 | `memory/pinterest_backlog.md` |  |
 | ok | core | 51 | 1853 | `pinterest_automation/__init__.py` |  |
-| ok | core | 221 | 8213 | `pinterest_automation/browser_utils.py` |  |
-| ok | core | 262 | 8784 | `pinterest_automation/campaign.py` |  |
-| ok | core | 218 | 8572 | `pinterest_automation/circuit_breaker.py` |  |
-| ok | core | 386 | 13685 | `pinterest_automation/config.py` |  |
-| ok | core | 234 | 9119 | `pinterest_automation/health_monitor.py` |  |
-| ok | core | 558 | 21843 | `pinterest_automation/job_queue.py` |  |
-| ok | core | 255 | 10869 | `pinterest_automation/mcp_bridge.py` |  |
-| ok | core | 146 | 4675 | `pinterest_automation/mcp_client.py` |  |
-| ok | core | 141 | 4204 | `pinterest_automation/mcp_integration.py` |  |
-| ok | core | 864 | 36908 | `pinterest_automation/pinterest_driver.py` |  |
-| ok | core | 179 | 6838 | `pinterest_automation/rate_limiter.py` |  |
-| ok | core | 560 | 21727 | `pinterest_automation/self_healing.py` |  |
-| ok | core | 324 | 13036 | `pinterest_automation/session_pool.py` |  |
-| ok | core | 588 | 26515 | `pinterest_automation/supervisor.py` |  |
-| ok | project | 247 | 8163 | `pyproject.toml` |  |
-| ok | project | 22 | 569 | `rankstein.py` |  |
+| ok | core | 233 | 8588 | `pinterest_automation/browser_utils.py` |  |
+| ok | core | 840 | 30296 | `pinterest_automation/campaign.py` |  |
+| ok | core | 246 | 9752 | `pinterest_automation/circuit_breaker.py` |  |
+| ok | core | 457 | 16502 | `pinterest_automation/config.py` |  |
+| ok | core | 281 | 11121 | `pinterest_automation/health_monitor.py` |  |
+| ok | core | 1269 | 51878 | `pinterest_automation/job_queue.py` |  |
+| ok | core | 282 | 11776 | `pinterest_automation/mcp_bridge.py` |  |
+| ok | core | 172 | 6217 | `pinterest_automation/mcp_client.py` |  |
+| ok | core | 343 | 12661 | `pinterest_automation/mcp_integration.py` |  |
+| ok | core | 1317 | 58562 | `pinterest_automation/pinterest_driver.py` |  |
+| ok | core | 289 | 12081 | `pinterest_automation/rate_limiter.py` |  |
+| ok | core | 53 | 1742 | `pinterest_automation/routing.py` |  |
+| ok | core | 152 | 5309 | `pinterest_automation/runtime_state.py` |  |
+| ok | core | 568 | 22061 | `pinterest_automation/self_healing.py` |  |
+| ok | core | 485 | 20430 | `pinterest_automation/session_pool.py` |  |
+| ok | core | 815 | 38205 | `pinterest_automation/supervisor.py` |  |
+| ok | core | 61 | 1897 | `pinterest_automation/utils.py` |  |
+| ok | project | 249 | 8197 | `pyproject.toml` |  |
+| ok | project | 39 | 1405 | `rankstein.py` |  |
 | ok | core | 15 | 630 | `rankstein/__init__.py` |  |
 | ok | core | 109 | 3506 | `rankstein/autonomous.py` |  |
 | ok | core | 266 | 10888 | `rankstein/branding.py` |  |
-| ok | core | 355 | 15308 | `rankstein/cli.py` |  |
-| ok | core | 214 | 9895 | `rankstein/config.py` |  |
-| ok | core | 315 | 13217 | `rankstein/domain.py` |  |
-| ok | core | 162 | 5049 | `rankstein/keyword_roadmap.py` |  |
+| ok | core | 200 | 8188 | `rankstein/category_policy.py` |  |
+| ok | core | 811 | 34231 | `rankstein/cli.py` |  |
+| ok | core | 214 | 9920 | `rankstein/config.py` |  |
+| ok | core | 313 | 13160 | `rankstein/domain.py` |  |
+| ok | core | 303 | 10561 | `rankstein/keyword_roadmap.py` |  |
+| ok | core | 681 | 23792 | `rankstein/launcher.py` |  |
+| ok | core | 118 | 4515 | `rankstein/log_manager.py` |  |
 | ok | core | 455 | 20762 | `rankstein/niche_detector.py` |  |
-| ok | core | 383 | 16327 | `rankstein/provisioner.py` |  |
-| ok | core | 694 | 24033 | `rankstein/site_factory.py` |  |
-| ok | core | 309 | 11464 | `rankstein/startup.py` |  |
+| ok | core | 230 | 6522 | `rankstein/pipeline_events.py` |  |
+| ok | core | 395 | 15366 | `rankstein/production_batch.py` |  |
+| ok | core | 566 | 20832 | `rankstein/production_reconcile.py` |  |
+| ok | core | 482 | 14818 | `rankstein/prompts.py` |  |
+| ok | core | 383 | 16413 | `rankstein/provisioner.py` |  |
+| ok | core | 817 | 27641 | `rankstein/recipe_pin_generator.py` |  |
+| ok | core | 822 | 28883 | `rankstein/remaster_variants.py` |  |
+| ok | core | 36 | 1295 | `rankstein/runtime_env.py` |  |
+| ok | core | 697 | 24047 | `rankstein/site_factory.py` |  |
+| ok | core | 400 | 15004 | `rankstein/startup.py` |  |
 | ok | core | 181 | 6033 | `rankstein/subscribers.py` |  |
-| ok | core | 651 | 22496 | `rankstein/trend_intelligence.py` |  |
-| ok | project | 3728 | 159599 | `rankstein_mcp_server.py` |  |
-| ok | project | 190 | 4082 | `requirements.txt` |  |
-| ok | scripts | 114 | 4565 | `scripts/adsense_audit.py` |  |
-| ok | scripts | 179 | 8031 | `scripts/adsense_repair.py` |  |
-| ok | scripts | 41 | 1253 | `scripts/audit_single.js` |  |
-| ok | scripts | 26 | 1155 | `scripts/check_categories.py` |  |
-| ok | scripts | 28 | 1237 | `scripts/check_columns.py` |  |
-| review | docs | 27 | 1218 | `scripts/debug/README.md` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 60 | 2208 | `scripts/debug/audit_repair_logic.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 26 | 893 | `scripts/debug/check_dotenv_load.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 56 | 1813 | `scripts/debug/check_duplicates.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 22 | 621 | `scripts/debug/check_pin_status.js` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 25 | 640 | `scripts/debug/check_supabase_columns.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 81 | 2364 | `scripts/debug/cleanup_backlog.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 34 | 986 | `scripts/debug/cleanup_env.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 52 | 1491 | `scripts/debug/delete_uploaded_images.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 60 | 2107 | `scripts/debug/direct_upload.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 73 | 2900 | `scripts/debug/fix_cross_save.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 91 | 2850 | `scripts/debug/full_queue_cleanup.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 134 | 8661 | `scripts/debug/gen_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 28 | 793 | `scripts/debug/inspect_processing_jobs.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 147 | 10870 | `scripts/debug/publish_milhojas.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 26 | 956 | `scripts/debug/queue_stats.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 29 | 1012 | `scripts/debug/quick_cloudinary_upload.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 41 | 1445 | `scripts/debug/reset_queue.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| ok | core | 570 | 21230 | `rankstein/suite_controller.py` |  |
+| ok | core | 1669 | 57746 | `rankstein/trend_intelligence.py` |  |
+| ok | project | 5325 | 224684 | `rankstein_mcp_server.py` |  |
+| ok | project | 192 | 4109 | `requirements.txt` |  |
+| review | scripts | 45 | 1608 | `scripts/debug/check_articles.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 45 | 1677 | `scripts/debug/check_models.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 11 | 407 | `scripts/debug/check_nvidia_log.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 19 | 875 | `scripts/debug/check_proof.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 45 | 1682 | `scripts/debug/check_published_today.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 32 | 1173 | `scripts/debug/dump_posts.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 39 | 1651 | `scripts/debug/fetch_urls.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 6 | 522 | `scripts/debug/find_recent.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 15 | 469 | `scripts/debug/find_tables.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 70 | 2431 | `scripts/debug/inspect_pinterest_remaster_dom.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 23 | 721 | `scripts/debug/publish_test_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 28 | 1226 | `scripts/debug/test_article_slug.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 96 | 4006 | `scripts/debug/test_full_nemotron_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 22 | 700 | `scripts/debug/test_gemini_api.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 45 | 1867 | `scripts/debug/test_gemini_rest.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 72 | 2363 | `scripts/debug/test_nemotron_stream.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 40 | 1397 | `scripts/debug/test_nvidia_fast.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 47 | 2002 | `scripts/debug/test_nvidia_live_gen.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 33 | 1162 | `scripts/debug/test_nvidia_module.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 53 | 2262 | `scripts/debug/test_nvidia_nemotron.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 23 | 834 | `scripts/debug/test_primp_gemini.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 17 | 778 | `scripts/debug/verify_20.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 43 | 1769 | `scripts/debug/verify_dashboard.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 52 | 2453 | `scripts/debug/verify_live_sites.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 79 | 2829 | `scripts/debug/verify_nemotron_json.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | ok | scripts | 89 | 3165 | `scripts/dev/check_no_root_scratch.py` |  |
 | ok | scripts | 162 | 5608 | `scripts/dev/live_article_quality_check.py` |  |
+| ok | scripts | 11 | 697 | `scripts/dev/live_logs.ps1` |  |
 | ok | scripts | 296 | 9256 | `scripts/dev/project_audit.py` |  |
 | ok | scripts | 520 | 20784 | `scripts/dev/repair_article_quality.py` |  |
-| ok | scripts | 322 | 11520 | `scripts/dev/run_production_validation.py` |  |
-| ok | scripts | 205 | 5719 | `scripts/dev/self_clean.py` |  |
-| ok | scripts | 126 | 4604 | `scripts/dev/start_agentmemory.ps1` |  |
-| ok | scripts | 206 | 6334 | `scripts/dev/validate_automation.py` |  |
+| ok | scripts | 323 | 11493 | `scripts/dev/run_production_validation.py` |  |
+| ok | scripts | 212 | 6028 | `scripts/dev/self_clean.py` |  |
+| ok | scripts | 130 | 4868 | `scripts/dev/start_agentmemory.ps1` |  |
+| ok | scripts | 105 | 4182 | `scripts/dev/start_all_mcp.ps1` |  |
+| ok | scripts | 222 | 7399 | `scripts/dev/validate_automation.py` |  |
 | ok | scripts | 134 | 4771 | `scripts/dev/validate_gemini_runtime.py` |  |
-| ok | scripts | 70 | 3435 | `scripts/fix_links_only.py` |  |
-| review | docs | 42 | 2098 | `scripts/oneoff/README.md` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 21 | 849 | `scripts/oneoff/download_image.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 103 | 3359 | `scripts/oneoff/enqueue_all_remasters.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 124 | 11894 | `scripts/oneoff/publish_cocido.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 124 | 11582 | `scripts/oneoff/publish_gambas.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 124 | 11703 | `scripts/oneoff/publish_lentejas.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 120 | 11625 | `scripts/oneoff/publish_pisto.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| review | scripts | 124 | 11677 | `scripts/oneoff/publish_pollo.py` | non-production helper retained under scripts/debug or scripts/oneoff |
-| ok | scripts | 17 | 916 | `scripts/test_keys.py` |  |
+| ok | scripts | 112 | 3447 | `scripts/ops/backfill_images.py` |  |
+| ok | scripts | 78 | 2658 | `scripts/ops/check_pins.py` |  |
+| ok | scripts | 94 | 3613 | `scripts/ops/clear_pinterest_drafts.py` |  |
+| ok | scripts | 46 | 1432 | `scripts/ops/force_chromium_env.py` |  |
+| ok | scripts | 174 | 6551 | `scripts/ops/force_chromium_login.py` |  |
+| ok | scripts | 223 | 8020 | `scripts/ops/generate_campaign_pins.py` |  |
+| ok | scripts | 141 | 4192 | `scripts/ops/kill_all_processes.py` |  |
+| ok | scripts | 79 | 2437 | `scripts/ops/reenqueue_dlq.py` |  |
+| ok | scripts | 88 | 3658 | `scripts/ops/reset_and_verify_dashboard.py` |  |
+| ok | scripts | 128 | 4839 | `scripts/ops/reset_dashboard_and_roadmaps.py` |  |
+| ok | scripts | 96 | 3173 | `scripts/ops/restore_gold_config.py` |  |
+| ok | scripts | 59 | 2008 | `scripts/publish_pending_batch.py` |  |
+| ok | scripts | 169 | 5177 | `scripts/recover_keywords.py` |  |
+| ok | scripts | 37 | 988 | `scripts/start_workers.py` |  |
+| ok | scripts | 59 | 2197 | `scripts/sweep_failed.py` |  |
+| ok | scripts | 55 | 1955 | `scripts/test_specificity.py` |  |
 | ok | tests | 0 | 0 | `tests/__init__.py` |  |
 | ok | tests | 44 | 1484 | `tests/conftest.py` |  |
 | ok | tests | 0 | 0 | `tests/e2e/__init__.py` |  |
 | ok | tests | 0 | 0 | `tests/integration/__init__.py` |  |
 | ok | tests | 37 | 1391 | `tests/integration/test_multidomain_routing.py` |  |
 | ok | tests | 0 | 0 | `tests/unit/__init__.py` |  |
-| ok | tests | 92 | 2884 | `tests/unit/test_ai_engine.py` |  |
+| ok | tests | 94 | 3087 | `tests/unit/test_ai_engine.py` |  |
+| ok | tests | 100 | 4025 | `tests/unit/test_article_quality_policy.py` |  |
+| ok | tests | 251 | 9197 | `tests/unit/test_article_remaster_queue.py` |  |
 | ok | tests | 170 | 7069 | `tests/unit/test_branding.py` |  |
-| ok | tests | 189 | 8162 | `tests/unit/test_browser_utils.py` |  |
+| ok | tests | 201 | 8719 | `tests/unit/test_browser_utils.py` |  |
+| ok | tests | 138 | 4795 | `tests/unit/test_campaign_prompts.py` |  |
+| ok | tests | 90 | 2483 | `tests/unit/test_category_policy.py` |  |
 | ok | tests | 98 | 3688 | `tests/unit/test_check_no_root_scratch.py` |  |
 | ok | tests | 80 | 3562 | `tests/unit/test_circuit_breaker.py` |  |
-| ok | tests | 214 | 9365 | `tests/unit/test_config.py` |  |
-| ok | tests | 172 | 6491 | `tests/unit/test_create_hero_image_pollinations.py` |  |
+| ok | tests | 247 | 11044 | `tests/unit/test_config.py` |  |
+| ok | tests | 249 | 9208 | `tests/unit/test_create_hero_image_pollinations.py` |  |
 | ok | tests | 86 | 2666 | `tests/unit/test_database_security.py` |  |
-| ok | tests | 199 | 9157 | `tests/unit/test_domain.py` |  |
-| ok | tests | 93 | 3651 | `tests/unit/test_domain_isolation.py` |  |
-| ok | tests | 26 | 894 | `tests/unit/test_health_monitor.py` |  |
-| ok | tests | 256 | 9657 | `tests/unit/test_job_queue_sqlite.py` |  |
-| ok | tests | 115 | 3718 | `tests/unit/test_keyword_roadmap.py` |  |
+| ok | tests | 110 | 3518 | `tests/unit/test_direct_upload_cross_save.py` |  |
+| ok | tests | 199 | 9163 | `tests/unit/test_domain.py` |  |
+| ok | tests | 110 | 4084 | `tests/unit/test_domain_isolation.py` |  |
+| ok | tests | 50 | 1652 | `tests/unit/test_health_monitor.py` |  |
+| ok | tests | 475 | 18123 | `tests/unit/test_job_queue_sqlite.py` |  |
+| ok | tests | 357 | 11976 | `tests/unit/test_keyword_roadmap.py` |  |
+| ok | tests | 88 | 2858 | `tests/unit/test_legacy_article_entrypoints.py` |  |
+| ok | tests | 100 | 3028 | `tests/unit/test_log_manager.py` |  |
+| ok | tests | 187 | 6325 | `tests/unit/test_mcp_remaster_campaign.py` |  |
 | ok | tests | 60 | 2120 | `tests/unit/test_memory_service.py` |  |
+| ok | tests | 37 | 1210 | `tests/unit/test_news_scraper.py` |  |
+| ok | tests | 18 | 581 | `tests/unit/test_nvidia_fallback.py` |  |
+| ok | tests | 642 | 22362 | `tests/unit/test_pinterest_production_runtime.py` |  |
+| ok | tests | 77 | 2335 | `tests/unit/test_pinterest_public_verification.py` |  |
+| ok | tests | 78 | 2156 | `tests/unit/test_pipeline_events.py` |  |
+| ok | tests | 307 | 11233 | `tests/unit/test_production_batch.py` |  |
+| ok | tests | 454 | 15788 | `tests/unit/test_production_reconcile.py` |  |
 | ok | tests | 253 | 11022 | `tests/unit/test_provisioner.py` |  |
+| ok | tests | 209 | 6902 | `tests/unit/test_remaster_native_fallback.py` |  |
+| ok | tests | 131 | 4369 | `tests/unit/test_remaster_relevance.py` |  |
+| ok | tests | 281 | 10036 | `tests/unit/test_remaster_variants.py` |  |
 | ok | tests | 178 | 7363 | `tests/unit/test_save_image_from_base64.py` |  |
 | ok | tests | 122 | 4717 | `tests/unit/test_save_image_from_path.py` |  |
+| ok | tests | 25 | 678 | `tests/unit/test_self_clean.py` |  |
 | ok | tests | 161 | 6024 | `tests/unit/test_site_factory.py` |  |
-| ok | tests | 142 | 5119 | `tests/unit/test_startup.py` |  |
+| ok | tests | 287 | 10275 | `tests/unit/test_startup.py` |  |
 | ok | tests | 108 | 3544 | `tests/unit/test_subscribers.py` |  |
-| ok | tests | 70 | 2471 | `tests/unit/test_trend_intelligence.py` |  |
+| ok | tests | 110 | 4154 | `tests/unit/test_suite_controller.py` |  |
+| ok | tests | 32 | 768 | `tests/unit/test_supabase_headers.py` |  |
+| ok | tests | 174 | 6050 | `tests/unit/test_supabase_image_upload.py` |  |
+| ok | tests | 623 | 22324 | `tests/unit/test_trend_intelligence.py` |  |
+| ok | tests | 1185 | 37943 | `tests/unit/test_turbo_articles.py` |  |

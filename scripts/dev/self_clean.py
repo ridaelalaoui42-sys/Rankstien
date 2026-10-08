@@ -96,6 +96,11 @@ CLEAN_DIR_GLOBS = [
 ]
 
 PROTECTED_NAMES = {".git", ".env", ".env.local", ".env.production"}
+PROTECTED_DIR_NAMES = {".venv", "node_modules"}
+PROTECTED_RUNTIME_ROOTS = {
+    (ROOT / "data" / "sessions").resolve(),
+    (ROOT / "data" / "queue").resolve(),
+}
 
 
 @dataclass(frozen=True)
@@ -128,7 +133,9 @@ def _is_safe(path: Path) -> bool:
         resolved.relative_to(ROOT.resolve())
     except ValueError:
         return False
-    return not any(part in PROTECTED_NAMES for part in resolved.parts)
+    if any(part in PROTECTED_NAMES or part in PROTECTED_DIR_NAMES for part in resolved.parts):
+        return False
+    return not any(root == resolved or root in resolved.parents for root in PROTECTED_RUNTIME_ROOTS)
 
 
 def _collect(include_tracked: bool) -> list[Candidate]:

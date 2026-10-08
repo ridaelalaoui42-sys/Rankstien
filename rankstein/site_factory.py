@@ -231,7 +231,9 @@ def _ignore_template_items(template: Path):
     return _ignore
 
 
-def _install_public_branding(project_path: Path, domain_root: Path, branding: dict[str, Any]) -> dict[str, str]:
+def _install_public_branding(
+    project_path: Path, domain_root: Path, branding: dict[str, Any]
+) -> dict[str, str]:
     public = project_path / "public"
     public.mkdir(parents=True, exist_ok=True)
     installed: dict[str, str] = {}
@@ -453,9 +455,7 @@ def _write_site_config(project_path: Path, blueprint: dict[str, Any]) -> None:
     target = project_path / "lib" / "rankstein-site.ts"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        "export const ranksteinSite = "
-        + json.dumps(config, indent=2, ensure_ascii=False)
-        + " as const;\n",
+        "export const ranksteinSite = " + json.dumps(config, indent=2, ensure_ascii=False) + " as const;\n",
         encoding="utf-8",
     )
 
@@ -569,8 +569,8 @@ if ($Production) {{
 
 vercel @deployArgs
 
-Write-Host "RankStein project deployed for {blueprint['domain']}."
-Write-Host "Next: run python rankstein.py run --domain {blueprint['handle']} from the RankStein workspace."
+Write-Host "RankStein project deployed for {blueprint["domain"]}."
+Write-Host "Next: run python rankstein.py run --domain {blueprint["handle"]} from the RankStein workspace."
 """,
         encoding="utf-8",
     )
@@ -587,7 +587,7 @@ def _write_supabase_script(project_path: Path, blueprint: dict[str, Any]) -> Pat
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Linking Supabase project $ProjectRef for {blueprint['domain']}..."
+Write-Host "Linking Supabase project $ProjectRef for {blueprint["domain"]}..."
 npx supabase link --project-ref $ProjectRef
 npx supabase db push
 
@@ -621,28 +621,28 @@ def _render_launch_prompt(blueprint: dict[str, Any]) -> str:
 
 You are RankStein launching a new autonomous blog from one domain name.
 
-Domain handle: `{blueprint['handle']}`
-Public domain: `{blueprint['domain']}`
-Brand: `{blueprint['display_name']}`
-Language: `{blueprint['language']}`
-Niche: `{blueprint['niche']}`
-Categories: {", ".join(blueprint['categories'])}
+Domain handle: `{blueprint["handle"]}`
+Public domain: `{blueprint["domain"]}`
+Brand: `{blueprint["display_name"]}`
+Language: `{blueprint["language"]}`
+Niche: `{blueprint["niche"]}`
+Categories: {", ".join(blueprint["categories"])}
 
 ## Operating Contract
 
 1. Use the domain manifest, `site_blueprint.json`, `brand_voice.md`, and `keywords.md` as source of truth.
 2. Do not reuse RecetaDolce names, URLs, Pinterest boards, Supabase targets, or author identity.
 3. Run trend research first, then seed campaigns, then publish only verified articles.
-4. Every article, hero image, OG image, and Pinterest pin must carry `domain_handle={blueprint['handle']}`.
-5. Use the generated site project at `{blueprint['project_path']}` for Vercel deployment work.
+4. Every article, hero image, OG image, and Pinterest pin must carry `domain_handle={blueprint["handle"]}`.
+5. Use the generated site project at `{blueprint["project_path"]}` for Vercel deployment work.
 6. Use Supabase only after the new project credentials have been written to the domain env and Vercel env.
 7. Mark keywords `Live` only after Supabase publish, image upload, Pinterest upload, and pin proof all succeed.
 
 ## Launch Commands
 
 ```powershell
-python rankstein.py trends --domain {blueprint['handle']} --limit 10
-python rankstein.py run --domain {blueprint['handle']} --keywords 3 --workers 1
+python rankstein.py trends --domain {blueprint["handle"]} --limit 10
+python rankstein.py run --domain {blueprint["handle"]} --keywords 3 --workers 1
 ```
 """
 
@@ -655,7 +655,9 @@ def _patch_gitignore(project_path: Path) -> None:
     marker = "# RankStein generated project assets"
     if marker in text:
         return
-    text = text.rstrip() + f"""
+    text = (
+        text.rstrip()
+        + f"""
 
 {marker}
 !scripts/
@@ -667,6 +669,7 @@ def _patch_gitignore(project_path: Path) -> None:
 !rankstein.site.json
 !.env.local.example
 """
+    )
     target.write_text(text + "\n", encoding="utf-8")
 
 

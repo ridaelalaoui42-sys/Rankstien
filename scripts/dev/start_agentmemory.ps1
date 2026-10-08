@@ -27,16 +27,20 @@ if (Test-Path $EnvFile) {
     }
 }
 
-$GeminiKey = if ($env:GEMINI_API_KEY) {
+$GeminiKey = if ($env:MCP_GEMINI_API_KEY) {
+    $env:MCP_GEMINI_API_KEY
+} elseif ($env:GEMINI_API_KEY) {
     $env:GEMINI_API_KEY
 } else {
-    [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
+    [Environment]::GetEnvironmentVariable("MCP_GEMINI_API_KEY", "User")
 }
 
-$GoogleKey = if ($env:GOOGLE_API_KEY) {
+$GoogleKey = if ($env:MCP_GOOGLE_API_KEY) {
+    $env:MCP_GOOGLE_API_KEY
+} elseif ($env:GOOGLE_API_KEY) {
     $env:GOOGLE_API_KEY
 } else {
-    [Environment]::GetEnvironmentVariable("GOOGLE_API_KEY", "User")
+    [Environment]::GetEnvironmentVariable("MCP_GOOGLE_API_KEY", "User")
 }
 
 if (-not $GeminiKey -and $GoogleKey) {
@@ -59,7 +63,7 @@ if (-not (Test-Path $projectIii) -and -not (Test-Path $fallbackIii)) {
     $zipPath = Join-Path $IiiDir "iii-x86_64-pc-windows-msvc.zip"
     New-Item -ItemType Directory -Force -Path $IiiDir | Out-Null
     Invoke-WebRequest `
-        -Uri "https://github.com/iii-hq/iii/releases/download/iii%2Fv0.11.2/iii-x86_64-pc-windows-msvc.zip" `
+        -Uri "https://github.com/iii-hq/iii/releases/download/iii%2Fv0.22.1/iii-x86_64-pc-windows-msvc.zip" `
         -OutFile $zipPath
     Expand-Archive -LiteralPath $zipPath -DestinationPath $IiiDir -Force
 }
@@ -75,13 +79,28 @@ $env:AGENTMEMORY_URL = "http://127.0.0.1:$Port"
 $env:AGENTMEMORY_TOOLS = if ($env:AGENTMEMORY_TOOLS) { $env:AGENTMEMORY_TOOLS } else { "core" }
 $env:GRAPH_EXTRACTION_ENABLED = if ($env:GRAPH_EXTRACTION_ENABLED) { $env:GRAPH_EXTRACTION_ENABLED } else { "true" }
 $env:CONSOLIDATION_ENABLED = if ($env:CONSOLIDATION_ENABLED) { $env:CONSOLIDATION_ENABLED } else { "true" }
-$env:AGENTMEMORY_AUTO_COMPRESS = if ($env:AGENTMEMORY_AUTO_COMPRESS) { $env:AGENTMEMORY_AUTO_COMPRESS } else { "true" }
+$env:AGENTMEMORY_AUTO_COMPRESS = if ($env:AGENTMEMORY_AUTO_COMPRESS) { $env:AGENTMEMORY_AUTO_COMPRESS } else { "false" }
 $env:AGENTMEMORY_INJECT_CONTEXT = if ($env:AGENTMEMORY_INJECT_CONTEXT) { $env:AGENTMEMORY_INJECT_CONTEXT } else { "true" }
 $env:GEMINI_MODEL = if ($env:GEMINI_MODEL) { $env:GEMINI_MODEL } else { "gemini-3.1-flash-lite-preview" }
 
+$secretFile = Join-Path $env:USERPROFILE ".agentmemory\secret"
+if (-not $env:AGENTMEMORY_SECRET -and (Test-Path $secretFile)) {
+    $env:AGENTMEMORY_SECRET = (Get-Content -LiteralPath $secretFile -Raw).Trim()
+}
+
+function Get-AgentMemoryHeaders {
+    $headers = @{}
+    $secret = if ($env:AGENTMEMORY_SECRET) { $env:AGENTMEMORY_SECRET } elseif (Test-Path $secretFile) { (Get-Content -LiteralPath $secretFile -Raw).Trim() } else { "" }
+    if ($secret) {
+        $headers["Authorization"] = "Bearer $secret"
+    }
+    return $headers
+}
+
 try {
-    $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -TimeoutSec 3
-    if ($health.status -eq "healthy") {
+    $headers = Get-AgentMemoryHeaders
+    $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -Headers $headers -TimeoutSec 3
+    if ($health.status -eq "healthy" -or $health.health.status -eq "healthy") {
         Write-Output "AgentMemory already healthy at $env:AGENTMEMORY_URL"
         exit 0
     }
@@ -105,16 +124,17 @@ set CONSOLIDATION_ENABLED=$env:CONSOLIDATION_ENABLED
 set AGENTMEMORY_AUTO_COMPRESS=$env:AGENTMEMORY_AUTO_COMPRESS
 set AGENTMEMORY_INJECT_CONTEXT=$env:AGENTMEMORY_INJECT_CONTEXT
 set GEMINI_MODEL=$env:GEMINI_MODEL
-"$npx" -y @agentmemory/agentmemory --port $Port --verbose > "$LogFile" 2> "$ErrFile"
+call "$npx" -y @agentmemory/agentmemory --port $Port --verbose > "$LogFile" 2> "$ErrFile"
 "@
 
 Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $CmdFile) -WindowStyle Hidden | Out-Null
 
-for ($i = 0; $i -lt 20; $i++) {
+for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 1
     try {
-        $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -TimeoutSec 3
-        if ($health.status -eq "healthy") {
+        $headers = Get-AgentMemoryHeaders
+        $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -Headers $headers -TimeoutSec 3
+        if ($health.status -eq "healthy" -or $health.health.status -eq "healthy") {
             Write-Output "AgentMemory healthy at $env:AGENTMEMORY_URL"
             exit 0
         }
@@ -122,4 +142,4 @@ for ($i = 0; $i -lt 20; $i++) {
     }
 }
 
-Write-Error "AgentMemory did not become healthy. See $LogFile"
+    Write-Warning "AgentMemory did not become healthy within 60s, but continuing anyway. See $LogFile"

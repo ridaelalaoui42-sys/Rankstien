@@ -26,6 +26,8 @@ MEDIA_DIR = PROJECT_ROOT / "data" / "media"
 SESSION_DIR = PROJECT_ROOT / "data" / "sessions" / "pinterest_rida_v7"
 LOG_DIR = PROJECT_ROOT / "data" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
+ARCHIVE_DIR = MEDIA_DIR / "archive"
+ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Logging
 logging.basicConfig(
@@ -54,6 +56,46 @@ def _kill_firefox_locks():
     from pinterest_batch_core import cleanup_session_artifacts
 
     return cleanup_session_artifacts(SESSION_DIR, "firefox")
+
+
+def cleanup_workspace(sb):
+    import time
+
+    logger.info("🧹 Starting workspace cleanup...")
+    # Delete debug and temp images
+    for p in ["debug_login_fail_*.jpg", "upload_temp_batch.*", "debug_*.png"]:
+        for f in PROJECT_ROOT.rglob(p):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+
+    # Delete files in archive older than 1 day
+    now = time.time()
+    for f in ARCHIVE_DIR.glob("*.*"):
+        if now - f.stat().st_mtime > 86400:
+            try:
+                f.unlink()
+                logger.info(f"   🗑️ Deleted old archived file: {f.name}")
+            except Exception:
+                pass
+
+    # Archive images of ALREADY uploaded pins
+    res = sb.table("posts").select("id, slug, pinterest_pin_id").eq("status", "published").execute()
+    pinned = [p for p in res.data if p.get("pinterest_pin_id") and len(str(p["pinterest_pin_id"])) >= 15]
+    logger.info(f"   🔍 Checking {len(pinned)} pinned posts for local images to archive...")
+    archived_count = 0
+    for p in pinned:
+        img = find_local_image_for_slug(p["slug"])
+        if img and img.parent != ARCHIVE_DIR:
+            try:
+                shutil.move(str(img), str(ARCHIVE_DIR / img.name))
+                archived_count += 1
+            except Exception as e:
+                pass
+    if archived_count > 0:
+        logger.info(f"   📦 Archived {archived_count} images for already pinned posts.")
+    logger.info("✨ Workspace cleanup complete.")
 
 
 def get_supabase():
@@ -215,41 +257,31 @@ async def _dismiss_login_overlays(page):
 
 async def _open_login_form(page):
     """Force Pinterest into the login dialog, not the sign-up dialog."""
-    await _dismiss_login_overlays(page)
-    login_patterns = (
-        re.compile(r"^Log in$", re.I),
-        re.compile(r"already (have|a member).*log in", re.I),
-        re.compile(r"already have an account", re.I),
-        re.compile(r"se connecter", re.I),
-        re.compile(r"iniciar sesi[oó]n", re.I),
-        re.compile(r"acceder", re.I),
-    )
-    for pattern in login_patterns:
-        for locator in (
-            page.get_by_role("button", name=pattern),
-            page.get_by_role("link", name=pattern),
-            page.get_by_text(pattern),
-        ):
-            if await _click_visible(page, locator):
-                await _dismiss_login_overlays(page)
-                break
+    # Check if inputs are already visible
+    for _ in range(12):
+        email = page.locator('input[type="email"], input#email, input[name="id"]').first
+        password = page.locator('input[type="password"], input#password, input[name="password"]').first
 
-    for _ in range(8):
-        email = page.locator('input#email, input[name="id"], input[type="email"]').first
-        password = page.locator('input#password, input[name="password"], input[type="password"]').first
-        if await email.count() and await password.count():
-            try:
-                password_hint = await password.get_attribute("placeholder") or ""
-            except Exception:
-                password_hint = ""
-            if not re.search(r"create|crear|cr[eé]er", password_hint, re.I):
-                return True
+        if await email.is_visible() and await password.is_visible():
+            return True
 
-        if await _click_visible(page, page.get_by_role("link", name=re.compile(r"^Log in$", re.I)), timeout=700):
+        # Try to dismiss overlays
+        await _dismiss_login_overlays(page)
+
+        # Try to click explicit 'Log in' / 'Iniciar sesión' button if inputs are not visible
+        try:
+            btn = page.locator(
+                'div[data-test-id="login-button"], button:has-text("Log in"), button:has-text("Iniciar sesión"), a:has-text("Log in"), a:has-text("Iniciar sesión")'
+            ).first
+            if await btn.is_visible():
+                await btn.click(timeout=1000)
+                await asyncio.sleep(1)
+                continue
+        except Exception:
             pass
-        elif await _click_visible(page, page.get_by_text(re.compile(r"already.*log in", re.I)), timeout=700):
-            pass
+
         await asyncio.sleep(1)
+
     return False
 
 
@@ -293,6 +325,7 @@ async def ensure_logged_in(page, email, password):
         await asyncio.sleep(3)
         if not await _open_login_form(page):
             logger.error("Pinterest login form did not open.")
+            await page.screenshot(path=str(PROJECT_ROOT / "data" / "debug_login_fail_batch.jpg"))
             return False
         await human_type(page, 'input#email, input[name="id"], input[type="email"]', email)
         await human_type(page, "input#password, input[name='password']", password)
@@ -571,6 +604,10 @@ async def main():
     password = os.environ.get("PINTEREST_PASSWORD", "")
 
     sb = get_supabase()
+
+    # Run cleanup of previously uploaded pins and temp files
+    cleanup_workspace(sb)
+
     posts = fetch_unpinned_posts(sb, args.limit)
     matched = [
         (p, find_local_image_for_slug(p["slug"])) for p in posts if find_local_image_for_slug(p["slug"])
@@ -631,6 +668,11 @@ async def main():
             if pin_id:
                 update_pin_id(sb, p["id"], pin_id)
                 logger.info(f"✅ Success [{i}/{len(matched)}]: {p['slug']} -> {pin_id}")
+                try:
+                    shutil.move(str(img), str(ARCHIVE_DIR / img.name))
+                    logger.info(f"   📦 Archived image {img.name}")
+                except Exception as e:
+                    logger.warning(f"   ⚠️ Could not archive image {img.name}: {e}")
             else:
                 logger.warning(f"⚠️ Failed [{i}/{len(matched)}]: {p['slug']}")
 

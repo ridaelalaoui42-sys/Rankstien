@@ -16,8 +16,23 @@ import sys
 from pathlib import Path
 
 from rankstein.domain import get_registry, reload_registry
+from rankstein.runtime_env import clean_python_env, sanitize_current_process_env
+
+sanitize_current_process_env()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _configure_utf8_stdio() -> None:
+    """Keep JSON and live provider text printable on Windows terminals."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="backslashreplace")
+            except (OSError, ValueError):
+                continue
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -119,7 +134,6 @@ def cmd_show_domain(args: argparse.Namespace) -> int:
 
 def _boot_mcp_servers() -> None:
     """Launch all MCP servers via start_all_mcp.ps1 before the startup plan runs."""
-    import os
     import subprocess
 
     mcp_script = PROJECT_ROOT / "scripts" / "dev" / "start_all_mcp.ps1"
@@ -134,15 +148,21 @@ def _boot_mcp_servers() -> None:
                 pwsh,
                 "-NonInteractive",
                 "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-File", str(mcp_script),
-                "-NoGemini",      # Don't launch Gemini CLI from here — we're already inside it
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(mcp_script),
+                "-NoGemini",  # Don't launch Gemini CLI from here — we're already inside it
             ],
             cwd=str(PROJECT_ROOT),
-            timeout=60,           # AgentMemory health-wait is max 20s + buffer
+            timeout=60,  # AgentMemory health-wait is max 20s + buffer
+            env=clean_python_env(),
         )
         if result.returncode != 0:
-            print(f"[boot] WARNING: MCP boot script exited {result.returncode} — continuing anyway.", file=sys.stderr)
+            print(
+                f"[boot] WARNING: MCP boot script exited {result.returncode} — continuing anyway.",
+                file=sys.stderr,
+            )
         else:
             print("[boot] All MCP servers ready.", file=sys.stderr)
     except FileNotFoundError:
@@ -172,11 +192,53 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
     )
     print_startup_report(report, as_json=args.json)
+    if not args.no_launch and not report["brief"].get("work_ready"):
+        return 2
+    return 0
+
+
+def cmd_production_reconcile(args: argparse.Namespace) -> int:
+    """Finish one article whose priority primary-pin job completed late."""
+
+    import asyncio
+
+    from rankstein.production_reconcile import (
+        ReconciliationError,
+        reconcile_production_article,
+    )
+
+    try:
+        result = asyncio.run(
+            reconcile_production_article(
+                project_root=PROJECT_ROOT,
+                batch_id=args.batch_id,
+                domain_handle=args.domain,
+                pipeline_run_id=args.pipeline_run_id,
+                primary_job_id=args.primary_job_id,
+            )
+        )
+    except ReconciliationError as exc:
+        print(
+            json.dumps(
+                {
+                    "success": False,
+                    "batch_id": args.batch_id,
+                    "domain_handle": args.domain,
+                    "pipeline_run_id": args.pipeline_run_id,
+                    "primary_job_id": args.primary_job_id,
+                    "error": str(exc),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 2
+    print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
 def cmd_trends(args: argparse.Namespace) -> int:
-    """Refresh Pinterest/Google News trend lists without launching workers."""
+    """Refresh Pinterest-first, externally validated keyword intelligence."""
     from rankstein.trend_intelligence import refresh_domain_trend_lists
 
     reload_registry()
@@ -186,6 +248,7 @@ def cmd_trends(args: argparse.Namespace) -> int:
         domains,
         limit_per_domain=args.limit,
         append_to_roadmap=not args.no_roadmap,
+        candidate_origin_policy=args.candidate_origin_policy,
     )
     print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
     return 0
@@ -210,10 +273,195 @@ def cmd_autonomous(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_launch(args: argparse.Namespace) -> int:
+    """Launch and monitor the full RankStein/Odysseus/Pinterest pipeline."""
+    from rankstein.launcher import LaunchOptions, print_launch_report, run_launch
+
+    report = run_launch(
+        LaunchOptions(
+            domains=[args.domain] if args.domain else None,
+            keywords_per_domain=args.keywords,
+            workers_per_domain=args.workers,
+            refresh_trends=not args.skip_trends,
+            trend_limit_per_domain=args.trend_limit,
+            monitor_seconds=args.monitor_seconds,
+            monitor_interval_seconds=args.monitor_interval,
+            start_services=not args.no_services,
+            start_articles=not args.no_articles,
+            start_supervisor=not args.no_supervisor,
+            start_frontend=args.frontend,
+            skip_odysseus_server=args.skip_odysseus_server,
+            skip_validation=args.skip_validation,
+            json_output=args.json,
+        )
+    )
+    print_launch_report(report, as_json=args.json)
+    if report.get("article_start_blocked"):
+        return 2
+    return 0
+
+
 def _subscriber_client(args: argparse.Namespace):
     from rankstein.subscribers import SupabaseSubscribersClient, resolve_supabase_target
 
     return SupabaseSubscribersClient(resolve_supabase_target(getattr(args, "domain", None)))
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Keyword cleaning interface
+# ───────────────────────────────────────────────────────────────────────────
+
+
+def _iter_target_domains(handle: str | None):
+    reload_registry()
+    reg = get_registry()
+    if handle:
+        return [reg.get(handle)]
+    return reg.all()
+
+
+def cmd_keywords_list(args: argparse.Namespace) -> int:
+    from rankstein.keyword_roadmap import keyword_counts, read_keyword_rows
+
+    for domain in _iter_target_domains(args.domain):
+        rows = read_keyword_rows(domain.keywords_file)
+        counts = keyword_counts(rows)
+        print(f"\n[{domain.handle}] {len(rows)} total — {counts}")
+        if args.status:
+            filtered = [r for r in rows if r.status.casefold() == args.status.casefold()]
+            print(f"  {len(filtered)} with status '{args.status}':")
+            for r in filtered[: args.limit]:
+                print(f"    {r.keyword[:60]:60} | {r.cluster[:20]}")
+            if len(filtered) > args.limit:
+                print(f"    ... and {len(filtered) - args.limit} more")
+    return 0
+
+
+def cmd_keywords_retry(args: argparse.Namespace) -> int:
+    """Reset keywords from a failed/blocked status back to Pending for retry."""
+    from rankstein.keyword_roadmap import read_keyword_rows, write_keyword_rows
+
+    source_statuses = {s.casefold() for s in args.from_status.split(",")}
+    total_reset = 0
+    for domain in _iter_target_domains(args.domain):
+        rows = read_keyword_rows(domain.keywords_file)
+        reset = 0
+        for r in rows:
+            if r.status.casefold() in source_statuses:
+                r.status = "Pending"
+                reset += 1
+        if reset:
+            title = f"{domain.display_name} Keyword Roadmap"
+            write_keyword_rows(domain.keywords_file, title, rows)
+        print(f"[{domain.handle}] reset {reset} keywords ({args.from_status}) -> Pending")
+        total_reset += reset
+    print(f"\nTotal reset for retry: {total_reset}")
+    return 0
+
+
+def cmd_keywords_remove(args: argparse.Namespace) -> int:
+    """Permanently remove keywords with the given status from the roadmap."""
+    from rankstein.keyword_roadmap import read_keyword_rows, write_keyword_rows
+
+    source_statuses = {s.casefold() for s in args.status.split(",")}
+    total_removed = 0
+    for domain in _iter_target_domains(args.domain):
+        rows = read_keyword_rows(domain.keywords_file)
+        before = len(rows)
+        kept = [r for r in rows if r.status.casefold() not in source_statuses]
+        removed = before - len(kept)
+        if removed:
+            if not args.yes:
+                print(f"[{domain.handle}] would remove {removed} keywords with status {args.status}")
+                for r in [r for r in rows if r.status.casefold() in source_statuses][:10]:
+                    print(f"    - {r.keyword[:60]}")
+                print("  Re-run with --yes to confirm.")
+                continue
+            title = f"{domain.display_name} Keyword Roadmap"
+            write_keyword_rows(domain.keywords_file, title, kept)
+        print(f"[{domain.handle}] removed {removed} keywords with status {args.status}")
+        total_removed += removed
+    print(f"\nTotal removed: {total_removed}")
+    return 0
+
+
+def cmd_keywords_clean_campaigns(args: argparse.Namespace) -> int:
+    """Close stale DB campaigns that never completed (active but abandoned)."""
+    import sqlite3
+
+    db_path = PROJECT_ROOT / "data" / "rankstein.db"
+    con = sqlite3.connect(str(db_path))
+    stale = con.execute(
+        "SELECT COUNT(*) FROM campaigns WHERE status='active' AND completed_at IS NULL"
+    ).fetchone()[0]
+    print(f"Stale active campaigns (never completed): {stale}")
+    if stale and not args.yes:
+        print("Re-run with --yes to mark them 'archived'.")
+        con.close()
+        return 0
+    if stale:
+        con.execute("UPDATE campaigns SET status='archived' WHERE status='active' AND completed_at IS NULL")
+        con.commit()
+        print(f"Archived {stale} stale campaigns.")
+    con.close()
+    return 0
+
+
+_JUNK_SUBSTRINGS = (
+    "pin page",
+    "pin de ",
+    "cargando los resultados",
+)
+_JUNK_EXACT = {
+    "receta",
+    "recetas",
+    "recetas de",
+    "postres recetas",
+    "galletas recetas",
+    "pasteles recetas",
+    "aperitivos faciles",
+    "receta cremosa y rapida",
+    "ale en la cocina",
+    "antojo en tu cocina",
+    "de aperitivos para fiestas",
+    "de aperitivos para fiestas faciles",
+    "de aperitivos faciles",
+}
+
+
+def _is_junk_keyword(keyword: str) -> bool:
+    k = " ".join(keyword.lower().split())
+    if any(token in k for token in _JUNK_SUBSTRINGS):
+        return True
+    return k in _JUNK_EXACT
+
+
+def cmd_keywords_purge_junk(args: argparse.Namespace) -> int:
+    """Remove Pinterest pin-page artifacts and garbage keywords from roadmaps."""
+    from rankstein.keyword_roadmap import read_keyword_rows, write_keyword_rows
+
+    total_removed = 0
+    for domain in _iter_target_domains(args.domain):
+        rows = read_keyword_rows(domain.keywords_file)
+        junk = [r for r in rows if _is_junk_keyword(r.keyword)]
+        if not junk:
+            print(f"[{domain.handle}] no junk keywords found")
+            continue
+        print(f"[{domain.handle}] {len(junk)} junk keywords:")
+        for r in junk[: args.limit]:
+            print(f"    - {r.keyword[:60]} [{r.status}]")
+        if len(junk) > args.limit:
+            print(f"    ... and {len(junk) - args.limit} more")
+        if not args.yes:
+            print("  Re-run with --yes to remove them.")
+            continue
+        kept = [r for r in rows if not _is_junk_keyword(r.keyword)]
+        title = f"{domain.display_name} Keyword Roadmap"
+        write_keyword_rows(domain.keywords_file, title, kept)
+        print(f"  Removed {len(junk)} junk keywords.")
+        total_removed += len(junk)
+    print(f"\nTotal junk removed: {total_removed}")
+    return 0
 
 
 def cmd_subscribers_add(args: argparse.Namespace) -> int:
@@ -255,6 +503,62 @@ def cmd_subscribers_export(args: argparse.Namespace) -> int:
     rows = client.list(status=args.status, limit=args.limit)
     output = export_subscribers_csv(rows, args.output)
     print(f"Exported {len(rows)} subscribers to {output}")
+    return 0
+
+
+def cmd_suite_status(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import get_service_status
+
+    status = get_service_status()
+    print(json.dumps(status, indent=2))
+    return 0
+
+
+def cmd_suite_preflight(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import preflight
+
+    report = preflight()
+    print(json.dumps(report, indent=2))
+    return 0 if report["ok"] else 1
+
+
+def cmd_suite_start(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import start_services
+
+    report = start_services()
+    print(json.dumps(report, indent=2))
+    return 0 if report["ok"] else 1
+
+
+def cmd_suite_stop(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import stop_services
+
+    print("Stopping suite services...")
+    stop_services()
+    print("Suite services stopped.")
+    return 0
+
+
+def cmd_suite_restart(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import restart_services
+
+    print("Restarting suite services...")
+    report = restart_services()
+    print(json.dumps(report, indent=2))
+    return 0 if report["ok"] else 1
+
+
+def cmd_suite_install(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import install_tasks
+
+    install_tasks()
+    return 0
+
+
+def cmd_suite_uninstall(args: argparse.Namespace) -> int:
+    from rankstein.suite_controller import uninstall_tasks
+
+    uninstall_tasks()
     return 0
 
 
@@ -322,13 +626,76 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--json", action="store_true", help="Print machine-readable startup report")
     run.set_defaults(func=cmd_run)
 
-    trends = sub.add_parser("trends", help="Refresh daily Pinterest/Google News keyword intelligence")
+    production = sub.add_parser("production", help="Manage bounded production-batch proof")
+    production_sub = production.add_subparsers(dest="production_command", required=True)
+    production_reconcile = production_sub.add_parser(
+        "reconcile",
+        help="Reconcile a late completed priority primary-pin job",
+    )
+    production_reconcile.add_argument("--batch-id", required=True, help="Production batch identifier")
+    production_reconcile.add_argument("--domain", required=True, help="Domain handle")
+    production_reconcile.add_argument(
+        "--pipeline-run-id",
+        required=True,
+        help="Exact pipeline run identifier stored in the batch report",
+    )
+    production_reconcile.add_argument(
+        "--primary-job-id",
+        required=True,
+        help="Completed priority-1 Pinterest job identifier",
+    )
+    production_reconcile.set_defaults(func=cmd_production_reconcile)
+
+    trends = sub.add_parser("trends", help="Refresh precise Pinterest-first keyword intelligence")
     trends.add_argument("--domain", default=None, help="Domain handle; default = every configured domain")
     trends.add_argument("--limit", type=int, default=10, help="Best keywords to keep per domain")
     trends.add_argument(
         "--no-roadmap", action="store_true", help="Write reports but do not append roadmap rows"
     )
+    trends.add_argument(
+        "--candidate-origin-policy",
+        choices=("pinterest_required", "multi_source"),
+        default="pinterest_required",
+        help=(
+            "Candidate origin policy; default requires Pinterest evidence. "
+            "Use multi_source only for explicitly requested broad discovery."
+        ),
+    )
     trends.set_defaults(func=cmd_trends)
+
+    keywords = sub.add_parser("keywords", help="Clean, retry, or remove roadmap keywords")
+    kw_sub = keywords.add_subparsers(dest="keywords_command", required=True)
+
+    kw_list = kw_sub.add_parser("list", help="List keywords with counts, optionally filter by status")
+    kw_list.add_argument("--domain", default=None, help="Domain handle; default = all domains")
+    kw_list.add_argument("--status", default=None, help="Filter by status (e.g. Failed, Live, Pending)")
+    kw_list.add_argument("--limit", type=int, default=50, help="Max rows to display per domain")
+    kw_list.set_defaults(func=cmd_keywords_list)
+
+    kw_retry = kw_sub.add_parser("retry", help="Reset failed/blocked keywords back to Pending")
+    kw_retry.add_argument("--domain", default=None, help="Domain handle; default = all domains")
+    kw_retry.add_argument(
+        "--from-status",
+        default="Failed,Needs Verification",
+        help="Comma-separated statuses to reset (default: Failed,Needs Verification)",
+    )
+    kw_retry.set_defaults(func=cmd_keywords_retry)
+
+    kw_remove = kw_sub.add_parser("remove", help="Permanently remove keywords with a given status")
+    kw_remove.add_argument("--domain", default=None, help="Domain handle; default = all domains")
+    kw_remove.add_argument("--status", required=True, help="Comma-separated statuses to remove")
+    kw_remove.add_argument("--yes", action="store_true", help="Confirm removal (required)")
+    kw_remove.set_defaults(func=cmd_keywords_remove)
+
+    kw_camps = kw_sub.add_parser("clean-campaigns", help="Archive stale DB campaigns that never completed")
+    kw_camps.add_argument("--yes", action="store_true", help="Confirm archiving (required)")
+    kw_camps.set_defaults(func=cmd_keywords_clean_campaigns)
+
+    kw_junk = kw_sub.add_parser("purge-junk", help="Remove Pinterest pin-page artifacts and garbage keywords")
+    kw_junk.add_argument("--domain", default=None, help="Domain handle; default = all domains")
+    kw_junk.add_argument("--limit", type=int, default=20, help="Max junk rows to preview per domain")
+    kw_junk.add_argument("--yes", action="store_true", help="Confirm removal (required)")
+    kw_junk.set_defaults(func=cmd_keywords_purge_junk)
 
     autonomous = sub.add_parser("autonomous", help="Run continuous trend+audit+campaign cycles")
     autonomous.add_argument("--domain", default=None, help="Domain handle; default = every configured domain")
@@ -346,6 +713,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--trend-limit", type=int, default=10, help="Daily trend keywords to add per domain"
     )
     autonomous.set_defaults(func=cmd_autonomous)
+
+    launch = sub.add_parser(
+        "launch",
+        help="Boot services, preflight campaigns, start workers/supervisor, and monitor health",
+    )
+    launch.add_argument("--domain", default=None, help="Domain handle; default = every configured domain")
+    launch.add_argument("--all", action="store_true", help="Run every configured domain (default)")
+    launch.add_argument("--keywords", type=int, default=3, help="Pending keywords to seed per domain")
+    launch.add_argument("--workers", type=int, default=1, help="Article workers to launch")
+    launch.add_argument("--skip-trends", action="store_true", help="Do not refresh daily trend keyword lists")
+    launch.add_argument("--trend-limit", type=int, default=10, help="Daily trend keywords to add per domain")
+    launch.add_argument("--monitor-seconds", type=int, default=180, help="Seconds to monitor after launch")
+    launch.add_argument("--monitor-interval", type=int, default=30, help="Seconds between monitor snapshots")
+    launch.add_argument("--no-services", action="store_true", help="Do not boot MCP/Hermes/operator services")
+    launch.add_argument("--no-articles", action="store_true", help="Do not start article workers")
+    launch.add_argument("--no-supervisor", action="store_true", help="Do not start Pinterest supervisor")
+    launch.add_argument(
+        "--frontend",
+        action="store_true",
+        help="Compatibility flag; the RankStein operator starts with services",
+    )
+    launch.add_argument(
+        "--skip-odysseus-server",
+        action="store_true",
+        help="Deprecated compatibility flag; Odysseus is no longer started",
+    )
+    launch.add_argument("--skip-validation", action="store_true", help="Skip isolated automation validation")
+    launch.add_argument("--json", action="store_true", help="Print machine-readable launch report")
+    launch.set_defaults(func=cmd_launch)
 
     subscribers = sub.add_parser("subscribers", help="Manage newsletter subscribers from the CLI")
     subscribers_sub = subscribers.add_subparsers(dest="subscribers_command", required=True)
@@ -374,10 +770,35 @@ def build_parser() -> argparse.ArgumentParser:
     sub_export.add_argument("--domain", default=None, help="Domain handle; default = global Supabase")
     sub_export.set_defaults(func=cmd_subscribers_export)
 
+    suite = sub.add_parser("suite", help="Manage RankStein background services and processes")
+    suite_sub = suite.add_subparsers(dest="suite_command", required=True)
+
+    suite_status = suite_sub.add_parser("status", help="Get status of all background services")
+    suite_status.set_defaults(func=cmd_suite_status)
+
+    suite_preflight = suite_sub.add_parser("preflight", help="Verify prerequisites without starting")
+    suite_preflight.set_defaults(func=cmd_suite_preflight)
+
+    suite_start = suite_sub.add_parser("start", help="Start all background services idempotently")
+    suite_start.set_defaults(func=cmd_suite_start)
+
+    suite_stop = suite_sub.add_parser("stop", help="Gracefully stop all background services")
+    suite_stop.set_defaults(func=cmd_suite_stop)
+
+    suite_restart = suite_sub.add_parser("restart", help="Restart all background services")
+    suite_restart.set_defaults(func=cmd_suite_restart)
+
+    suite_install = suite_sub.add_parser("install", help="Register Windows Scheduled Tasks")
+    suite_install.set_defaults(func=cmd_suite_install)
+
+    suite_uninstall = suite_sub.add_parser("uninstall", help="Remove Windows Scheduled Tasks")
+    suite_uninstall.set_defaults(func=cmd_suite_uninstall)
+
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
