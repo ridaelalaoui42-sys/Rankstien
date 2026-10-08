@@ -180,11 +180,12 @@ _OPENCODE_BASE_URL = "https://opencode.ai/zen/v1"
 _HERMES_CODEX_PROVIDER = "openai-codex"
 _HERMES_CODEX_API_MODE = "codex_responses"
 _HERMES_CODEX_UPSTREAM = "https://chatgpt.com/backend-api/codex"
-_HERMES_FREE_DEFAULT_PROVIDER = "openrouter"
-_HERMES_FREE_DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+_HERMES_FREE_DEFAULT_PROVIDER = "gemini"
+_HERMES_FREE_DEFAULT_MODEL = "gemini-2.5-flash"
 _HERMES_FREE_ALLOWED_SUFFIXES = {
     "openrouter": ":free",
     "opencode-zen": "-free",
+    "gemini": "-flash",
 }
 
 
