@@ -533,6 +533,6 @@
 | arroz con leche con toppings | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | paella de marisco con langosta | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | tortilla española video | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| ensalada de garbanzos mediterranea | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| ensalada de garbanzos mediterranea | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
 | salmón al horno con salsa teriyaki | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
 | paella de marisco española | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
