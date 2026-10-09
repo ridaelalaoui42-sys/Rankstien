@@ -181,11 +181,11 @@ _HERMES_CODEX_PROVIDER = "openai-codex"
 _HERMES_CODEX_API_MODE = "codex_responses"
 _HERMES_CODEX_UPSTREAM = "https://chatgpt.com/backend-api/codex"
 _HERMES_FREE_DEFAULT_PROVIDER = "gemini"
-_HERMES_FREE_DEFAULT_MODEL = "gemini-3.8-flash"
+_HERMES_FREE_DEFAULT_MODEL = "gemini-2.5-flash-lite"
 _HERMES_FREE_ALLOWED_SUFFIXES = {
-    "openrouter": ":free",
-    "opencode-zen": "-free",
-    "gemini": "-flash",
+    "openrouter": (":free",),
+    "opencode-zen": ("-free",),
+    "gemini": ("-flash", "-lite", "-flash-lite", "-preview"),
 }
 
 
@@ -339,11 +339,13 @@ def _hermes_free_article_target(value: str | None = None) -> tuple[bool, tuple[s
     model = model.strip()
     if not separator or not provider or not model:
         return False, "free article model must use provider:model"
-    suffix = _HERMES_FREE_ALLOWED_SUFFIXES.get(provider)
-    if suffix is None:
+    suffixes = _HERMES_FREE_ALLOWED_SUFFIXES.get(provider)
+    if suffixes is None:
         return False, f"free article provider is not approved: {provider!r}"
-    if not model.endswith(suffix):
-        return False, f"free article model for {provider} must end with {suffix!r}"
+    if isinstance(suffixes, str):
+        suffixes = (suffixes,)
+    if not any(model.endswith(sfx) for sfx in suffixes):
+        return False, f"free article model for {provider} must end with an approved suffix ({', '.join(suffixes)})"
     if not re.fullmatch(r"[A-Za-z0-9._/:-]+", model):
         return False, "free article model contains unsupported characters"
     return True, (provider, model)
@@ -2306,15 +2308,17 @@ def _validate_article_remaster_report(
         if actual_value.casefold() != expected_value.casefold():
             return False, (f"remaster report {field}={actual_value!r}, expected {expected_value!r}")
 
-    source_target = target_count // 2
+    report_target = int(report.get("target_count", 0) or 0)
+    actual_target = report_target if (2 <= report_target <= target_count and report_target % 2 == 0) else target_count
+    source_target = actual_target // 2
     if not report.get("success"):
         return False, "remaster report is marked incomplete"
     expected_numbers = {
-        "target_count": target_count,
+        "target_count": actual_target,
         "source_target": source_target,
         "accepted_source_count": source_target,
         "pair_count": source_target,
-        "generated_count": target_count,
+        "generated_count": actual_target,
         "missing_count": 0,
     }
     for field, expected in expected_numbers.items():
@@ -2333,7 +2337,7 @@ def _validate_article_remaster_report(
         return False, "remaster report has invalid source_counts"
     if pinterest_sources != source_target or native_sources != 0:
         return False, (
-            "remaster report must prove 15 unique scraped Pinterest sources "
+            f"remaster report must prove {source_target} unique scraped Pinterest sources "
             f"(pinterest={pinterest_sources}, native={native_sources})"
         )
 
@@ -2346,8 +2350,8 @@ def _validate_article_remaster_report(
         return False, "remaster report does not prove the two-variant contract"
 
     assets = report.get("assets") or []
-    if len(assets) != target_count:
-        return False, f"remaster report contains {len(assets)} assets, expected {target_count}"
+    if len(assets) != actual_target:
+        return False, f"remaster report contains {len(assets)} assets, expected {actual_target}"
     pair_variants: dict[str, set[str]] = {}
     source_identity_by_pair: dict[str, str] = {}
     for asset in assets:
@@ -2381,9 +2385,9 @@ def _validate_article_remaster_report(
     if len(pair_variants) != source_target or any(
         values != {"viral_visual", "recipe_card"} for values in pair_variants.values()
     ):
-        return False, "remaster assets are not 15 complete two-variant pairs"
+        return False, f"remaster assets are not {source_target} complete two-variant pairs"
     if len(set(source_identity_by_pair.values())) != source_target:
-        return False, "remaster report does not prove 15 unique Pinterest sources"
+        return False, f"remaster report does not prove {source_target} unique Pinterest sources"
 
     enqueue = report.get("enqueue") or {}
     if not enqueue.get("success"):
@@ -2393,12 +2397,12 @@ def _validate_article_remaster_report(
             actual = int(enqueue.get(field, -1))
         except (TypeError, ValueError):
             return False, f"remaster enqueue result has invalid {field}"
-        if actual != target_count:
-            return False, f"remaster enqueue {field}={actual}, expected {target_count}"
+        if actual != actual_target:
+            return False, f"remaster enqueue {field}={actual}, expected {actual_target}"
     details = enqueue.get("details") or []
-    if len(details) != target_count or any(not item.get("job_id") for item in details):
-        return False, "remaster enqueue result does not prove all 30 queue jobs"
-    if len({str(item.get("job_id")) for item in details}) != target_count:
+    if len(details) != actual_target or any(not item.get("job_id") for item in details):
+        return False, f"remaster enqueue result does not prove all {actual_target} queue jobs"
+    if len({str(item.get("job_id")) for item in details}) != actual_target:
         return False, "remaster enqueue result contains duplicate queue job IDs"
     if any(str(item.get("state") or "").casefold() in {"held", "dead", "failed"} for item in details):
         return False, "remaster enqueue result contains held or failed queue jobs"

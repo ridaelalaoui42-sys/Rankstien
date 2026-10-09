@@ -2,7 +2,7 @@
 
 | Keyword | Cluster | Source | Target Blog | Priority | Status |
 |---|---|---|---|---|---|
-| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
 | 5 Aperitivos Sencillos Rapidos Fiestas | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos De Navidad Originales Y Faciles Para Triunfar | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos Fiestas Faciles Economicos V2 | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
@@ -493,13 +493,13 @@
 | Ensaladas de atun | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Ensaladas de garbanzos | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Ensaladas saludables faciles | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| Ensaladas de manzana | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | In Progress |
-| salmón al horno recetas faciles | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Ensaladas de manzana | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| salmón al horno recetas faciles | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
 | salmón al horno con patatas | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| arroz con leche en vaso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| Ensaladas de lentejas | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| Ensaladas de mango | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| arroz con leche animado | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con leche en vaso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| Ensaladas de lentejas | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| Ensaladas de mango | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| arroz con leche animado | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | paella valenciana autentica | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Live |
 | tortilla de patatas jugosa | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Live |
 | pollo al ajillo con salsa | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Pending |
@@ -516,8 +516,23 @@
 | croquetas caseras de carne | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | paella de marisco en casa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Failed |
 | tortilla española saludable | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Failed |
-| Pescados al horno | Pescados | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| Carnes de cerdo | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| pollo al horno con ensalada rusa | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| Ensaladas de zanahoria | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| salmón al horno con miel y mostaza | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| Pescados al horno | Pescados | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| Carnes de cerdo | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| pollo al horno con ensalada rusa | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
+| Ensaladas de zanahoria | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| salmón al horno con miel y mostaza | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
+| arroz con leche de coco | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso fría | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| salmón al horno como cocinar | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| pollo al horno con ensalada | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tortilla española al horno | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| pollo al horno navideño | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| arroz con leche colombiano | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| arroz con leche para vender publicidad | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| arroz con leche casero | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| arroz con leche con toppings | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| paella de marisco con langosta | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tortilla española video | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| ensalada de garbanzos mediterranea | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| salmón al horno con salsa teriyaki | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| paella de marisco española | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |

@@ -725,17 +725,29 @@
 | bizcocho de avena platano y chocolate sin azucar | dulces-saludables | SEO Feedback Radar | Receta Dolce | High | Pending |
 | croquetas caseras de carne | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | brownie de chocolate con nueces | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| tarta de manzana casera facil | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
+| tarta de manzana casera facil | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | flan de huevo al bano maria | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | churros rellenos de chocolate | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | bizcocho de yogur esponjoso | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | coulant de chocolate fundente | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | tarta de queso japonesa | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | profiteroles de chocolate y nata | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| tarta de santiago con almendra | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
+| tarta de santiago con almendra | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | bizcocho de zanahoria con frosting | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| bizcocho de chocolate saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
-| pastel de zanahoria receta facil | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
-| bizcocho de chocolate con dulce de leche | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
-| pastel de zanahoria navideño | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
-| bizcocho de chocolate matilda | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |
+| bizcocho de chocolate saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| pastel de zanahoria receta facil | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| bizcocho de chocolate con dulce de leche | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| pastel de zanahoria navideño | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| bizcocho de chocolate matilda | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
+| arroz con leche animado | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Needs Verification |
+| mousse de chocolate chantilly | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| arroz con leche de coco | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| helado de pistacho vegano | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| mousse de chocolate para vender | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| arroz con leche colombiano | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| mousse de chocolate pote | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| arroz con leche casero | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| helado de pistacho con yogurt | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| arroz con leche para vender publicidad | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| mousse de chocolate emplatado | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | In Progress |
+| helado de pistacho sarita | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | Medium | Pending |

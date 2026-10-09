@@ -1,21 +1,21 @@
 # Daily Best Keywords - Receta Genial
 
-Generated: 2026-10-09T18:06:02.563092+00:00
+Generated: 2026-10-09T18:26:59.797366+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|
-| Pescados al horno | Pescados | High | 172.00 | 3.0 | 20.0 | 5 |
-| Carnes de cerdo | Carnes | High | 170.00 | 3.0 | 20.0 | 5 |
-| Ensaladas de atun | Ensaladas | High | 169.00 | 3.0 | 20.0 | 5 |
-| Ensaladas de garbanzos | Ensaladas | High | 168.00 | 3.0 | 20.0 | 5 |
-| Ensaladas saludables faciles | Ensaladas | High | 168.00 | 3.0 | 16.0 | 5 |
-| Ensaladas de manzana | Ensaladas | High | 165.00 | 3.0 | 20.0 | 5 |
-| salmón al horno recetas faciles | Aperitivos | High | 161.00 | 3.0 | 8.0 | 5 |
-| salmón al horno con patatas | Aperitivos | High | 156.00 | 4.0 | 20.0 | 5 |
-| Ensaladas de lentejas | Ensaladas | High | 156.00 | 3.0 | 20.0 | 5 |
-| arroz con leche en vaso | Aperitivos | High | 154.00 | 3.0 | 20.0 | 5 |
-| Ensaladas de mango | Ensaladas | High | 153.00 | 3.0 | 20.0 | 5 |
-| pollo al horno con ensalada rusa | Carnes | High | 151.00 | 3.0 | 20.0 | 5 |
-| Ensaladas de zanahoria | Ensaladas | High | 146.00 | 3.0 | 20.0 | 5 |
-| salmón al horno con miel y mostaza | Aperitivos | High | 145.00 | 4.0 | 16.0 | 5 |
-| arroz con leche animado | Aperitivos | High | 145.00 | 3.0 | 20.0 | 5 |
+| arroz con leche de coco | Aperitivos | High | 155.00 | 3.0 | 20.0 | 5 |
+| tarta de queso fría | Postres | High | 154.00 | 4.0 | 20.0 | 5 |
+| salmón al horno como cocinar | Aperitivos | High | 152.00 | 3.0 | 16.0 | 5 |
+| pollo al horno con ensalada | Carnes | High | 151.00 | 3.0 | 20.0 | 5 |
+| tortilla española al horno | Aperitivos | High | 150.00 | 3.0 | 16.0 | 5 |
+| pollo al horno navideño | Carnes | High | 150.00 | 4.0 | 20.0 | 5 |
+| arroz con leche colombiano | Aperitivos | High | 147.00 | 3.0 | 18.0 | 5 |
+| arroz con leche para vender publicidad | Aperitivos | High | 143.00 | 3.0 | 2.0 | 5 |
+| arroz con leche casero | Aperitivos | High | 143.00 | 3.0 | 20.0 | 5 |
+| arroz con leche con toppings | Aperitivos | High | 142.00 | 3.0 | 4.0 | 5 |
+| paella de marisco con langosta | Aperitivos | High | 135.00 | 3.0 | 2.0 | 5 |
+| tortilla española video | Aperitivos | High | 135.00 | 3.0 | 8.0 | 5 |
+| ensalada de garbanzos mediterranea | Ensaladas | High | 135.00 | 3.0 | 10.0 | 5 |
+| salmón al horno con salsa teriyaki | Aperitivos | High | 134.00 | 3.0 | 4.0 | 5 |
+| paella de marisco española | Aperitivos | High | 132.00 | 3.0 | 6.0 | 5 |
