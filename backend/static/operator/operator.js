@@ -305,6 +305,21 @@ function renderCampaigns() {
             ? c.run_status === "failed"
             : c.overall_state === outcome)),
   );
+  function historyOutcomeBadge(c) {
+    if (c.quality_hold) return "Quality hold";
+    if (c.roadmap_status === "Failed" || (c.current_label === "Article writing" && c.overall_state === "attention")) {
+      return "Failed";
+    }
+    if (c.roadmap_status === "Live" && c.pin_url) {
+      if (c.current_label === "Pin distribution" && c.overall_state === "attention") return "Distributing";
+      if (c.current_label === "Final verification" && c.overall_state === "attention") return "Remaster pending";
+      return "Live";
+    }
+    if (c.roadmap_status === "Needs Verification" || (c.article_url && !c.pin_url)) {
+      return "Needs verification";
+    }
+    return c.overall_state === "attention" ? "Attention" : c.overall_state;
+  }
   const historyNotice = `<p class="muted" role="status">${esc(historyCoverage())}. Showing the latest recorded workflows; older deferred jobs remain in the Queue backlog.</p>`;
   $("history").innerHTML = historyNotice + (rows.length
     ? table(
@@ -318,7 +333,7 @@ function renderCampaigns() {
         ],
         rows.map(
           (c) =>
-            `<tr><td><button class="link-button" data-campaign="${esc(c.id)}">${esc(c.keyword || c.title)}</button><span class="subtext">${esc(c.quality_hold ? c.current_detail : c.current_label)}</span></td><td class="mono">${esc(c.domain_handle)}</td><td>${badge(c.quality_hold ? "Quality hold" : c.overall_state === "attention" ? "Needs verification" : c.overall_state)}</td><td>${external(c.article_url, "Article")} ${external(c.pin_url, "Pin")}</td><td class="mono">${esc(date(c.updated_at))}</td><td><button class="icon-button" data-campaign="${esc(c.id)}" title="Inspect campaign" aria-label="Inspect campaign">${icon("chevron-right")}</button></td></tr>`,
+            `<tr><td><button class="link-button" data-campaign="${esc(c.id)}">${esc(c.keyword || c.title)}</button><span class="subtext">${esc(c.quality_hold ? c.current_detail : c.current_label)}</span></td><td class="mono">${esc(c.domain_handle)}</td><td>${badge(historyOutcomeBadge(c))}</td><td>${external(c.article_url, "Article")} ${external(c.pin_url, "Pin")}</td><td class="mono">${esc(date(c.updated_at))}</td><td><button class="icon-button" data-campaign="${esc(c.id)}" title="Inspect campaign" aria-label="Inspect campaign">${icon("chevron-right")}</button></td></tr>`,
         ),
       )
     : empty("No matching recent history"));

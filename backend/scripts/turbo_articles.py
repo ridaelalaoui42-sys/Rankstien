@@ -4042,7 +4042,7 @@ try:
         )
     result = {"report": report}
 except Exception as error:
-    result = {"error_type": type(error).__name__}
+    result = {"error_type": type(error).__name__, "error_detail": str(error)}
 sys.stdout.buffer.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
 """
 
@@ -4129,7 +4129,6 @@ async def _run_bounded_trend_validation(
     try:
         process = await _create_owned_subprocess(
             sys.executable,
-            "-I",
             "-u",
             "-c",
             _TREND_VALIDATION_WORKER,
@@ -4139,12 +4138,14 @@ async def _run_bounded_trend_validation(
             env=clean_python_env(),
         )
         remaining = max(0.001, timeout - (time.monotonic() - started_at))
-        stdout, _stderr = await asyncio.wait_for(process.communicate(request), timeout=remaining)
+        stdout, stderr_bytes = await asyncio.wait_for(process.communicate(request), timeout=remaining)
         if process.returncode != 0:
-            raise RuntimeError(f"Exact validation worker exited with code {process.returncode}")
+            stderr_msg = stderr_bytes.decode(errors="replace").strip() if stderr_bytes else ""
+            raise RuntimeError(f"Exact validation worker exited with code {process.returncode}: {stderr_msg}")
         result = json.loads(stdout)
         if result.get("error_type"):
-            raise RuntimeError(f"Exact validation worker failed: {result['error_type']}")
+            error_detail = result.get("error_detail", "")
+            raise RuntimeError(f"Exact validation worker failed: {result['error_type']} ({error_detail})")
         if not isinstance(result.get("report"), dict):
             raise ValueError("Exact validation worker returned no report")
         return result["report"]

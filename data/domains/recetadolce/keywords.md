@@ -730,7 +730,12 @@
 | churros rellenos de chocolate | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | bizcocho de yogur esponjoso | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
 | coulant de chocolate fundente | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| tarta de queso japonesa | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Needs Verification |
+| tarta de queso japonesa | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | profiteroles de chocolate y nata | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | tarta de santiago con almendra | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
-| bizcocho de zanahoria con frosting | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Needs Verification |
+| bizcocho de zanahoria con frosting | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
+| bizcocho de chocolate saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| pastel de zanahoria receta facil | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| bizcocho de chocolate con dulce de leche | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| pastel de zanahoria navideño | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| bizcocho de chocolate matilda | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |

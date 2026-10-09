@@ -1,86 +1,128 @@
 {
-  "generated_at": "2026-10-09T11:10:32.807839+00:00",
+  "generated_at": "2026-10-09T17:45:14.336968+00:00",
   "domain": "recetadolce",
+  "methodology": {
+    "candidate_origin": "Pinterest Trends/Search only",
+    "candidate_origin_policy": "pinterest_required",
+    "specificity_gate": "dish plus concrete qualifier",
+    "external_validation": "Google search demand plus optional Google News freshness",
+    "fail_closed": true
+  },
   "items": [
     {
-      "keyword": "brownie de chocolate con nueces",
-      "qualified": true,
+      "keyword": "bizcocho de chocolate saludable",
+      "domain": "recetadolce",
+      "cluster": "fresas-y-nata",
+      "priority": "High",
+      "score": 144.0,
+      "pinterest_score": 75.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Bizcocho de yogur y chocolate: 3 recetas fáciles, deliciosas y saludables",
+        "La nutricionista Sandra Moñino explica la receta para hacer un bizcocho saludable: está listo en cinco minutos y no necesita horno",
+        "El chef Jordi Cruz comparte su receta de bizcocho de plátano casero más saludable",
+        "Marta Verona, chef: \"La tarta de chocolate más fácil no lleva huevo, sólo 2 ingredientes y uno es 500 g de calabaza cocida\"",
+        "Menú semanal del 16 al 22 de febrero"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
+      "qualified": true
     },
     {
-      "keyword": "tarta de manzana casera facil",
-      "qualified": true,
+      "keyword": "pastel de zanahoria receta facil",
+      "domain": "recetadolce",
+      "cluster": "fresas-y-nata",
+      "priority": "High",
+      "score": 140.0,
+      "pinterest_score": 65.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "Cómo hacer una 'carrot cake' en menos de 5 minutos con el bizcocho de zanahoria de Mercadona listo para comer",
+        "Jordi Cruz y su espectacular tarta de zanahoria: “Posiblemente, la mejor carrot cake del mundo”",
+        "Jordi Cruz, chef: \"La mejor tarta de zanahoria se hace con 100 ml. de aceite de coco, 80g. de azúcar glas con vainilla y 3g. de canela\"",
+        "La receta salada de pastel de zanahoria de Isasaweis (49), sana y fácil de hacer, perfecta para toda la familia",
+        "Laura Escanes prepara un bizcocho de zanahoria fácil (para toda la familia)"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 3.0,
+      "search_volume_score": 20.0,
+      "search_demand_score": 20.0,
+      "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
+      "qualified": true
     },
     {
-      "keyword": "flan de huevo al bano maria",
-      "qualified": true,
+      "keyword": "bizcocho de chocolate con dulce de leche",
+      "domain": "recetadolce",
+      "cluster": "fresas-y-nata",
+      "priority": "High",
+      "score": 136.0,
+      "pinterest_score": 79.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La chocotorta argentina está entre los tres mejores pasteles del mundo, según un ranking",
+        "Menú semanal del 28 de septiembre al 4 de octubre",
+        "La chocotorta argentina quedó entre los 3 mejores pasteles de del mundo",
+        "La tarta de chocolate más irresistible para celebrar el Día Mundial de la Repostería: el paraíso para los amantes del cacao",
+        "Orgullo argentino: la chocotorta fue elegida como la segunda mejor torta de chocolate del mundo"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 8.0,
+      "search_demand_score": 8.0,
+      "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
+      "qualified": true
     },
     {
-      "keyword": "churros rellenos de chocolate",
-      "qualified": true,
+      "keyword": "pastel de zanahoria navideño",
+      "domain": "recetadolce",
+      "cluster": "fresas-y-nata",
+      "priority": "High",
+      "score": 122.0,
+      "pinterest_score": 69.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "15 postres primaverales fáciles y rápidos que llenan de color tu cocina",
+        "Menú especial de Navidad, también en el hospital Reina Sofía",
+        "Los 12 aperitivos de Navidad italianos que pueden marcar la diferencia en tu mesa este año: cómo hacerlos paso a paso",
+        "Tarteras de Navidad: desde Zara Home a Maisons du Monde, el detalle que tu mesa necesita estas fiestas",
+        "Dónde comprar la cena de Navidad y Año Nuevo 2025-2026"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 4.0,
+      "search_volume_score": 4.0,
+      "search_demand_score": 4.0,
+      "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
+      "qualified": true
     },
     {
-      "keyword": "bizcocho de yogur esponjoso",
-      "qualified": true,
+      "keyword": "bizcocho de chocolate matilda",
+      "domain": "recetadolce",
+      "cluster": "fresas-y-nata",
+      "priority": "Medium",
+      "score": 114.0,
+      "pinterest_score": 63.0,
+      "google_news_hits": 5,
+      "google_news_titles": [
+        "La torta de chocolate de Matilda llega a Chía: así recrean la receta con cacao de la Amazonía",
+        "La receta de la TORTA MATILDA original: Secretos de Mauricio Asta para que quede súper húmeda",
+        "La historia de la torta Matilda: por qué la llaman el \"pastel del diablo\"",
+        "Del cine a la merienda: Matilda, la torta de chocolate más irresistible",
+        "Una bomba imperdible: receta fácil de la torta de chocolate de Maru Botana"
+      ],
+      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
+      "specificity_score": 3.0,
+      "search_volume_score": 8.0,
+      "search_demand_score": 8.0,
+      "search_demand_source": "Google Autocomplete Demand",
       "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
-    },
-    {
-      "keyword": "coulant de chocolate fundente",
-      "qualified": true,
-      "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
-    },
-    {
-      "keyword": "tarta de queso japonesa",
-      "qualified": true,
-      "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
-    },
-    {
-      "keyword": "profiteroles de chocolate y nata",
-      "qualified": true,
-      "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
-    },
-    {
-      "keyword": "tarta de santiago con almendra",
-      "qualified": true,
-      "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
-    },
-    {
-      "keyword": "bizcocho de zanahoria con frosting",
-      "qualified": true,
-      "pinterest_origin": true,
-      "source": "Google Autocomplete Demand + Pinterest Trends",
-      "search_demand_score": 10.0,
-      "specificity_score": 3.0
+      "qualified": true
     }
   ]
 }
