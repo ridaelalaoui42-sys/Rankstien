@@ -17,15 +17,18 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-  if (password !== correct) {
+  if (password.trim() !== correct.trim()) {
     return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
   }
+
+  const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
+  const isSecure = process.env.NODE_ENV === 'production' && isHttps;
 
   // Set a session cookie valid for 7 days
   const res = NextResponse.json({ success: true });
   res.cookies.set('rd_admin_session', 'authenticated', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
   // Public cookie for UI state (not for security)
   res.cookies.set('rd_admin', 'true', {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',

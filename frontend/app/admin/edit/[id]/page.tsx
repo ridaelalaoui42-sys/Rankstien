@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import PostForm from '@/components/PostForm';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: Promise<{ id: string }>;
 }

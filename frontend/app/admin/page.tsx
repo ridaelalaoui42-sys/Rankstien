@@ -7,6 +7,8 @@ import LogoutButton from '@/components/LogoutButton';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Panel Admin | RecetaDolce',
   robots: { index: false, follow: false },

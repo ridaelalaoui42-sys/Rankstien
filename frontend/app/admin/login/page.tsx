@@ -20,8 +20,8 @@ export default function AdminLoginPage() {
     });
 
     if (res.ok) {
-      router.push('/admin');
-      router.refresh();
+      localStorage.setItem('rd_admin', 'true');
+      window.location.href = '/admin';
     } else {
       const json = await res.json();
       setError(json.error || 'Error de autenticación');

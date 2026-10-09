@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // If already authenticated and on login page, redirect to /admin
+  if (pathname === '/admin/login') {
+    const session = req.cookies.get('rd_admin_session');
+    if (session && session.value === 'authenticated') {
+      const adminUrl = req.nextUrl.clone();
+      adminUrl.pathname = '/admin';
+      return NextResponse.redirect(adminUrl);
+    }
+  }
+
   // Protect /admin routes (exclude login page)
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
     const session = req.cookies.get('rd_admin_session');
