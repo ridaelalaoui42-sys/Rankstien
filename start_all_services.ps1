@@ -39,7 +39,7 @@ if ($Uninstall) {
 }
 
 if ($Install) {
-    & $Python (Join-Path $ProjectRoot 'rankstein.py') suite install
+    & $Python (Join-Path $ProjectRoot 'rankstein.py') suite install --daily-at $DailyAt
     exit $LASTEXITCODE
 }
 

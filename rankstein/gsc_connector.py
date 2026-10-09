@@ -167,10 +167,13 @@ class GSCConnector:
         end_date: str | None = None,
         dimensions: list[str] | None = None,
         row_limit: int = 1000,
+        raise_on_error: bool = False,
     ) -> list[dict[str, Any]]:
         """Query Search Analytics metrics for a given verified siteUrl."""
         token = self.get_access_token()
         if not token:
+            if raise_on_error:
+                raise RuntimeError("GSC authentication unavailable")
             return []
 
         # Default date range: past 28 days (ending 3 days ago for data maturity)
@@ -203,6 +206,8 @@ class GSCConnector:
             )
             if not resp.ok:
                 logger.warning("GSC query failed for %s: %s %s", site_url, resp.status_code, resp.text)
+                if raise_on_error:
+                    raise RuntimeError(f"GSC query failed: HTTP {resp.status_code}")
                 return []
 
             data = resp.json()
@@ -226,6 +231,8 @@ class GSCConnector:
 
         except Exception as exc:
             logger.error("Error querying GSC search analytics for %s: %s", site_url, exc)
+            if raise_on_error:
+                raise
             return []
 
     def get_top_queries(self, site_url: str, days: int = 28, row_limit: int = 25) -> list[dict[str, Any]]:

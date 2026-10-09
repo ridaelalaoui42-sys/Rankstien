@@ -1,0 +1,21 @@
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright \
+    HOME=/app/data/worker_home
+WORKDIR /app
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --disable-pip-version-check -r /tmp/requirements.txt \
+    && python -m playwright install --with-deps chromium \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa curl \
+    && rm -rf /var/lib/apt/lists/*
+RUN groupadd --gid 1000 rankstein \
+    && useradd --uid 1000 --gid 1000 --create-home --home-dir /home/rankstein rankstein
+COPY . /app
+RUN mkdir -p /app/data /app/memory /app/nanobanana-output \
+    && chown -R rankstein:rankstein /app /opt/playwright
+USER 1000:1000
+CMD ["python", "-m", "uvicorn", "backend.operator:app", "--host", "127.0.0.1", "--port", "7000", "--no-proxy-headers"]

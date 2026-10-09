@@ -593,6 +593,19 @@ def get_hero_image(
     )
 
     # --- Tier 3 (Fallback 2): Pollinations AI image generation ---
+    if os.environ.get("RANKSTEIN_DISABLE_POLLINATIONS", "").lower() in ("1", "true"):
+        logger.warning("Pollinations hero generation is disabled per policy. Failing closed without Tier 3.")
+        return {
+            "success": False,
+            "error": (
+                f"All approved hero generation options failed (Codex: {codex.get('error', 'unknown error')}, "
+                f"Scraped: {scraped.get('error', 'unknown error')}; Pollinations disabled by policy)"
+            ),
+            "source": "failed",
+            "provider": "failed",
+            "domain": domain_handle or "",
+        }
+
     pollinations = create_hero_image_pollinations(
         keyword=keyword,
         domain=domain_handle,
@@ -634,8 +647,30 @@ def create_hero_image_pollinations(
     d_handle = getattr(domain, "handle", str(domain))
     eff_slug = slug or keyword.replace(" ", "-")
     eff_prompt = prompt or f"Photorealistic editorial food photography of {keyword}, high quality"
+    try:
+        from rankstein_mcp_server import create_hero_image_pollinations as _mcp_pollinations
+
+        res = _mcp_pollinations(
+            prompt=eff_prompt,
+            slug=eff_slug,
+            suffix="hero",
+            width=1920,
+            height=1280,
+            model="flux",
+            enhance=True,
+            upscale_if_smaller=True,
+        )
+        if res.get("success"):
+            res["source"] = "pollinations"
+            res["provider"] = "pollinations"
+            res["domain"] = d_handle
+            return res
+    except Exception as exc:
+        logger.warning("MCP pollinations call failed: %s, falling back to stealth request", exc)
+
     res = _pollinations_stealth_request(eff_prompt, eff_slug, model="flux")
     if res.get("success"):
         res["source"] = "pollinations"
+        res["provider"] = "pollinations"
         res["domain"] = d_handle
     return res

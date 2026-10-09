@@ -79,6 +79,15 @@ async function audit(browser, site) {
     await page.screenshot({ path: join(reportDirectory, site.name.toLowerCase() + '-preview-home.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(site.origin + '/');
+    const mobileHero = page.locator('img[src*="home-hero-"]').first();
+    await mobileHero.evaluate((image) => image.decode());
+    await page.evaluate(() => document.fonts.ready);
+    result.mobileHero = await mobileHero.evaluate((image) => {
+      const bounds = image.getBoundingClientRect();
+      const style = getComputedStyle(image);
+      return { loaded: image.complete && image.naturalWidth > 0, width: bounds.width, height: bounds.height, opacity: Number(style.opacity) };
+    });
+    assert(result.mobileHero.loaded && result.mobileHero.width >= 390 && result.mobileHero.height > 0 && result.mobileHero.opacity >= 0.5, site.name + ': mobile hero is not visibly rendered');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 0);
     await page.screenshot({ path: join(reportDirectory, site.name.toLowerCase() + '-preview-mobile.png') });
     result.mobileHomepage = true;

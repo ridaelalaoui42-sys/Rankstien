@@ -116,9 +116,19 @@ def main() -> int:
 
     agentmemory_url = servers["agentmemory"].get("env", {}).get("AGENTMEMORY_URL", "http://127.0.0.1:3111")
     try:
-        with urllib.request.urlopen(
-            f"{agentmemory_url.rstrip('/')}/agentmemory/health", timeout=5
-        ) as response:
+        headers = {"User-Agent": "rankstein-validator"}
+        secret = os.environ.get("AGENTMEMORY_SECRET")
+        if not secret:
+            secret_path = Path.home() / ".agentmemory" / "secret"
+            if secret_path.exists():
+                try:
+                    secret = secret_path.read_text(encoding="utf-8").strip()
+                except OSError:
+                    secret = ""
+        if secret:
+            headers["Authorization"] = f"Bearer {secret}"
+        request = urllib.request.Request(f"{agentmemory_url.rstrip('/')}/agentmemory/health", headers=headers)
+        with urllib.request.urlopen(request, timeout=5) as response:
             if response.status != 200:
                 _fail(f"AgentMemory health returned HTTP {response.status}")
         _ok(f"AgentMemory REST health reachable: {agentmemory_url}")

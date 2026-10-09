@@ -31,6 +31,8 @@ _SHORT_RECIPE_WORDS = {"pan", "sal", "pie", "mix", "egg", "cup", "oil", "g", "kg
 def _read_windows_text(path: str, *, timeout: float) -> dict[str, Any]:
     """Capture local OCR in memory without logging its output or error text."""
 
+    if sys.platform != "win32":
+        return _read_tesseract_text(path, timeout=timeout)
     executable = shutil.which("powershell.exe") if sys.platform == "win32" else None
     if not executable or not _OCR_SCRIPT.is_file():
         return {"available": False, "reason": "ocr_unavailable"}
@@ -70,6 +72,29 @@ def _read_windows_text(path: str, *, timeout: float) -> dict[str, Any]:
     return payload
 
 
+def _read_tesseract_text(path: str, *, timeout: float) -> dict[str, Any]:
+    executable = shutil.which("tesseract")
+    if not executable:
+        return {"available": False, "reason": "ocr_unavailable"}
+    try:
+        completed = subprocess.run(
+            [executable, path, "stdout", "-l", "eng+spa", "--psm", "11"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"available": False, "reason": "ocr_timeout"}
+    except OSError:
+        return {"available": False, "reason": "ocr_unavailable"}
+    if completed.returncode != 0 or len(completed.stdout) > _MAX_OCR_CHARACTERS:
+        return {"available": False, "reason": "ocr_unavailable"}
+    return {"available": True, "text": completed.stdout}
+
+
 def _text_assessment(text: str) -> dict[str, Any]:
     """Allow only a small amount of short OCR noise, never recipe/brand copy."""
 
@@ -101,7 +126,7 @@ def _base_assessment(*, source_hash: str = "") -> dict[str, Any]:
         "accepted": False,
         "policy": SOURCE_QUALITY_POLICY,
         "version": SOURCE_QUALITY_VERSION,
-        "backend": OCR_BACKEND,
+        "backend": OCR_BACKEND if sys.platform == "win32" else "tesseract-ocr",
         "reason": "ocr_unavailable",
         "word_count": 0,
         "significant_word_count": 0,

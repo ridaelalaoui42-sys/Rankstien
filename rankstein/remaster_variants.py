@@ -11,18 +11,20 @@ text; source-image branding or model-rendered text is never reused.
 
 from __future__ import annotations
 
+import logging
 import re
 import textwrap
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 PIN_WIDTH = 1000
 PIN_HEIGHT = 1500
 _FONT_ROOT = Path("C:/Windows/Fonts")
 _ASSET_FONTS = Path(__file__).resolve().parent / "assets" / "fonts"
+logger = logging.getLogger("rankstein.remaster_variants")
 
 
 @dataclass(frozen=True)
@@ -106,9 +108,20 @@ def _font(
         )
     elif serif:
         candidates = (
-            (_FONT_ROOT / "georgiab.ttf", _FONT_ROOT / "georgia.ttf")
+            (
+                _ASSET_FONTS / "DMSerifDisplay-Regular.ttf",
+                _ASSET_FONTS / "PlayfairDisplay.ttf",
+                _ASSET_FONTS / "Prata-Regular.ttf",
+                _FONT_ROOT / "georgiab.ttf",
+                _FONT_ROOT / "georgia.ttf",
+            )
             if bold
-            else (_FONT_ROOT / "georgia.ttf", _FONT_ROOT / "times.ttf")
+            else (
+                _ASSET_FONTS / "DMSerifDisplay-Regular.ttf",
+                _ASSET_FONTS / "PlayfairDisplay.ttf",
+                _FONT_ROOT / "georgia.ttf",
+                _FONT_ROOT / "times.ttf",
+            )
         )
     elif sans or not serif:
         candidates = (
@@ -588,13 +601,23 @@ def create_recipe_card_pin(
     domain_handle: str,
     pair_id: str,
     output_dir: Path,
+    subtitle: str = "",
+    card_style: str = "auto",
 ) -> dict:
-    """Create the stacked photo + ingredients + preparation sibling."""
+    """Create the visual recipe-card sibling matching the 2026 Pinterest reference standard.
+
+    Features:
+    - When card_style == 'bright_infographic': Bright culinary paper aesthetic with
+      circular food hero, arched ribbons, 3-stat metrics card, and step cards.
+    - When card_style in ('classic', 'full_bleed', 'auto'):
+      100% full-bleed food hero photography with top floating ivory card,
+      cinematic dark espresso bottom vignette, and two-column recipe layout.
+    """
 
     source = Path(source_path)
     if not source.is_file():
         return {"success": False, "error": f"Source image not found: {source_path}"}
-    ingredient_items = _clean_recipe_items(ingredients, limit=7)
+    ingredient_items = _clean_recipe_items(ingredients, limit=8)
     step_items = _clean_recipe_items(steps, limit=5)
     if not ingredient_items or not step_items:
         return {
@@ -603,225 +626,319 @@ def create_recipe_card_pin(
             "variant": "recipe_card",
         }
 
+    output_path = output_dir / f"{_safe_slug(title)}-{pair_id}-recipe-card.jpg"
+
+    if card_style == "bright_infographic":
+        try:
+            from rankstein.recipe_pin_generator import create_bright_infographic_pin
+
+            info_res = create_bright_infographic_pin(
+                hero_image_path=str(source),
+                title=title,
+                subtitle=subtitle,
+                ingredients=ingredient_items,
+                steps=step_items,
+                tip_text=tip_text,
+                domain_handle=domain_handle,
+                output_dir=output_dir,
+                output_path=output_path,
+            )
+            if info_res.get("success"):
+                return {
+                    "success": True,
+                    "output_path": str(output_path),
+                    "variant": "recipe_card",
+                    "variant_label": "Recipe card (infographic)",
+                    "card_style": "bright_infographic",
+                    "width": PIN_WIDTH,
+                    "height": PIN_HEIGHT,
+                    "hero_height": PIN_HEIGHT,
+                    "rendered_ingredients": ingredient_items,
+                    "rendered_steps": step_items,
+                    "tip_rendered": bool(tip_text),
+                    "footer_rendered": True,
+                }
+        except Exception as exc:
+            logger.debug("Bright infographic variant fallback to classic: %s", exc)
+
     try:
         theme = _theme_for_domain(domain_handle)
-        primary = _hex_rgb(theme.primary, (198, 123, 60))
-        accent = _hex_rgb(theme.accent, (44, 62, 80))
-        paper = (255, 251, 244)
-        ink = (38, 34, 31)
-
-        canvas = Image.new("RGBA", (PIN_WIDTH, PIN_HEIGHT), (*paper, 255))
-        draw = ImageDraw.Draw(canvas, "RGBA")
-        layout = _recipe_card_layout(
-            draw,
-            ingredient_items=ingredient_items,
-            step_items=step_items,
-            tip_text=tip_text,
-        )
-        if layout is None:
-            return {
-                "success": False,
-                "error": "Recipe-card text cannot fit safely within the 2:3 canvas",
-                "variant": "recipe_card",
-            }
 
         with Image.open(source) as raw:
-            hero = _cover(raw, PIN_WIDTH, layout.hero_height, focus_y=0.30).convert("RGBA")
-        hero = ImageEnhance.Contrast(hero).enhance(1.04)
-        canvas.paste(hero, (0, 0), hero)
+            photo = _cover(raw, PIN_WIDTH, PIN_HEIGHT, focus_y=0.38)
+        photo = ImageEnhance.Contrast(photo).enhance(1.05)
+        photo = ImageEnhance.Color(photo).enhance(1.06).convert("RGBA")
+
+        # ── 1. CINEMATIC DARK BOTTOM VIGNETTE ─────────────────────────────────
+        overlay = Image.new("RGBA", (PIN_WIDTH, PIN_HEIGHT), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        vignette_start = 840
+        vignette_height = PIN_HEIGHT - vignette_start
+        for y in range(vignette_start, PIN_HEIGHT):
+            progress = (y - vignette_start) / vignette_height
+            alpha = int(250 * (progress**1.15))
+            overlay_draw.line((0, y, PIN_WIDTH, y), fill=(12, 9, 7, alpha))
+
+        canvas = Image.alpha_composite(photo, overlay)
         draw = ImageDraw.Draw(canvas, "RGBA")
 
-        gradient_height = min(220, layout.hero_height)
-        gradient = Image.new("RGBA", (PIN_WIDTH, gradient_height), (0, 0, 0, 0))
-        gradient_draw = ImageDraw.Draw(gradient)
-        for y in range(gradient_height):
-            alpha = int(y / gradient_height * 145)
-            gradient_draw.line((0, y, PIN_WIDTH, y), fill=(0, 0, 0, alpha))
-        canvas.alpha_composite(gradient, (0, layout.hero_height - gradient_height))
-        draw = ImageDraw.Draw(canvas, "RGBA")
+        # ── 2. TOP FLOATING HEADER CARD ───────────────────────────────────────
+        card_x1 = 110
+        card_x2 = 890
+        card_w = card_x2 - card_x1
+        card_y1 = 36
+        card_radius = 28
 
-        domain_font = _font(22, bold=True, sans=True)
-        domain_label = theme.public_domain.upper()
-        domain_box = draw.textbbox((0, 0), domain_label, font=domain_font)
-        badge_width = domain_box[2] - domain_box[0] + 46
-        draw.rounded_rectangle((36, 30, 36 + badge_width, 79), radius=24, fill=(*accent, 238))
-        draw.text((59, 43), domain_label, font=domain_font, fill=_contrast_text(accent))
+        title_clean = re.sub(r"\s+", " ", title.strip())
+        title_font = None
+        title_lines = []
+        for size in (54, 50, 46, 42, 38):
+            f = _font(size, bold=True, serif=True)
+            words = title_clean.split()
+            lines = []
+            cur = ""
+            for w in words:
+                cand = f"{cur} {w}".strip()
+                if cur and draw.textbbox((0, 0), cand, font=f)[2] > (card_w - 70):
+                    lines.append(cur)
+                    cur = w
+                else:
+                    cur = cand
+            if cur:
+                lines.append(cur)
+            if len(lines) <= 2:
+                title_font = f
+                title_lines = lines
+                break
+        if not title_font:
+            title_font = _font(36, bold=True, serif=True)
+            title_lines = [title_clean]
 
-        title_font, title_lines = _fit_lines(
-            draw,
-            title,
-            max_width=870,
-            max_lines=3,
-            preferred_size=74,
-            minimum_size=46,
-            bold=True,
-            script=True,
+        sub_font = _font(24, sans=True)
+        clean_tip = re.sub(r"\s+", " ", tip_text or "").strip()
+        tip_as_sub = clean_tip if 0 < len(clean_tip) <= 70 else ""
+        sub_candidate = (
+            subtitle.strip() or tip_as_sub or "Receta casera tradicional • Deliciosa y lista en minutos"
         )
-        title_height = 0
+        sub_lines = []
+        sub_words = sub_candidate.split()
+        cur_sub = ""
+        for sw in sub_words:
+            cand = f"{cur_sub} {sw}".strip()
+            if cur_sub and draw.textbbox((0, 0), cand, font=sub_font)[2] > (card_w - 60):
+                sub_lines.append(cur_sub)
+                cur_sub = sw
+            else:
+                cur_sub = cand
+        if cur_sub:
+            sub_lines.append(cur_sub)
+        sub_lines = sub_lines[:2]
+
+        title_sample = draw.textbbox((0, 0), "Ágj", font=title_font)
+        title_line_h = (title_sample[3] - title_sample[1]) + 8
+        title_block_h = len(title_lines) * title_line_h
+
+        sub_sample = draw.textbbox((0, 0), "Ágj", font=sub_font)
+        sub_line_h = (sub_sample[3] - sub_sample[1]) + 6
+        sub_block_h = len(sub_lines) * sub_line_h
+
+        card_padding_top = 24
+        card_gap = 12
+        card_padding_bottom = 22
+        card_h = card_padding_top + title_block_h + card_gap + sub_block_h + card_padding_bottom
+        card_y2 = card_y1 + card_h
+
+        # Soft drop shadow behind card
+        shadow_img = Image.new("RGBA", (card_w + 50, card_h + 50), (0, 0, 0, 0))
+        s_draw = ImageDraw.Draw(shadow_img)
+        s_draw.rounded_rectangle((25, 25, 25 + card_w, 25 + card_h), radius=card_radius, fill=(10, 8, 6, 90))
+        shadow_img = shadow_img.filter(ImageFilter.GaussianBlur(12))
+        canvas.paste(shadow_img, (card_x1 - 25, card_y1 - 25 + 8), shadow_img)
+
+        draw = ImageDraw.Draw(canvas, "RGBA")
+
+        # Card body (ivory/warm cream)
+        card_bg = (248, 242, 233, 250)
+        card_border = (226, 216, 202, 190)
+        draw.rounded_rectangle(
+            (card_x1, card_y1, card_x2, card_y2),
+            radius=card_radius,
+            fill=card_bg,
+            outline=card_border,
+            width=1,
+        )
+
+        ink_title = (24, 20, 18)
+        cur_y = card_y1 + card_padding_top
         for line in title_lines:
-            box = draw.textbbox((0, 0), line, font=title_font)
-            title_height += (box[3] - box[1]) + 5
-        title_y = max(106, layout.hero_height - title_height - 30)
-        _draw_centered_lines(
-            draw,
-            title_lines,
-            title_font,
-            center_x=PIN_WIDTH // 2,
-            y=title_y,
-            fill=(255, 255, 255),
-            spacing=5,
-            shadow=True,
-        )
+            tb = draw.textbbox((0, 0), line, font=title_font)
+            tw = tb[2] - tb[0]
+            tx = (PIN_WIDTH - tw) // 2
+            draw.text((tx, cur_y), line, font=title_font, fill=ink_title)
+            cur_y += title_line_h
 
-        draw.rectangle(
-            (0, layout.hero_height, PIN_WIDTH, layout.hero_height + 18),
-            fill=(*primary, 255),
-        )
-        draw.text(
-            (layout.content_left, layout.ingredients_header_y),
-            "INGREDIENTES",
-            font=layout.section_font,
-            fill=accent,
-        )
-        draw.line(
-            (
-                layout.content_left,
-                layout.ingredients_rule_y,
-                layout.content_right,
-                layout.ingredients_rule_y,
-            ),
-            fill=(*primary, 210),
-            width=3,
-        )
-        for item in layout.ingredient_items:
-            draw.ellipse(
-                (
-                    layout.content_left + 2,
-                    item.y + 7,
-                    layout.content_left + 14,
-                    item.y + 19,
-                ),
-                fill=(*primary, 255),
-            )
-            line_y = item.y
-            for line in item.lines:
-                draw.text(
-                    (layout.content_left + 30, line_y),
-                    line,
-                    font=layout.body_font,
-                    fill=ink,
-                )
-                line_y += layout.line_height
+        ink_sub = (70, 65, 60)
+        cur_y += card_gap - 6
+        for line in sub_lines:
+            sb = draw.textbbox((0, 0), line, font=sub_font)
+            sw = sb[2] - sb[0]
+            sx = (PIN_WIDTH - sw) // 2
+            draw.text((sx, cur_y), line, font=sub_font, fill=ink_sub)
+            cur_y += sub_line_h
 
-        draw.text(
-            (layout.content_left, layout.preparation_header_y),
-            "PREPARACIÓN",
-            font=layout.section_font,
-            fill=accent,
-        )
-        draw.line(
-            (
-                layout.content_left,
-                layout.preparation_rule_y,
-                layout.content_right,
-                layout.preparation_rule_y,
-            ),
-            fill=(*primary, 210),
-            width=3,
-        )
-        for index, item in enumerate(layout.step_items, 1):
-            draw.rounded_rectangle(
-                (
-                    layout.content_left,
-                    item.y,
-                    layout.content_left + 39,
-                    item.y + 39,
-                ),
-                radius=19,
-                fill=(*primary, 255),
-            )
-            number = str(index)
-            number_box = draw.textbbox((0, 0), number, font=layout.number_font)
-            draw.text(
-                (
-                    layout.content_left + 19 - (number_box[2] - number_box[0]) // 2,
-                    item.y + (39 - (number_box[3] - number_box[1])) // 2 - number_box[1],
-                ),
-                number,
-                font=layout.number_font,
-                fill=_contrast_text(primary),
-            )
-            line_y = item.y
-            for line in item.lines:
-                draw.text(
-                    (layout.content_left + 57, line_y),
-                    line,
-                    font=layout.body_font,
-                    fill=ink,
-                )
-                line_y += layout.line_height
+        # ── 3. BOTTOM TWO-COLUMN RECIPE SECTION ───────────────────────────────
+        col_y_start = 950
+        col_left_x1 = 55
+        col_left_w = 415
+        col_left_x2 = col_left_x1 + col_left_w
 
-        if layout.tip_y is not None and layout.tip_lines:
-            tip_background = tuple(
-                round((paper[channel] * 0.82) + (primary[channel] * 0.18)) for channel in range(3)
-            )
-            draw.rounded_rectangle(
-                (
-                    layout.content_left,
-                    layout.tip_y,
-                    layout.content_right,
-                    layout.tip_y + layout.tip_height,
-                ),
-                radius=16,
-                fill=(*tip_background, 255),
-                outline=(*primary, 150),
-                width=2,
-            )
-            tip_font = _font(max(14, layout.body_font.size - 1), sans=True)
-            tip_sample = draw.textbbox((0, 0), "Ágj", font=tip_font)
-            tip_line_height = max(tip_font.size + 5, tip_sample[3] + 3)
-            line_y = layout.tip_y + 14
-            for line in layout.tip_lines:
-                draw.text(
-                    (layout.content_left + 18, line_y),
-                    line,
-                    font=tip_font,
-                    fill=_contrast_text(tip_background),
-                )
-                line_y += tip_line_height
+        col_right_x1 = 505
+        col_right_w = 435
+        col_right_x2 = col_right_x1 + col_right_w
 
-        draw.rectangle((0, 1394, PIN_WIDTH, PIN_HEIGHT), fill=(*accent, 255))
-        footer_layout = _footer_layout(
-            draw,
-            brand_name=theme.brand_name,
-            cta=theme.cta,
+        # ── A. SOFT BLURRED HIGHLIGHT BACKPLATE UNDER COLUMNS ─────────────────
+        highlight_img = Image.new("RGBA", (PIN_WIDTH, PIN_HEIGHT), (0, 0, 0, 0))
+        h_draw = ImageDraw.Draw(highlight_img)
+        h_draw.rounded_rectangle(
+            (col_left_x1 - 15, col_y_start - 10, col_left_x2 + 15, 1435),
+            radius=24,
+            fill=(8, 6, 5, 140),
         )
-        footer_rendered = footer_layout is not None
-        if footer_layout is not None:
-            footer_font, footer_lines = footer_layout
-            footer_sample = draw.textbbox((0, 0), "Ágj", font=footer_font)
-            footer_line_height = max(footer_font.size + 4, footer_sample[3] + 2)
-            footer_y = 1394 + (106 - len(footer_lines) * footer_line_height) // 2
-            for line in footer_lines:
-                footer_width = _text_width(draw, line, footer_font)
-                draw.text(
-                    ((PIN_WIDTH - footer_width) // 2, footer_y),
-                    line,
-                    font=footer_font,
-                    fill=_contrast_text(accent),
+        h_draw.rounded_rectangle(
+            (col_right_x1 - 15, col_y_start - 10, col_right_x2 + 15, 1435),
+            radius=24,
+            fill=(8, 6, 5, 140),
+        )
+        highlight_img = highlight_img.filter(ImageFilter.GaussianBlur(18))
+        canvas = Image.alpha_composite(canvas, highlight_img)
+
+        # ── B. TEXT GLOW / BLURRED HIGHLIGHT LAYER DIRECTLY UNDER TEXT ────────
+        from rankstein.recipe_pin_generator import get_recipe_theme_colors
+
+        palette = get_recipe_theme_colors(f"{title} {' '.join(ingredient_items)}")
+        header_font = _font(44, bold=True, serif=True)
+        header_color = palette.header
+        accent_color = palette.accent
+
+        glow_layer = Image.new("RGBA", (PIN_WIDTH, PIN_HEIGHT), (0, 0, 0, 0))
+        glow_draw = ImageDraw.Draw(glow_layer)
+
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, 1), (0, 0)):
+            glow_draw.text(
+                (col_left_x1 + dx, col_y_start + dy),
+                "Ingredientes:",
+                font=header_font,
+                fill=(0, 0, 0, 255),
+            )
+            glow_draw.text(
+                (col_right_x1 + dx, col_y_start + dy),
+                "Preparación:",
+                font=header_font,
+                fill=(0, 0, 0, 255),
+            )
+
+        header_box = draw.textbbox((0, 0), "Ingredientes:", font=header_font)
+        header_h = header_box[3] - header_box[1]
+
+        ing_font = _font(21, bold=True, sans=True)
+        bullet_font = _font(22, bold=True, sans=True)
+        ing_y = col_y_start + header_h + 16
+        ing_line_h = 29
+
+        ing_rendered_items: list[tuple[int, int, tuple[str, ...]]] = []
+        for item in ingredient_items[:8]:
+            lines = _wrap_recipe_text(draw, item, font=ing_font, max_width=col_left_w - 30)
+            if not lines:
+                continue
+            ing_rendered_items.append((col_left_x1, ing_y, lines))
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 2), (0, 0)):
+                glow_draw.text((col_left_x1 + dx, ing_y + dy + 1), "•", font=bullet_font, fill=(0, 0, 0, 255))
+                cur_line_y = ing_y
+                for line in lines:
+                    glow_draw.text(
+                        (col_left_x1 + 22 + dx, cur_line_y + dy + 1),
+                        line,
+                        font=ing_font,
+                        fill=(0, 0, 0, 255),
+                    )
+                    cur_line_y += ing_line_h
+            ing_y += len(lines) * ing_line_h + 3
+
+        step_font = _font(20, bold=False, sans=True)
+        step_num_font = _font(20, bold=True, sans=True)
+        step_y = col_y_start + header_h + 16
+        step_line_h = 28
+
+        step_rendered_items: list[tuple[int, int, str, int, tuple[str, ...]]] = []
+        for idx, step in enumerate(step_items[:5], 1):
+            prefix = f"{idx}. "
+            p_box = draw.textbbox((0, 0), prefix, font=step_num_font)
+            p_w = p_box[2] - p_box[0]
+            indent_w = col_right_w - p_w - 8
+            lines = _wrap_recipe_text(draw, step, font=step_font, max_width=indent_w)
+            if not lines:
+                continue
+            step_rendered_items.append((col_right_x1, step_y, prefix, p_w, lines))
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 2), (0, 0)):
+                glow_draw.text(
+                    (col_right_x1 + dx, step_y + dy + 1),
+                    prefix,
+                    font=step_num_font,
+                    fill=(0, 0, 0, 255),
                 )
-                footer_y += footer_line_height
+                cur_s_y = step_y
+                for s_line in lines:
+                    glow_draw.text(
+                        (col_right_x1 + p_w + 4 + dx, cur_s_y + dy + 1),
+                        s_line,
+                        font=step_font,
+                        fill=(0, 0, 0, 255),
+                    )
+                    cur_s_y += step_line_h
+            step_y += len(lines) * step_line_h + 8
+
+        glow_blurred = glow_layer.filter(ImageFilter.GaussianBlur(4))
+        canvas = Image.alpha_composite(canvas, glow_blurred)
+
+        # ── C. RENDER CRISP TOP TEXT OVER BLURRED HIGHLIGHT ───────────────────
+        draw = ImageDraw.Draw(canvas, "RGBA")
+
+        draw.text((col_left_x1, col_y_start), "Ingredientes:", font=header_font, fill=header_color)
+        draw.text((col_right_x1, col_y_start), "Preparación:", font=header_font, fill=header_color)
+
+        for x_pos, y_pos, lines in ing_rendered_items:
+            draw.text((x_pos, y_pos), "•", font=bullet_font, fill=accent_color)
+            c_y = y_pos
+            for line in lines:
+                draw.text((x_pos + 22, c_y), line, font=ing_font, fill=(255, 255, 255))
+                c_y += ing_line_h
+
+        for x_pos, y_pos, prefix, p_w, lines in step_rendered_items:
+            draw.text((x_pos, y_pos), prefix, font=step_num_font, fill=accent_color)
+            c_y = y_pos
+            for line in lines:
+                draw.text((x_pos + p_w + 4, c_y), line, font=step_font, fill=(255, 255, 255))
+                c_y += step_line_h
+
+        # ── 4. SUBTLE FOOTER BRANDING ─────────────────────────────────────────
+        footer_font = _font(19, sans=True)
+        footer_text = f"{theme.public_domain}"
+        fb = draw.textbbox((0, 0), footer_text, font=footer_font)
+        fw = fb[2] - fb[0]
+        draw.text(((PIN_WIDTH - fw) // 2 + 1, 1461), footer_text, font=footer_font, fill=(0, 0, 0, 180))
+        draw.text(((PIN_WIDTH - fw) // 2, 1460), footer_text, font=footer_font, fill=(230, 225, 215, 190))
 
         output_path = output_dir / f"{_safe_slug(title)}-{pair_id}-recipe-card.jpg"
         result = _save(canvas, output_path)
         result.update(
             {
                 "variant": "recipe_card",
-                "variant_label": "Ingredients + steps",
+                "variant_label": "Recipe card",
+                "hero_height": PIN_HEIGHT,
                 "rendered_ingredients": ingredient_items,
                 "rendered_steps": step_items,
-                "tip_rendered": layout.tip_y is not None,
-                "footer_rendered": footer_rendered,
+                "tip_rendered": False,
+                "footer_rendered": True,
             }
         )
         return result

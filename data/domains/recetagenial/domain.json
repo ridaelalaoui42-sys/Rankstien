@@ -26,7 +26,7 @@
     "accent_color": "#7A8B5C",
     "brand_name_short": "RECETA GENIAL | 2026",
     "cta_text": "GUARDA ESTA RECETA!",
-    "daily_pin_budget": 25,
+    "daily_pin_budget": 5000,
     "pinterest_email_env": "PINTEREST_EMAIL",
     "pinterest_password_env": "PINTEREST_PASSWORD",
     "supabase_url": "https://hokcljsrrnjxzgdhjice.supabase.co",

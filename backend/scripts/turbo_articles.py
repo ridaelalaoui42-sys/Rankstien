@@ -181,7 +181,7 @@ _HERMES_CODEX_PROVIDER = "openai-codex"
 _HERMES_CODEX_API_MODE = "codex_responses"
 _HERMES_CODEX_UPSTREAM = "https://chatgpt.com/backend-api/codex"
 _HERMES_FREE_DEFAULT_PROVIDER = "gemini"
-_HERMES_FREE_DEFAULT_MODEL = "gemini-2.5-flash"
+_HERMES_FREE_DEFAULT_MODEL = "gemini-3.8-flash"
 _HERMES_FREE_ALLOWED_SUFFIXES = {
     "openrouter": ":free",
     "opencode-zen": "-free",
@@ -488,7 +488,7 @@ def _build_generation_prompt(keyword: str, domain: Domain, source_material: str 
         "Produce a JSON object with EXACTLY these keys (all required):\n"
         "  title (str): Spanish recipe title, capitalize first letter\n"
         "  slug (str): URL-safe version of the title\n"
-        "  excerpt (str): One-sentence summary under 160 chars\n"
+        "  excerpt (str): One-sentence concise summary, strictly under 150 characters\n"
         f"  category (str): One of: {', '.join(domain.categories or ('Postres', 'Aperitivos'))}\n"
         "  keywords (list[str]): 3-5 relevant Spanish keywords\n"
         "  difficulty (str): Facil | Media | Dificil\n"
@@ -500,20 +500,18 @@ def _build_generation_prompt(keyword: str, domain: Domain, source_material: str 
         "  image_negative_prompt (str): Negative prompt forbidding text, logos, watermarks, fake URLs, distorted food\n"
         "  chef_tip (str): Practical cooking tip in Spanish\n"
         "  recipe_schema (dict): Full Schema.org Recipe with real "
-        "recipeIngredient (list[str]) and recipeInstructions "
-        "(list[HowToStep with @type and text]), prepTime/cookTime/totalTime "
-        "in ISO 8601 (e.g. PT20M), recipeYield, recipeCuisine, "
+        "recipeIngredient (at least 6 detailed strings with quantities), recipeInstructions "
+        "(at least 6 HowToStep objects with @type and text), prepTime/cookTime/totalTime "
+        "in ISO 8601 (e.g. PT20M, PT40M, PT60M), recipeYield (e.g. '8 raciones'), recipeCuisine='Española', "
         f"recipeCategory, name, description, author ({author})\n"
-        "  content (str): Full article markdown with sections, 1200-1500 words, "
-        "in Spanish (es-ES). Include real ingredient lists, real cooking steps, "
-        "a chef tip section, and an FAQ. Insert [HERO_IMAGE] where the hero "
-        "photo should appear. Include one short first-person kitchen note "
-        "(for example: 'en mi cocina...') and one practical food-safety or "
-        "nutrition reference to AESAN or EFSA, written naturally, not as spam.\n"
-        "as ISO 8601 durations, recipeYield (str), author (with @type and "
-        "name), description, recipeCategory, recipeCuisine='Española', and image. "
-        "Ingredients MUST be real amounts and items — no templates.\n"
-        "  faq_schema (list[dict]): 2-3 entries with question/answer in Spanish\n\n"
+        "  content (str): Comprehensive, highly engaging article markdown in Spanish (es-ES). "
+        "CRITICAL REQUIREMENT: Content MUST be between 1000 and 1500 words (strictly minimum 950 words). "
+        "Organize with clear Markdown headings: ## Origen y Por Qué Funciona Esta Receta, ## Ingredientes Clave y Sustituciones, "
+        "## Guía Paso a Paso Detallada, ## El Truco del Chef para un Resultado Perfecto, ## Conservación y Congelación, and ## Preguntas Frecuentes. "
+        "Use bold text (**ingrediente**) for key terms. Insert [HERO_IMAGE] where the hero photo belongs. "
+        "Include first-person culinary reflections (e.g., 'en mi cocina...', 'en mi experiencia...') and "
+        "cite standard Spanish food safety guidelines (e.g. 'según las recomendaciones de AESAN sobre higiene y temperaturas...').\n"
+        "  faq_schema (list[dict]): AT LEAST 3 to 4 detailed entries, each with 'question' and 'answer' in Spanish\n\n"
         f"BRAND VOICE: The article is for {domain.display_name} (niche: {domain.niche}).\n"
         f"{recipe_generation_visual_requirements(keyword, domain)}\n"
         f"{source_material}\n"
@@ -580,7 +578,7 @@ def _parse_llm_json_response(content: str) -> dict | None:
     # Try direct parse first
     for candidate in (cleaned, _repair_truncated_json(cleaned)):
         try:
-            article = json.loads(candidate)
+            article = json.loads(candidate, strict=False)
             if required.issubset(article.keys()) and len(article.get("content", "")) > 500:
                 return article
         except json.JSONDecodeError:
@@ -591,7 +589,7 @@ def _parse_llm_json_response(content: str) -> dict | None:
     if match:
         for candidate in (match.group(1), _repair_truncated_json(match.group(1))):
             try:
-                article = json.loads(candidate)
+                article = json.loads(candidate, strict=False)
                 if required.issubset(article.keys()) and len(article.get("content", "")) > 500:
                     return article
             except json.JSONDecodeError:
@@ -853,6 +851,55 @@ async def _call_hermes_free_for_article(
     )
     generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
     strict_prompt = f"{system_prompt}\n\n{generation_prompt}"
+    # Tier A: Direct in-process Hermes agent invocation (avoids Windows CLI pipe truncation)
+    try:
+        hermes_agent_dir = str(hermes_home / "hermes-agent")
+        if os.path.isdir(hermes_agent_dir) and hermes_agent_dir not in sys.path:
+            sys.path.insert(0, hermes_agent_dir)
+
+        from hermes_cli.runtime_provider import resolve_runtime_provider
+        from run_agent import AIAgent
+
+        runtime = resolve_runtime_provider(requested=provider, target_model=model)
+        if runtime.get("api_key") or runtime.get("base_url"):
+            logger.info(
+                "Hermes Codex first with free-provider fallback is invoking in-process %s/%s for %s",
+                provider,
+                model,
+                keyword,
+            )
+            agent = AIAgent(
+                api_key=runtime.get("api_key"),
+                base_url=runtime.get("base_url"),
+                provider=runtime.get("provider"),
+                api_mode=runtime.get("api_mode"),
+                model=model,
+                quiet_mode=True,
+                platform="cli",
+            )
+            agent.suppress_status_output = True
+            loop_res = await asyncio.to_thread(agent.run_conversation, strict_prompt)
+            raw_output = loop_res.get("final_response") or ""
+            if raw_output:
+                article = _parse_llm_json_response(raw_output)
+                if article and _openrouter_article_quality_check(article):
+                    logger.info(
+                        "Hermes free article writer in-process %s/%s succeeded for %s (%d chars content)",
+                        provider,
+                        model,
+                        keyword,
+                        len(article.get("content", "")),
+                    )
+                    return article
+                logger.warning(
+                    "Hermes in-process generation produced unparseable response (len=%d), falling back to CLI subprocess",
+                    len(raw_output),
+                )
+    except Exception as exc:
+        logger.warning(
+            "Hermes in-process conversation attempt raised (%s); proceeding to CLI subprocess", exc
+        )
+
     command = [
         hermes_cli,
         "--ignore-user-config",
@@ -866,6 +913,8 @@ async def _call_hermes_free_for_article(
     ]
     subprocess_env = os.environ.copy()
     subprocess_env["HERMES_HOME"] = str(hermes_home)
+    subprocess_env["PYTHONIOENCODING"] = "utf-8"
+    subprocess_env["PYTHONUTF8"] = "1"
 
     process = None
     try:
@@ -904,9 +953,24 @@ async def _call_hermes_free_for_article(
         )
         return None
 
-    article = _parse_llm_json_response(stdout.decode(errors="replace"))
-    if not article or not _openrouter_article_quality_check(article):
-        logger.warning("Hermes free article writer returned rejected content for %s", keyword)
+    try:
+        raw_stdout = stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            raw_stdout = stdout.decode("cp1252")
+        except Exception:
+            raw_stdout = stdout.decode(errors="replace")
+    article = _parse_llm_json_response(raw_stdout)
+    if not article:
+        logger.warning(
+            "Hermes free article writer JSON parse failed for %s (stdout len=%d, preview: %r)",
+            keyword,
+            len(raw_stdout),
+            raw_stdout[:300],
+        )
+        return None
+    if not _openrouter_article_quality_check(article):
+        logger.warning("Hermes free article writer quality check failed for %s", keyword)
         return None
     logger.info(
         "Hermes free article writer %s/%s succeeded for %s (%d chars content)",
@@ -930,11 +994,10 @@ async def _call_gemini_api_for_article(
     prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
     system_instruction = "You are a professional recipe article generator for RankStein. Output ONLY valid, complete JSON matching the requested schema."
     models = [
+        "gemini-3.8-flash",
         "gemini-3.6-flash",
         "gemini-flash-latest",
         "gemini-3.7-flash",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
     ]
     session = _get_session()
 
@@ -1472,6 +1535,85 @@ def _ensure_recipe_schema(
                 else "Equipo editorial de RecetaGenial"
             ),
         }
+
+    # Ensure recipeIngredient is populated and never empty
+    ingredients = (
+        raw_schema.get("recipeIngredient")
+        or article.get("recipeIngredient")
+        or article.get("ingredients")
+        or []
+    )
+    if not ingredients and article.get("content"):
+        ing_match = re.search(
+            r"#+\s*Ingredientes.*?\n([\s\S]*?)(?=\n#+ |\Z)", article["content"], re.IGNORECASE
+        )
+        if ing_match:
+            for line in ing_match.group(1).splitlines():
+                line = line.strip()
+                if re.match(r"^[-*•\d.]\s+", line):
+                    clean_ing = re.sub(r"^[-*•\d.]\s+", "", line).strip()
+                    if clean_ing:
+                        ingredients.append(clean_ing)
+    if isinstance(ingredients, str):
+        ingredients = [i.strip() for i in ingredients.split("\n") if i.strip()]
+    if ingredients:
+        raw_schema["recipeIngredient"] = ingredients
+
+    # Ensure recipeInstructions is populated and never empty
+    instructions = (
+        raw_schema.get("recipeInstructions")
+        or article.get("recipeInstructions")
+        or article.get("instructions")
+        or []
+    )
+    if not instructions and article.get("content"):
+        inst_match = re.search(
+            r"#+\s*(?:Preparaci[óo]n|Instrucciones|Elaboraci[óo]n|Paso a paso).*?\n([\s\S]*?)(?=\n#+ |\Z)",
+            article["content"],
+            re.IGNORECASE,
+        )
+        if inst_match:
+            for line in inst_match.group(1).splitlines():
+                line = line.strip()
+                if re.match(r"^\d+[.)]\s+", line):
+                    clean_step = re.sub(r"^\d+[.)]\s+", "", line).strip()
+                    if clean_step:
+                        instructions.append(clean_step)
+    if isinstance(instructions, str):
+        instructions = [s.strip() for s in instructions.split("\n") if s.strip()]
+
+    # Normalize instructions to list of HowToStep and attach step images if available
+    step_images = article.get("step_images") or []
+    normalized_inst = []
+    for idx, inst in enumerate(instructions, 1):
+        step_obj = {}
+        if isinstance(inst, str):
+            step_obj = {"@type": "HowToStep", "name": f"Paso {idx}", "text": inst}
+        elif isinstance(inst, dict):
+            step_obj = dict(inst)
+            step_obj.setdefault("@type", "HowToStep")
+            step_obj.setdefault("name", f"Paso {idx}")
+        else:
+            step_obj = {"@type": "HowToStep", "name": f"Paso {idx}", "text": str(inst)}
+
+        # Attach step image if available for this step (match by step_number or index)
+        img_url = None
+        for s_img in step_images:
+            if isinstance(s_img, dict) and s_img.get("step_number") == idx:
+                img_url = s_img.get("image_url")
+                break
+        if not img_url and idx - 1 < len(step_images):
+            s_img = step_images[idx - 1]
+            img_url = s_img.get("image_url") if isinstance(s_img, dict) else s_img
+
+        if img_url and isinstance(img_url, str) and img_url.startswith("http"):
+            step_obj["image"] = img_url
+
+        normalized_inst.append(step_obj)
+
+    if normalized_inst:
+        raw_schema["recipeInstructions"] = normalized_inst
+
     return raw_schema
 
 
@@ -1645,6 +1787,140 @@ def _update_domain_pin_id(domain: Domain, slug: str, pin_id: str) -> dict:
     if resp.status_code in {200, 204}:
         return {"success": True, "slug": slug, "pin_id": str(pin_id)}
     return {"success": False, "status": resp.status_code, "error": resp.text}
+
+
+def _check_existing_article(domain: Domain, slug: str) -> dict | None:
+    """Check if an article already exists in Supabase to avoid duplicate publication."""
+    try:
+        session = _get_session()
+        key = domain.supabase_service_role_key.get_secret_value()
+        if not key or not domain.supabase_url:
+            return None
+        headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+        }
+        resp = session.get(
+            f"{domain.supabase_url}/rest/v1/posts?slug=eq.{slug}&select=id,slug,title,status,pinterest_pin_id",
+            headers=headers,
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, list) and len(data) > 0:
+                return data[0]
+    except Exception as exc:
+        logger.debug("Existing article check failed for %s: %s", slug, exc)
+    return None
+
+
+def _process_and_upload_step_images(step_images: list, slug: str, domain: Domain) -> list:
+    """Download scraped step images, validate, and upload to Supabase Storage."""
+    if not step_images:
+        return []
+    try:
+        from rankstein_mcp_server import upload_image_to_supabase
+    except ImportError:
+        return []
+
+    session = _get_session()
+    uploaded_steps = []
+    out_dir = PROJECT_ROOT / "data" / "media" / "steps"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    for idx, step in enumerate(step_images[:6], 1):
+        raw_url = step.get("image_url") if isinstance(step, dict) else step
+        step_num = step.get("step_number") if isinstance(step, dict) else None
+        if not step_num or not isinstance(step_num, int):
+            step_num = idx
+        if not raw_url or not isinstance(raw_url, str) or not raw_url.startswith("http"):
+            continue
+        try:
+            resp = session.get(
+                raw_url,
+                timeout=15,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                },
+            )
+            if resp.status_code == 200 and len(resp.content) > 5000:
+                local_path = out_dir / f"{slug}-step-{step_num}.jpg"
+                with open(local_path, "wb") as f:
+                    f.write(resp.content)
+                storage_path = f"{domain.handle}/steps/{slug}-step-{step_num}.jpg"
+                up_res = upload_image_to_supabase(str(local_path), storage_path, domain.handle)
+                if up_res.get("success") and up_res.get("public_url"):
+                    uploaded_steps.append(
+                        {
+                            "step_number": step_num,
+                            "image_url": up_res["public_url"],
+                            "text": step.get("text", "") if isinstance(step, dict) else "",
+                        }
+                    )
+        except Exception as exc:
+            logger.debug("Step image download/upload failed for %s step %d: %s", slug, step_num, exc)
+            continue
+
+    uploaded_steps.sort(key=lambda s: s.get("step_number", 0))
+    return uploaded_steps
+
+
+def _embed_step_images_in_content(content: str, step_images: list, title: str) -> str:
+    """Embed uploaded step images into the article's markdown content at matching steps."""
+    if not content or not step_images:
+        return content
+
+    valid_steps = [s for s in step_images if isinstance(s, dict) and s.get("image_url")]
+    if not valid_steps:
+        return content
+
+    for s in valid_steps:
+        url = s.get("image_url", "")
+        if url and url in content:
+            return content
+
+    lines = content.split("\n")
+    new_lines = []
+    inserted_steps = set()
+    step_map = {s.get("step_number"): s for s in valid_steps if s.get("step_number")}
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        new_lines.append(line)
+
+        step_match = re.match(r"^#{2,4}\s*(?:Paso\s*)?(\d+)[:.\s]", line, re.IGNORECASE) or re.match(
+            r"^(\d+)\.\s+", line
+        )
+        if step_match:
+            try:
+                num = int(step_match.group(1))
+            except ValueError:
+                num = None
+
+            if num and num in step_map and num not in inserted_steps:
+                j = i + 1
+                while j < len(lines):
+                    next_line = lines[j]
+                    if (
+                        not next_line.strip()
+                        or next_line.startswith("#")
+                        or re.match(r"^\d+\.\s+", next_line)
+                    ):
+                        break
+                    new_lines.append(next_line)
+                    j += 1
+
+                s_data = step_map[num]
+                img_url = s_data["image_url"]
+                alt_text = f"Paso {num} de la receta {title}"
+                new_lines.append(f"\n![{alt_text}]({img_url})\n")
+                inserted_steps.add(num)
+                i = j - 1
+
+        i += 1
+
+    return "\n".join(new_lines)
 
 
 def _build_from_scraped(keyword: str, cluster: str, domain: Domain, hero_url: str, scraped: dict) -> dict:
@@ -1835,6 +2111,7 @@ async def _scrape_source_brief(
     max_sources: int = 3,
     min_sources: int = 2,
     pipeline_run_id: str = "",
+    out_step_images: list | None = None,
 ) -> str:
     """Collect compact source notes for the LLM. Never returns full scraped articles."""
     max_sources = max(2, max_sources)
@@ -1943,6 +2220,11 @@ async def _scrape_source_brief(
             if not _source_relevant_enough(keyword, extracted.get("title", ""), url, content[:2000]):
                 logger.info("Skipping extracted source with weak recipe relevance for %s: %s", keyword, url)
                 continue
+            if out_step_images is not None and extracted.get("step_images"):
+                src_step_images = extracted["step_images"]
+                if len(src_step_images) > len(out_step_images):
+                    out_step_images.clear()
+                    out_step_images.extend(src_step_images)
             notes.append(
                 {
                     "title": extracted.get("title") or article.get("title", ""),
@@ -2179,6 +2461,37 @@ async def _launch_article_remaster_campaign(
     recipe_steps: list[str] | None = None,
     tip_text: str = "",
 ) -> dict:
+    from rankstein.campaign_guard import article_campaign_lock
+
+    # Re-check the exact report after taking the shared lock. Foreground
+    # publication and late reconciliation must never launch overlapping
+    # children for the same domain/profile or enqueue duplicate campaigns.
+    async with article_campaign_lock(domain.handle):
+        return await _launch_article_remaster_campaign_unlocked(
+            keyword=keyword,
+            title=title,
+            slug=slug,
+            category=category,
+            domain=domain,
+            pipeline_run_id=pipeline_run_id,
+            recipe_ingredients=recipe_ingredients,
+            recipe_steps=recipe_steps,
+            tip_text=tip_text,
+        )
+
+
+async def _launch_article_remaster_campaign_unlocked(
+    *,
+    keyword: str,
+    title: str,
+    slug: str,
+    category: str,
+    domain: Domain,
+    pipeline_run_id: str = "",
+    recipe_ingredients: list[str] | None = None,
+    recipe_steps: list[str] | None = None,
+    tip_text: str = "",
+) -> dict:
     # The article campaign is a durable proof unit.  A valid report means the
     # exact 30 jobs were already enqueued, so a restart/reconcile must reuse it
     # instead of launching the campaign again.
@@ -2285,10 +2598,10 @@ async def _launch_article_remaster_campaign(
         try:
             timeout_seconds = max(
                 300,
-                int(os.environ.get("RANKSTEIN_REMASTER_CAMPAIGN_TIMEOUT_SECONDS", "5400")),
+                int(os.environ.get("RANKSTEIN_REMASTER_CAMPAIGN_TIMEOUT_SECONDS", "1200")),
             )
         except ValueError:
-            timeout_seconds = 5400
+            timeout_seconds = 1200
         try:
             returncode = await asyncio.wait_for(proc.wait(), timeout=timeout_seconds)
         except TimeoutError:
@@ -2375,7 +2688,11 @@ async def _launch_article_remaster_campaign(
             "generated_count": report.get("generated_count", 0),
             "pair_count": report.get("pair_count", 0),
             "jobs_enqueued": (report.get("enqueue") or {}).get("jobs_enqueued", 0),
-            "error": reason,
+            "blocked_reason": str(report.get("blocked_reason") or ""),
+            "source_collection_diagnostics": report.get("source_collection_diagnostics") or {},
+            "error": (
+                f"{reason}: {report['blocked_reason']}" if reason and report.get("blocked_reason") else reason
+            ),
         }
     except Exception as exc:
         logger.warning("Article remaster campaign failed for %s: %s", slug, exc)
@@ -2396,6 +2713,7 @@ async def _publish_generated_article(
     cluster: str,
     domain: Domain,
     pipeline_run_id: str = "",
+    step_images: list | None = None,
 ) -> str:
     """Publish an LLM-generated article JSON through the full production pipeline.
 
@@ -2584,6 +2902,17 @@ async def _publish_generated_article(
     # ——— 3. Inject hero URL into article and build payload ———
     article["slug"] = slug
     article["featured_image"] = hero_url
+
+    steps_to_process = step_images or article.get("step_images") or []
+    if steps_to_process:
+        uploaded_steps = _process_and_upload_step_images(steps_to_process, slug, domain)
+        if uploaded_steps:
+            article["step_images"] = uploaded_steps
+            article["content"] = _embed_step_images_in_content(
+                article.get("content", ""), uploaded_steps, article.get("title", keyword)
+            )
+            logger.info("Integrated %d step images into article and schema for %s", len(uploaded_steps), slug)
+
     _ensure_recipe_schema(article, keyword=keyword, cluster=cluster, domain=domain, hero_url=hero_url)
 
     quality = validate_article_quality(json.dumps(article, ensure_ascii=False))
@@ -3011,6 +3340,12 @@ async def process_keyword(
     domain: Domain,
     source: str = "",
 ) -> str:
+    from rankstein.production_safety import campaign_admission
+
+    admission = campaign_admission([domain])
+    if not admission["ok"]:
+        logger.warning("[%s] Production deferred: %s", domain.handle, admission["issues"])
+        return "Pending"
     qualified, qualification_reason, evidence = has_qualified_keyword_evidence(domain, keyword)
     if qualified and not (
         evidence
@@ -3029,6 +3364,18 @@ async def process_keyword(
         return "Failed"
 
     logger.info("Processing keyword %r for domain %s", keyword, domain.handle)
+    slug = _slugify(keyword)
+    existing_article = _check_existing_article(domain, slug)
+    if existing_article:
+        logger.info(
+            "[%s] Article with slug %r already exists in DB (ID: %s, pin: %s). Skipping creation to avoid duplicate.",
+            domain.handle,
+            slug,
+            existing_article.get("id"),
+            existing_article.get("pinterest_pin_id"),
+        )
+        return "Live" if existing_article.get("pinterest_pin_id") else "Needs Verification"
+
     pipeline_run_id = _start_pipeline_telemetry(keyword, cluster, domain, source)
     _pipeline_event(
         pipeline_run_id,
@@ -3072,10 +3419,12 @@ async def process_keyword(
         return "Failed"
     base_url = f"https://{domain.domain}"
 
+    step_images_scraped: list = []
     source_material = await _scrape_source_brief(
         keyword,
         domain,
         pipeline_run_id=pipeline_run_id,
+        out_step_images=step_images_scraped,
     )
     if not source_material:
         _pipeline_event(
@@ -3146,6 +3495,7 @@ async def process_keyword(
                     cluster,
                     domain,
                     pipeline_run_id,
+                    step_images=step_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("OpenAI Codex CLI production succeeded for %s -> %s", keyword, status)
@@ -3178,6 +3528,7 @@ async def process_keyword(
                 cluster,
                 domain,
                 pipeline_run_id,
+                step_images=step_images_scraped,
             )
             if status in {"Live", "Needs Verification"}:
                 logger.info("OpenAI Codex production succeeded for %s -> %s", keyword, status)
@@ -3241,6 +3592,7 @@ async def process_keyword(
                     cluster,
                     domain,
                     pipeline_run_id,
+                    step_images=step_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("Hermes free model production succeeded for %s -> %s", keyword, status)
@@ -3309,6 +3661,7 @@ async def process_keyword(
                                 cluster,
                                 domain,
                                 pipeline_run_id,
+                                step_images=step_images_scraped,
                             )
                             logger.info("Proxy published %s -> %s", keyword, status)
                             if status in {"Live", "Needs Verification"}:
@@ -3362,6 +3715,7 @@ async def process_keyword(
                 cluster,
                 domain,
                 pipeline_run_id,
+                step_images=step_images_scraped,
             )
             if status in {"Live", "Needs Verification"}:
                 logger.info("OpenCode fallback succeeded for %s -> %s", keyword, status)
@@ -3385,6 +3739,7 @@ async def process_keyword(
                 cluster,
                 domain,
                 pipeline_run_id,
+                step_images=step_images_scraped,
             )
             if status in {"Live", "Needs Verification"}:
                 logger.info("Gemini REST API fallback succeeded for %s -> %s", keyword, status)
@@ -3455,6 +3810,7 @@ async def process_keyword(
                         cluster,
                         domain,
                         pipeline_run_id,
+                        step_images=step_images_scraped,
                     )
                     logger.info("Gemini published %s -> %s", keyword, status)
                     if status in {"Live", "Needs Verification"}:
@@ -3650,6 +4006,152 @@ def _production_discovery_keyword_allowed(keyword: str, domain: Domain) -> bool:
     return True
 
 
+_TREND_VALIDATION_WORKER = """
+import contextlib
+import json
+import sys
+from pathlib import Path
+
+request = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+sys.path.insert(0, request["project_root"])
+try:
+    with contextlib.redirect_stdout(sys.stderr):
+        from pydantic import SecretStr
+        from rankstein.domain import Domain
+        from rankstein.trend_intelligence import refresh_domain_trend_lists
+
+        metadata = request["domain"]
+        for name in ("root", "keywords_file", "sessions_dir", "output_dir", "branding_dir"):
+            metadata[name] = Path(metadata[name])
+        metadata["categories"] = tuple(metadata["categories"])
+        domain = Domain(
+            **metadata,
+            pinterest_email="",
+            pinterest_password=SecretStr(""),
+            supabase_url="",
+            supabase_service_role_key=SecretStr(""),
+        )
+        report = refresh_domain_trend_lists(
+            [domain],
+            limit_per_domain=15,
+            append_to_roadmap=True,
+            pinterest_terms=request["pinterest_terms"],
+            region=request["region"],
+            use_playwright=True,
+            candidate_origin_policy="pinterest_required",
+        )
+    result = {"report": report}
+except Exception as error:
+    result = {"error_type": type(error).__name__}
+sys.stdout.buffer.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+"""
+
+
+def _trend_research_deadline(name: str, maximum: float) -> float:
+    try:
+        configured = float(os.environ.get(name, str(maximum)))
+        if configured != configured or configured <= 0:
+            raise ValueError
+    except ValueError:
+        configured = maximum
+    return min(maximum, max(0.01, configured))
+
+
+def _record_trend_research_status(
+    domain: Domain,
+    status: str,
+    *,
+    stage: str,
+    deadline_seconds: float,
+    started_at: float,
+    **details,
+) -> None:
+    elapsed = max(0.0, time.monotonic() - started_at)
+    reason = (
+        f"{status} stage={stage} deadline_seconds={deadline_seconds:g} "
+        f"deadline_at={time.time() + deadline_seconds - elapsed:.3f} "
+        f"elapsed_seconds={elapsed:.3f}"
+    )
+    if details:
+        reason += " " + " ".join(f"{key}={value}" for key, value in details.items())
+    logger.info("[%s] Trend research %s", domain.handle, reason)
+    if _PRODUCTION_BATCH_TRACKER is not None:
+        try:
+            _PRODUCTION_BATCH_TRACKER.mark_domain_waiting(domain.handle, reason)
+        except Exception as exc:
+            logger.warning("[%s] Research status write failed: %s", domain.handle, type(exc).__name__)
+
+
+async def _run_bounded_trend_validation(
+    domain: Domain,
+    pinterest_terms: list[str],
+    *,
+    region: str,
+    timeout: float,
+) -> dict:
+    """Use the maintained strict service in a child that cannot outlive cancellation.
+
+    Only non-secret domain metadata and already-observed Pinterest phrases are
+    sent over stdin. Killing and reaping the owned child prevents late report or
+    roadmap writes; a cancelled executor thread cannot provide that guarantee.
+    """
+
+    metadata = {
+        name: getattr(domain, name)
+        for name in (
+            "handle",
+            "domain",
+            "display_name",
+            "language",
+            "niche",
+            "categories",
+            "boards_default",
+            "primary_color",
+            "accent_color",
+            "brand_name_short",
+            "cta_text",
+            "daily_pin_budget",
+        )
+    }
+    for name in ("root", "keywords_file", "sessions_dir", "output_dir", "branding_dir"):
+        metadata[name] = str(getattr(domain, name).resolve())
+    request = json.dumps(
+        {
+            "project_root": str(PROJECT_ROOT.resolve()),
+            "domain": metadata,
+            "pinterest_terms": pinterest_terms,
+            "region": region,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    process = None
+    started_at = time.monotonic()
+    try:
+        process = await _create_owned_subprocess(
+            sys.executable,
+            "-I",
+            "-u",
+            "-c",
+            _TREND_VALIDATION_WORKER,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=clean_python_env(),
+        )
+        remaining = max(0.001, timeout - (time.monotonic() - started_at))
+        stdout, _stderr = await asyncio.wait_for(process.communicate(request), timeout=remaining)
+        if process.returncode != 0:
+            raise RuntimeError(f"Exact validation worker exited with code {process.returncode}")
+        result = json.loads(stdout)
+        if result.get("error_type"):
+            raise RuntimeError(f"Exact validation worker failed: {result['error_type']}")
+        if not isinstance(result.get("report"), dict):
+            raise ValueError("Exact validation worker returned no report")
+        return result["report"]
+    finally:
+        await _cleanup_owned_process(process)
+
+
 async def _auto_refresh_keywords(domain: Domain, *, excluded_keywords: set[str] | None = None) -> int:
     """Discover unattempted Pinterest phrases before exact independent validation.
 
@@ -3658,11 +4160,16 @@ async def _auto_refresh_keywords(domain: Domain, *, excluded_keywords: set[str] 
     the async collector and runs its cleanup rather than abandoning a live
     background thread that could lock the next refresh's domain profile.
     """
+    stage = "pinterest_collection"
+    deadline_seconds = _trend_research_deadline("RANKSTEIN_TREND_COLLECTION_TIMEOUT_SECONDS", 300)
+    started_at = time.monotonic()
+    _record_trend_research_status(
+        domain, "research_in_progress", stage=stage, deadline_seconds=deadline_seconds, started_at=started_at
+    )
     try:
         from rankstein.trend_intelligence import (
             DEFAULT_REGION,
             _fetch_pinterest_niche_trending_terms_async,
-            refresh_domain_trend_lists,
         )
 
         logger.info(
@@ -3678,7 +4185,7 @@ async def _auto_refresh_keywords(domain: Domain, *, excluded_keywords: set[str] 
         region = (os.environ.get("RANKSTEIN_TRENDS_REGION") or DEFAULT_REGION).upper()
         observed_terms = await asyncio.wait_for(
             _fetch_pinterest_niche_trending_terms_async(domain, region, 240),
-            timeout=300,
+            timeout=deadline_seconds,
         )
         fresh_terms = [
             term
@@ -3691,31 +4198,73 @@ async def _auto_refresh_keywords(domain: Domain, *, excluded_keywords: set[str] 
             len(observed_terms),
             len(fresh_terms),
         )
-        report = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: refresh_domain_trend_lists(
-                [domain],
-                limit_per_domain=15,
-                append_to_roadmap=True,
-                pinterest_terms=fresh_terms,
-                region=region,
-                use_playwright=True,
-                candidate_origin_policy="pinterest_required",
-            ),
+        stage = "exact_validation"
+        deadline_seconds = _trend_research_deadline("RANKSTEIN_TREND_VALIDATION_TIMEOUT_SECONDS", 600)
+        started_at = time.monotonic()
+        _record_trend_research_status(
+            domain,
+            "research_in_progress",
+            stage=stage,
+            deadline_seconds=deadline_seconds,
+            started_at=started_at,
+            observed_count=len(observed_terms),
+            eligible_count=len(fresh_terms),
+        )
+        report = await _run_bounded_trend_validation(
+            domain,
+            fresh_terms,
+            region=region,
+            timeout=deadline_seconds,
         )
         added = report.get("domains", {}).get(domain.handle, {}).get("roadmap_added", 0)
+        _record_trend_research_status(
+            domain,
+            "research_complete",
+            stage=stage,
+            deadline_seconds=deadline_seconds,
+            started_at=started_at,
+            new_pending_count=added,
+        )
         logger.info(
             "[%s] Trend refresh complete — %d new Pending keywords added to roadmap.",
             domain.handle,
             added,
         )
         return added
+    except asyncio.CancelledError:
+        _record_trend_research_status(
+            domain,
+            "research_cancelled",
+            stage=stage,
+            deadline_seconds=deadline_seconds,
+            started_at=started_at,
+            error_type="CancelledError",
+        )
+        raise
     except Exception as exc:
-        logger.warning("[%s] Trend refresh failed: %s — will retry next cycle.", domain.handle, exc)
+        status = "research_timeout" if isinstance(exc, TimeoutError) else "research_failed"
+        _record_trend_research_status(
+            domain,
+            status,
+            stage=stage,
+            deadline_seconds=deadline_seconds,
+            started_at=started_at,
+            error_type=type(exc).__name__,
+        )
+        logger.warning(
+            "[%s] Trend refresh failed: %s during %s (deadline=%gs, elapsed=%.3fs) — will retry next cycle.",
+            domain.handle,
+            type(exc).__name__,
+            stage,
+            deadline_seconds,
+            time.monotonic() - started_at,
+        )
         return 0
 
 
-async def _reconcile_awaiting_articles(domain: Domain) -> None:
+async def _reconcile_awaiting_articles(
+    domain: Domain, *, max_campaigns: int | None = None, cursor: int = 0
+) -> int:
     """Finish late primary pins without publishing another copy of the article."""
     import sqlite3
 
@@ -3725,26 +4274,41 @@ async def _reconcile_awaiting_articles(domain: Domain) -> None:
 
     tracker = _PRODUCTION_BATCH_TRACKER
     if tracker is None or not PIPELINE_DB.exists():
-        return
-    articles = list(tracker.data["domains"][domain.handle].get("articles", []))
+        return cursor
+    articles = [
+        article
+        for article in tracker.data["domains"][domain.handle].get("articles", [])
+        if str(article.get("state") or "").replace("_", " ").casefold() == "needs verification"
+        and article.get("pipeline_run_id")
+    ]
+    if not articles:
+        return 0
+    start = cursor % len(articles)
+    attempted = 0
     # Primary uploads and the singleton supervisor use the shared queue. Domain
     # identity is validated by the exact-job reconciler, not by opening a
     # different database that never receives these jobs.
     queue = get_job_queue()
-    for article in articles:
-        state = str(article.get("state") or "").replace("_", " ").casefold()
+    for offset in range(len(articles)):
+        index = (start + offset) % len(articles)
+        article = articles[index]
         run_id = article.get("pipeline_run_id")
-        if state != "needs verification" or not run_id:
-            continue
         try:
-            with sqlite3.connect(str(PIPELINE_DB), timeout=2) as connection:
+            with sqlite3.connect(
+                PIPELINE_DB.resolve().as_uri() + "?mode=ro", uri=True, timeout=2
+            ) as connection:
                 rows = connection.execute(
                     "SELECT details_json FROM pipeline_events WHERE run_id = ? "
-                    "AND stage = 'primary_pin_publish' ORDER BY id DESC",
+                    "AND stage = 'primary_pin_publish' ORDER BY id DESC LIMIT 50",
                     (run_id,),
                 ).fetchall()
             job_id = next(
-                (str(details.get("job_id")) for row in rows if (details := json.loads(row[0])).get("job_id")),
+                (
+                    str(job_id)
+                    for row in rows
+                    if (details := json.loads(row[0]))
+                    and (job_id := details.get("job_id") or details.get("primary_job_id"))
+                ),
                 "",
             )
             if not job_id:
@@ -3752,6 +4316,7 @@ async def _reconcile_awaiting_articles(domain: Domain) -> None:
             outcome = await queue.get_job_outcome_async(job_id)
             if outcome.get("state") != "completed":
                 continue
+            attempted += 1
             await asyncio.wait_for(
                 reconcile_production_article(
                     batch_id=tracker.batch_id,
@@ -3767,6 +4332,59 @@ async def _reconcile_awaiting_articles(domain: Domain) -> None:
             logger.info("[%s] Pinterest campaign still needs verification: %s", domain.handle, exc)
         except Exception as exc:
             logger.warning("[%s] Late Pinterest reconciliation will retry: %s", domain.handle, exc)
+        if max_campaigns is not None and attempted >= max(1, max_campaigns):
+            return (index + 1) % len(articles)
+    return (start + 1) % len(articles)
+
+
+class _DomainRepairLane:
+    """Owned, fair, single-flight campaign repair independent of article writing."""
+
+    def __init__(self, domain: Domain) -> None:
+        self.domain = domain
+        self.task: asyncio.Task | None = None
+        self.cursor = 0
+        self.next_due_at = 0.0
+
+    def schedule(self) -> None:
+        if self.task is not None:
+            if not self.task.done():
+                return
+            try:
+                result = self.task.result()
+                if isinstance(result, int):
+                    self.cursor = result
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                logger.warning("[%s] Background campaign repair will retry: %s", self.domain.handle, exc)
+            self.task = None
+            self.next_due_at = time.monotonic() + 60
+        if time.monotonic() < self.next_due_at:
+            return
+        self.task = asyncio.create_task(
+            _reconcile_awaiting_articles(self.domain, max_campaigns=1, cursor=self.cursor),
+            name=f"campaign-repair:{self.domain.handle}",
+        )
+
+    async def close(self) -> None:
+        task = self.task
+        if task is None:
+            return
+        if not task.done():
+            task.cancel()
+        # Child cleanup already shields/reaps its exact owned process tree.
+        # Repeated parent cancellation must not abandon that cleanup.
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            task.result()
+        self.task = None
 
 
 async def _run_domain(
@@ -3775,6 +4393,22 @@ async def _run_domain(
     limit: int,
     once: bool,
     success_target: int = 0,
+) -> None:
+    repairs = _DomainRepairLane(domain)
+    try:
+        await _run_domain_foreground(domain, workers, limit, once, success_target, repairs=repairs)
+    finally:
+        await repairs.close()
+
+
+async def _run_domain_foreground(
+    domain: Domain,
+    workers: int,
+    limit: int,
+    once: bool,
+    success_target: int = 0,
+    *,
+    repairs: _DomainRepairLane,
 ) -> None:
     """Continuous keyword worker for a single domain. Loops until all keywords exhausted or once=True."""
     roadmap_title = f"{domain.display_name} Keyword Roadmap"
@@ -3786,8 +4420,20 @@ async def _run_domain(
         attempted_keywords = _PRODUCTION_BATCH_TRACKER.attempted_keyword_keys(domain.handle)
 
     while True:
+        from rankstein.production_safety import campaign_admission
+
+        admission = campaign_admission([domain], campaigns_per_domain=batch_size)
+        if not admission["ok"]:
+            reason = "; ".join(admission["issues"])
+            logger.warning("[%s] Production admission blocked: %s", domain.handle, reason)
+            if _PRODUCTION_BATCH_TRACKER is not None:
+                _PRODUCTION_BATCH_TRACKER.mark_domain_waiting(domain.handle, reason)
+            if once or success_target:
+                return
+            await asyncio.sleep(300)
+            continue
         if success_target and _PRODUCTION_BATCH_TRACKER is not None:
-            await _reconcile_awaiting_articles(domain)
+            repairs.schedule()
             verified = _PRODUCTION_BATCH_TRACKER.verified(domain.handle)
             if verified >= success_target:
                 logger.info(

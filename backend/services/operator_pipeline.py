@@ -101,7 +101,9 @@ REQUIRED_QUEUE_JOBS = 30
 STALE_RUNNING_SECONDS = 2 * 60 * 60
 
 
-def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
+def build_pipeline_payload(
+    root: Path, *, limit: int = 12, live_only: bool = False, history_limit: int | None = None
+) -> dict[str, Any]:
     """Return recent and active keyword pipelines from maintained runtime state."""
 
     root = Path(root)
@@ -118,6 +120,7 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
     run_keys: dict[str, tuple[str, str]] = {}
     campaign_aliases: dict[tuple[str, str], tuple[str, str]] = {}
     applied_report_times: dict[tuple[str, str], float] = {}
+    deferred_queues: dict[tuple[str, str], dict[str, Any]] = {}
 
     for run in event_runs:
         domain = _domain_handle(run.get("domain_handle", ""))
@@ -182,6 +185,12 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
         key = run_keys.get(run_id) or campaign_aliases.get(queue_key) or queue_key
         campaign = campaigns.get(key)
         if campaign is None:
+            if live_only and not queue.get("processing") and key not in recovery:
+                # Aggregate old queue-only lanes without allocating their stage trees.
+                # The selected recent history is expanded below for normal inspection.
+                campaigns[key] = _queue_history_summary(key, queue, roadmap)
+                deferred_queues[key] = queue
+                continue
             campaign = _new_campaign(
                 domain=key[0],
                 keyword=queue.get("title", "") or key[1].replace("-", " ").title(),
@@ -209,6 +218,8 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
         _apply_primary_proof(campaign, proof)
 
     for key, campaign in campaigns.items():
+        if key in deferred_queues:
+            continue
         keyword_key = (
             campaign["domain_handle"],
             _slugify(campaign.get("keyword", "")),
@@ -233,16 +244,39 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
     visible = ordered[: max(1, limit)]
     ongoing = [item for item in ordered if item["is_ongoing"]]
     history = [item for item in ordered if not item["is_ongoing"]]
+    if live_only:
+        history.sort(key=lambda item: -float(item.get("updated_at") or 0))
+    recent_history = history[: max(0, history_limit if history_limit is not None else limit)]
+    if deferred_queues:
+        for index, item in enumerate(recent_history):
+            key = (item["domain_handle"], item["slug"])
+            queue = deferred_queues.get(key)
+            if queue is None:
+                continue
+            campaign = _new_campaign(
+                domain=key[0],
+                keyword=item["keyword"],
+                title=item["title"],
+                slug=key[1],
+                updated_at=item["updated_at"],
+                run_id=item["id"],
+            )
+            _apply_queue_evidence(campaign, queue)
+            campaign["roadmap_status"] = item["roadmap_status"]
+            _finalize_campaign(campaign, now=now)
+            campaign["is_ongoing"] = False
+            recent_history[index] = campaign
     return {
         "stages": [
             {"key": key, "label": label, "phase": phase, "service": service}
             for key, label, phase, service in STAGE_DEFINITIONS
         ],
-        "campaigns": visible,
+        "campaigns": ongoing if live_only else visible,
         # The live dashboard consumes this collection. ``campaigns`` remains the
         # recent evidence/history feed so completed artifacts are not discarded.
-        "ongoing_campaigns": ongoing[: max(1, limit)],
-        "history_campaigns": history[: max(1, limit)],
+        "ongoing_campaigns": ongoing if live_only else ongoing[: max(1, limit)],
+        "history_campaigns": recent_history,
+        "history_truncated": len(recent_history) < len(history),
         "total_campaigns": len(ordered),
         "ongoing_total": len(ongoing),
         "history_total": len(history),
@@ -258,6 +292,37 @@ def build_pipeline_payload(root: Path, *, limit: int = 12) -> dict[str, Any]:
             "pins_held": sum(item["queue"].get("held", 0) for item in ordered),
         },
         "updated_at": int(now),
+    }
+
+
+def _queue_history_summary(
+    key: tuple[str, str], queue: dict[str, Any], roadmap: dict[tuple[str, str], str]
+) -> dict[str, Any]:
+    """Keep full backlog counts/classification without expanding invisible stages."""
+
+    active = sum(int(queue.get(state, 0)) for state in ACTIVE_QUEUE_STATES)
+    counts = {state: int(queue.get(state, 0)) for state in ("completed", "dead", "failed", "held")}
+    title = queue.get("title", "")
+    keyword = title or key[1].replace("-", " ").title()
+    roadmap_status = roadmap.get((key[0], _slugify(keyword))) or roadmap.get(key, "")
+    if counts["held"] or roadmap_status == "Failed" or (not active and (counts["dead"] or counts["failed"])):
+        state = "attention"
+    elif active or roadmap_status == "Needs Verification":
+        state = "waiting"
+    else:
+        state = "recent"
+    return {
+        "id": queue.get("pipeline_run_id") or f"queue:{key[0]}:{key[1]}",
+        "domain_handle": key[0],
+        "slug": key[1],
+        "keyword": keyword,
+        "title": title,
+        "updated_at": float(queue.get("updated_at") or 0),
+        "roadmap_status": roadmap_status,
+        "queue": {"active": active, **counts},
+        "overall_state": state,
+        "is_ongoing": False,
+        "in_current_batch": False,
     }
 
 
@@ -409,6 +474,20 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
     source_counts = report.get("source_counts") or {}
     pinterest_sources = int(source_counts.get("pinterest") or 0)
     native_sources = int(source_counts.get("native") or 0)
+    collection = _source_collection_presentation(report, source_target=source_target)
+    source_detail = (
+        f"{pinterest_sources} of {REQUIRED_SOURCE_PAIRS} unique scraped Pinterest sources · "
+        f"{native_sources} generated fills"
+    )
+    if collection:
+        source_detail = (
+            f"{collection['accepted']} of {source_target} clean photos accepted · {collection['examined']} examined · "
+            f"{collection['text_rejected']} text-rejected · {collection['text_unavailable']} OCR-unavailable"
+        )
+        if collection.get("phase"):
+            source_detail += f" · phase: {collection['phase']}"
+        if collection.get("blocked_reason"):
+            source_detail += f" · blocked: {collection['blocked_reason']}"
     campaign["campaign_job_ids"] = list(
         dict.fromkeys(
             str(item.get("job_id") or "").strip()
@@ -420,12 +499,9 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
         campaign,
         "pinterest_siphon",
         "complete" if report_complete else "warning",
-        (
-            f"{pinterest_sources} of {REQUIRED_SOURCE_PAIRS} unique scraped Pinterest sources · "
-            f"{native_sources} generated fills"
-        ),
+        source_detail,
         report["_updated_at"],
-        source_counts,
+        {**source_counts, "source_collection": collection} if collection else source_counts,
     )
     remaster_state = "complete" if report_complete else "warning"
     _set_stage(
@@ -472,8 +548,64 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
         "native_sources": native_sources,
         "report_path": report.get("_path", ""),
         "pairs": _remaster_pair_previews(report),
+        "source_collection": collection,
     }
     _sync_contract_verification(campaign, report["_updated_at"])
+
+
+def _source_collection_presentation(report: dict[str, Any], *, source_target: int) -> dict[str, Any]:
+    """Expose bounded counters and code-like reasons, never OCR/source text or paths."""
+
+    raw = report.get("source_collection_diagnostics")
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, Any] = {"target": source_target}
+    for field in (
+        "accepted",
+        "examined",
+        "text_rejected",
+        "text_unavailable",
+        "held_sources_skipped",
+        "download_failed",
+        "irrelevant",
+        "undersized",
+        "ocr_in_progress",
+        "attempt_examined",
+        "checkpoint_sources_loaded",
+        "checkpoint_invalidated",
+        "checkpoint_processed_count",
+        "checkpoint_skipped",
+        "queries_planned",
+        "query_attempts",
+        "queries_succeeded",
+        "query_failures",
+        "login_wall_detected",
+        "relevance_rejected",
+        "undersized_rejected",
+        "invalid_image_rejected",
+        "ocr_checks_started",
+        "ocr_checks_completed",
+        "candidate_limit",
+        "deadline_exceeded",
+    ):
+        value = raw.get(field, raw.get("pins_examined", 0) if field == "examined" else 0)
+        try:
+            result[field] = max(0, int(value))
+        except (TypeError, ValueError, OverflowError):
+            result[field] = 0
+    result["remaining_sources"] = max(0, source_target - result["accepted"])
+    for field in ("phase", "failure_phase", "blocked_reason", "error_type", "cleanup_error_type"):
+        value = str(report.get(field) or raw.get(field) or "")
+        result[field] = value if re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", value) else ""
+    allowed_steps = {stage[0] for stage in STAGE_DEFINITIONS}
+    result["remaining_workflow_steps"] = list(
+        dict.fromkeys(
+            step
+            for step in report.get("remaining_workflow_steps") or []
+            if isinstance(step, str) and step in allowed_steps
+        )
+    )
+    return result
 
 
 def _remaster_contract_status(

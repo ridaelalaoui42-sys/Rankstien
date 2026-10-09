@@ -298,7 +298,7 @@ def cmd_launch(args: argparse.Namespace) -> int:
     print_launch_report(report, as_json=args.json)
     if report.get("article_start_blocked"):
         return 2
-    return 0
+    return 0 if report.get("ok", not report.get("issues")) else 1
 
 
 def _subscriber_client(args: argparse.Namespace):
@@ -551,7 +551,7 @@ def cmd_suite_restart(args: argparse.Namespace) -> int:
 def cmd_suite_install(args: argparse.Namespace) -> int:
     from rankstein.suite_controller import install_tasks
 
-    install_tasks()
+    install_tasks(daily_at=args.daily_at)
     return 0
 
 
@@ -789,6 +789,7 @@ def build_parser() -> argparse.ArgumentParser:
     suite_restart.set_defaults(func=cmd_suite_restart)
 
     suite_install = suite_sub.add_parser("install", help="Register Windows Scheduled Tasks")
+    suite_install.add_argument("--daily-at", default="06:30", help="Daily local time, HH:MM")
     suite_install.set_defaults(func=cmd_suite_install)
 
     suite_uninstall = suite_sub.add_parser("uninstall", help="Remove Windows Scheduled Tasks")

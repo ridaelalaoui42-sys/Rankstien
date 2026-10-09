@@ -434,38 +434,16 @@ def setup_rankstein_routes() -> APIRouter:
     @router.get("/control/agentmemory/status")
     def control_agentmemory_status(request: Request) -> dict[str, Any]:
         require_admin(request)
-        try:
-            import urllib.request as _urlreq
+        from rankstein.suite_controller import _http_probe
 
-            with _urlreq.urlopen("http://127.0.0.1:3111/agentmemory/health", timeout=2) as resp:
-                body = json.loads(resp.read().decode("utf-8", errors="replace"))
-                return {
-                    "ok": 200 <= resp.status < 300,
-                    "status": resp.status,
-                    "body": body,
-                }
-        except Exception as exc:
-            return {"ok": False, "error": type(exc).__name__}
+        return _http_probe("http://127.0.0.1:3111/agentmemory/health")
 
     @router.post("/control/agentmemory/restart")
     def control_agentmemory_restart(request: Request):
         require_admin(request)
-        import subprocess
+        from rankstein.suite_controller import restart_service
 
-        try:
-            res = subprocess.run(
-                ["docker", "restart", "agentmemory-iii-engine-1"],
-                capture_output=True,
-                text=True,
-                timeout=15,
-            )
-            return {
-                "ok": res.returncode == 0,
-                "stdout": res.stdout.strip(),
-                "stderr": res.stderr.strip(),
-            }
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
+        return restart_service("agentmemory")
 
     @router.get("/pins")
     def list_pins(
@@ -1067,7 +1045,7 @@ def _status_payload() -> dict[str, Any]:
     process_status = _process_status(processes)
     actions = _action_snapshots(process_status)
     production_batch = _production_batch_presentation(_latest_production_batch())
-    pipeline = build_pipeline_payload(RANKSTEIN_ROOT, limit=100)
+    pipeline = build_pipeline_payload(RANKSTEIN_ROOT, live_only=True, history_limit=12)
     _attach_live_research_lanes(
         pipeline,
         production_batch=production_batch,
@@ -1146,14 +1124,21 @@ def _attach_live_research_lanes(
             int(summary.get("waiting") or 0)
             - sum(item.get("overall_state") == "waiting" for item in previous_lanes.values()),
         )
+        summary["attention"] = max(
+            0,
+            int(summary.get("attention") or 0)
+            - sum(item.get("overall_state") == "attention" for item in previous_lanes.values()),
+        )
         pipeline["summary"] = summary
     if not production_batch or not production_action.get("alive"):
         return
     stage = str(production_action.get("stage") or "").casefold()
-    if not any(marker in stage for marker in ("research", "candidate")):
-        return
-
     domains = production_batch.get("domains") or {}
+    has_explicit_research = any(
+        str(domain.get("detail") or "").startswith("research_") for domain in domains.values()
+    )
+    if not has_explicit_research and not any(marker in stage for marker in ("research", "candidate")):
+        return
     lanes: list[dict[str, Any]] = []
     sources = [
         "Pinterest Trends/Search (candidate origin)",
@@ -1177,6 +1162,9 @@ def _attach_live_research_lanes(
         )
         if waiting:
             detail = str(domain.get("detail") or "Waiting for a fresh qualified Pinterest keyword")
+        activity = _research_activity(domain, default_active=not waiting)
+        lane_state = activity["state"]
+        stage_state = {"active": "running", "attention": "warning", "waiting": "waiting"}[lane_state]
         stages = []
         for key, label, phase, service in STAGE_DEFINITIONS:
             is_research = key == "keyword_search"
@@ -1186,10 +1174,10 @@ def _attach_live_research_lanes(
                     "label": label,
                     "phase": phase,
                     "service": service,
-                    "state": ("waiting" if waiting else "running") if is_research else "pending",
+                    "state": stage_state if is_research else "pending",
                     "detail": detail if is_research else "Waiting for keyword selection",
                     "updated_at": production_action.get("updated_at") if is_research else None,
-                    "metrics": {"sources": sources} if is_research else {},
+                    "metrics": {"sources": sources, **activity["metrics"]} if is_research else {},
                 }
             )
         lanes.append(
@@ -1220,11 +1208,11 @@ def _attach_live_research_lanes(
                 },
                 "in_current_batch": True,
                 "batch_id": production_batch.get("batch_id") or "",
-                "batch_state": "researching",
-                "overall_state": "waiting" if waiting else "active",
+                "batch_state": "researching" if lane_state == "active" else lane_state,
+                "overall_state": lane_state,
                 "is_ongoing": True,
                 "current_stage": "keyword_search",
-                "current_label": "Waiting for qualified keywords" if waiting else "Keyword search",
+                "current_label": activity["label"],
                 "current_detail": detail,
                 "progress": 5,
                 "age_seconds": int(production_action.get("elapsed_seconds") or 0),
@@ -1248,7 +1236,48 @@ def _attach_live_research_lanes(
     summary["waiting"] = int(summary.get("waiting") or 0) + sum(
         lane["overall_state"] == "waiting" for lane in lanes
     )
+    summary["attention"] = int(summary.get("attention") or 0) + sum(
+        lane["overall_state"] == "attention" for lane in lanes
+    )
     pipeline["summary"] = summary
+
+
+def _research_activity(domain: dict[str, Any], *, default_active: bool = False) -> dict[str, Any]:
+    """Interpret existing tracker reasons without crediting a fictitious article run."""
+
+    reason = str(domain.get("detail") or "")
+    prefix = reason.split(" ", 1)[0]
+    fields = dict(re.findall(r"\b([a-z_]+)=([^\s]+)", reason))
+    stage = fields.get("stage")
+    label = {
+        "pinterest_collection": "Pinterest candidate collection",
+        "exact_validation": "Exact Pinterest-phrase demand validation",
+    }.get(stage, "Keyword search")
+    metrics = {
+        key: fields[key]
+        for key in (
+            "stage",
+            "deadline_seconds",
+            "deadline_at",
+            "elapsed_seconds",
+            "observed_count",
+            "eligible_count",
+        )
+        if key in fields
+    }
+    if prefix == "research_in_progress":
+        state = "active"
+    elif prefix in {"research_timeout", "research_failed", "research_cancelled"}:
+        state = "attention"
+        if prefix == "research_timeout":
+            short_label = "Pinterest collection" if stage == "pinterest_collection" else "Exact validation"
+            label = f"{short_label} reached its {fields.get('deadline_seconds', '?')}s deadline"
+        else:
+            label += " cancelled" if prefix == "research_cancelled" else " failed"
+    else:
+        state = "active" if default_active else "waiting"
+        label = label if default_active else "Waiting for qualified keywords"
+    return {"state": state, "label": label, "metrics": metrics}
 
 
 def _production_batch_presentation(batch: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -1348,6 +1377,18 @@ def _resolve_rankstein_preview(requested_path: str) -> Path:
 def _start_background(mode: str, command: list[str]) -> subprocess.Popen:
     if not RANKSTEIN_ROOT.exists():
         raise HTTPException(500, "RankStein root not found")
+    if mode in {"production", "full", "launch"}:
+        from rankstein.domain import DomainRegistry
+        from rankstein.production_safety import campaign_admission
+
+        registry = DomainRegistry(RANKSTEIN_ROOT)
+        selected = registry.all()
+        if "--domain" in command:
+            selected = [registry.get(command[command.index("--domain") + 1])]
+        count = int(command[command.index("--limit") + 1]) if "--limit" in command else 1
+        admission = campaign_admission(selected, campaigns_per_domain=count)
+        if not admission["ok"]:
+            raise HTTPException(409, {"reason": "production_admission_blocked", **admission})
     with PROCESS_LOCK:
         from pinterest_automation.runtime_state import supervisor_status
 
@@ -2022,22 +2063,13 @@ def _opencode_status() -> dict[str, Any]:
 
 
 def _get_seo_feedback_report() -> dict[str, Any]:
-    import importlib
-    import sys
-    from dataclasses import asdict
-
-    sys.path.insert(0, str(RANKSTEIN_ROOT))
-    import rankstein.seo_feedback_engine
-
-    importlib.reload(rankstein.seo_feedback_engine)
     from rankstein.seo_feedback_engine import SEOFeedbackEngine
 
     engine = SEOFeedbackEngine(RANKSTEIN_ROOT)
     report_data = engine.load_latest_report()
     if not report_data:
-        rep = engine.run_full_feedback_analysis()
-        report_data = asdict(rep) if hasattr(rep, "__dataclass_fields__") else rep
-    return {"ok": True, "report": report_data}
+        return {"ok": True, "state": "not_collected", "report": None}
+    return {"ok": True, "state": "collected", "report": report_data}
 
 
 def _run_seo_feedback_refresh() -> dict[str, Any]:
@@ -2108,13 +2140,7 @@ def _add_recommendation_to_roadmap(body: dict[str, Any]) -> dict[str, Any]:
 def _download_seo_report() -> Any:
     report_file = RANKSTEIN_ROOT / "data" / "reports" / "seo_feedback" / "seo_trend_feedback_report_latest.md"
     if not report_file.exists():
-        import sys
-
-        sys.path.insert(0, str(RANKSTEIN_ROOT))
-        from rankstein.seo_feedback_engine import SEOFeedbackEngine
-
-        engine = SEOFeedbackEngine(RANKSTEIN_ROOT)
-        engine.run_full_feedback_analysis()
+        raise HTTPException(status_code=404, detail="No SEO report has been collected")
 
     return FileResponse(
         path=str(report_file),

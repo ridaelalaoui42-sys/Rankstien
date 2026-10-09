@@ -1116,7 +1116,14 @@ def validate_article_quality(article_json: str) -> dict:
 
 
 @mcp.tool()
-def apply_luxury_overlay(image_path: str, title_text: str, brand: str = "RECETA GENIAL | 2026") -> dict:
+def apply_luxury_overlay(
+    image_path: str,
+    title_text: str,
+    brand: str = "RECETA GENIAL | 2026",
+    domain_handle: str = "",
+    date_str: str = "",
+    keyword: str = "",
+) -> dict:
     """
     Apply the visual-first luxury editorial pin styling (2026 Pinterest standard).
     Creates a full-bleed 1000x1500 vertical Pinterest pin with subtle gradient vignette,
@@ -1227,8 +1234,15 @@ def apply_luxury_overlay(image_path: str, title_text: str, brand: str = "RECETA 
         fb = draw.textbbox((0, 0), footer, font=font_brand)
         draw.text(((W - (fb[2] - fb[0])) // 2, 1455), footer, font=font_brand, fill=(200, 200, 200, 160))
 
-        REMASTER_DIR.mkdir(parents=True, exist_ok=True)
-        out = REMASTER_DIR / f"remastered_{src.stem}.jpg"
+        if domain_handle:
+            clean_domain = re.sub(r"[^a-zA-Z0-9_-]+", "-", domain_handle).strip("-") or "manual"
+            day = date_str or datetime.now(UTC).strftime("%Y-%m-%d")
+            clean_kw = re.sub(r"[^a-zA-Z0-9_-]+", "-", slugify(keyword or title_text).get("slug", "")).strip("-") or "general"
+            out_dir = REMASTER_DIR / clean_domain / day / clean_kw
+        else:
+            out_dir = REMASTER_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out = out_dir / f"remastered_{src.stem}.jpg"
         canvas.convert("RGB").save(str(out), "JPEG", quality=95)
 
         return {"success": True, "output_path": str(out)}
@@ -1958,6 +1972,23 @@ def create_hero_image(
     )
 
     # --- Tier 3: Pollinations AI image generation ---
+    if os.environ.get("RANKSTEIN_DISABLE_POLLINATIONS", "").lower() in ("1", "true"):
+        logger.warning("create_hero_image: Pollinations hero generation is disabled per policy.")
+        return {
+            "success": False,
+            "error": (
+                f"All approved hero generation options failed (Codex: {codex_result.get('error', 'unknown')}, "
+                f"Scraped: {scraped_result.get('error', 'unknown')}; Pollinations disabled by policy)"
+            ),
+            "provider": "failed",
+            "source": "failed",
+            "provider_errors": {
+                "codex": codex_result.get("error", "unknown"),
+                "scraped": scraped_result.get("error", "unknown"),
+                "pollinations": "disabled_by_policy",
+            },
+        }
+
     pollinations_result: dict = {"success": False, "error": "not_attempted"}
     try:
         pollinations_result = create_hero_image_pollinations(
@@ -4074,9 +4105,6 @@ def health_check(domain_handle: str = "") -> dict:
         "domain": domain.handle,
         "debug_env_path": str(_env_path.absolute()),
         "debug_env_exists": _env_path.exists(),
-        "debug_env_first_line": _env_path.read_text(encoding="utf-8").splitlines()[0]
-        if _env_path.exists()
-        else "N/A",
     }
 
 
@@ -4686,75 +4714,94 @@ def reset_stuck_keywords(domain_handle: str = "", max_age_hours: int = 4, force:
     """
     from datetime import datetime as _dt
 
-    domain = get_registry().get(domain_handle)
-    kw_file = domain.keywords_file
-    if not kw_file.exists():
-        return {"reset_count": 0, "error": f"keywords file not found for {domain.handle}"}
+    registry = get_registry()
+    domains = (
+        registry.all()
+        if not domain_handle or str(domain_handle).strip().lower() == "all"
+        else [registry.get(domain_handle)]
+    )
+    total_reset = []
+    total_promoted = []
+    domain_reports = {}
 
     now = _dt.now(UTC)
-    content = kw_file.read_text(encoding="utf-8")
-    lines = content.split("\n")
-    reset = []
-    promoted_live = []
-
-    for i, line in enumerate(lines):
-        if "In Progress" not in line or "|" not in line:
+    for domain in domains:
+        kw_file = domain.keywords_file
+        if not kw_file.exists():
             continue
-        parts = line.split("|")
-        if len(parts) < 7:
-            continue
-        keyword = parts[1].strip()
 
-        # Age check (unless force=True)
-        if not force:
-            notes_col = parts[-1].strip() if len(parts) >= 8 else ""
-            import re as _re_ts
+        raw_content = kw_file.read_text(encoding="utf-8")
+        lines = raw_content.split("\n")
+        reset = []
+        promoted_live = []
 
-            ts_match = _re_ts.search(r"reserved (\d{4}-\d{2}-\d{2}T\d{2}:\d{2})", notes_col)
-            if ts_match:
+        for i, line in enumerate(lines):
+            if "In Progress" not in line or "|" not in line:
+                continue
+            parts = line.split("|")
+            if len(parts) < 7:
+                continue
+            keyword = parts[1].strip()
+
+            # Age check (unless force=True)
+            if not force:
+                notes_col = parts[-1].strip() if len(parts) >= 8 else ""
+                import re as _re_ts
+
+                ts_match = _re_ts.search(r"reserved (\d{4}-\d{2}-\d{2}T\d{2}:\d{2})", notes_col)
+                if ts_match:
+                    try:
+                        reserved_at = _dt.strptime(ts_match.group(1), "%Y-%m-%dT%H:%M").replace(tzinfo=UTC)
+                        age_hours = (now - reserved_at).total_seconds() / 3600
+                        if age_hours < max_age_hours:
+                            continue  # Not stale yet
+                    except Exception:
+                        pass  # Parse error → treat as stale
+
+            # Cross-check with Supabase — if article already exists, mark Live
+            slug_val = slugify(keyword).get("slug", "")
+            is_live_in_supabase = False
+            if slug_val:
                 try:
-                    reserved_at = _dt.strptime(ts_match.group(1), "%Y-%m-%dT%H:%M").replace(tzinfo=UTC)
-                    age_hours = (now - reserved_at).total_seconds() / 3600
-                    if age_hours < max_age_hours:
-                        continue  # Not stale yet
+                    sb_result = get_article_data_from_supabase_by_slug(slug_val, domain_handle=domain.handle)
+                    if sb_result.get("found") and sb_result.get("article"):
+                        is_live_in_supabase = True
                 except Exception:
-                    pass  # Parse error → treat as stale
+                    pass
 
-        # Cross-check with Supabase — if article already exists, mark Live
-        slug_val = slugify(keyword).get("slug", "")
-        is_live_in_supabase = False
-        if slug_val:
-            try:
-                sb_result = get_article_data_from_supabase_by_slug(slug_val, domain_handle=domain.handle)
-                if sb_result.get("found") and sb_result.get("article"):
-                    is_live_in_supabase = True
-            except Exception:
-                pass
+            if is_live_in_supabase:
+                parts[-2] = " Live "
+                promoted_live.append(keyword)
+            else:
+                parts[-2] = " Pending "
+                reset.append(keyword)
 
-        if is_live_in_supabase:
-            parts[-2] = " Live "
-            promoted_live.append(keyword)
-        else:
-            parts[-2] = " Pending "
-            reset.append(keyword)
+            # Clear the lease timestamp from notes
+            if len(parts) >= 8:
+                import re as _re_clean
 
-        # Clear the lease timestamp from notes
-        if len(parts) >= 8:
-            import re as _re_clean
+                parts[-1] = _re_clean.sub(r"reserved \S+", "", parts[-1]).strip() + " "
 
-            parts[-1] = _re_clean.sub(r"reserved \S+", "", parts[-1]).strip() + " "
+            lines[i] = "|".join(parts)
 
-        lines[i] = "|".join(parts)
+        if reset or promoted_live:
+            kw_file.write_text("\n".join(lines), encoding="utf-8")
 
-    if reset or promoted_live:
-        kw_file.write_text("\n".join(lines), encoding="utf-8")
+        total_reset.extend(reset)
+        total_promoted.extend(promoted_live)
+        domain_reports[domain.handle] = {
+            "reset_count": len(reset),
+            "promoted_live": len(promoted_live),
+            "keywords_reset": reset,
+            "keywords_promoted_live": promoted_live,
+        }
 
     return {
-        "reset_count": len(reset),
-        "promoted_live": len(promoted_live),
-        "keywords_reset": reset,
-        "keywords_promoted_live": promoted_live,
-        "domain": domain.handle,
+        "reset_count": len(total_reset),
+        "promoted_live": len(total_promoted),
+        "keywords_reset": total_reset,
+        "keywords_promoted_live": total_promoted,
+        "domains": domain_reports,
     }
 
 
@@ -4828,7 +4875,7 @@ def get_project_status(domain_handle: str = "") -> dict:
         "pending_keywords": pending,
         "live_keywords": live,
         "hero_images_in_output": hero_count,
-        "remastered_pins": len(list(REMASTER_DIR.glob("*"))),
+        "remastered_pins": len([p for p in REMASTER_DIR.rglob("*") if p.is_file()]),
         "supabase_url": domain.supabase_url,
     }
 

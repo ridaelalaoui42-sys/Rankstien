@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-08T18:32:59.837777+00:00",
+  "generated_at": "2026-10-09T16:16:27.893592+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 414,
+  "files_audited": 471,
   "status_counts": {
-    "ok": 379,
-    "review": 35,
+    "ok": 398,
+    "review": 73,
     "fail": 0
   },
   "kind_counts": {
     "agent-config": 1,
     "backend": 65,
-    "core": 49,
+    "core": 53,
     "docs": 29,
     "domain-data": 4,
     "frontend": 130,
     "project": 8,
-    "scripts": 66,
-    "tests": 62
+    "scripts": 113,
+    "tests": 68
   },
   "files": [
     {
@@ -191,8 +191,8 @@
       "path": "backend/api/operator_routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 82331,
-      "lines": 2234,
+      "bytes": 84098,
+      "lines": 2260,
       "findings": []
     },
     {
@@ -279,7 +279,7 @@
       "path": "backend/scripts/batch_upload_all_remastered.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 6471,
+      "bytes": 6473,
       "lines": 179,
       "findings": []
     },
@@ -383,8 +383,8 @@
       "path": "backend/scripts/hero_image_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 20136,
-      "lines": 642,
+      "bytes": 21466,
+      "lines": 677,
       "findings": []
     },
     {
@@ -415,8 +415,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 163512,
-      "lines": 4053,
+      "bytes": 188838,
+      "lines": 4700,
       "findings": []
     },
     {
@@ -463,8 +463,8 @@
       "path": "backend/services/news_scraper.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 24384,
-      "lines": 642,
+      "bytes": 29914,
+      "lines": 781,
       "findings": []
     },
     {
@@ -479,16 +479,16 @@
       "path": "backend/services/operator_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 53717,
-      "lines": 1395,
+      "bytes": 59496,
+      "lines": 1527,
       "findings": []
     },
     {
       "path": "backend/services/remasterer.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 102582,
-      "lines": 2477,
+      "bytes": 113081,
+      "lines": 2712,
       "findings": []
     },
     {
@@ -527,8 +527,8 @@
       "path": "backend/static/operator/index.html",
       "kind": "backend",
       "status": "ok",
-      "bytes": 23486,
-      "lines": 564,
+      "bytes": 22831,
+      "lines": 557,
       "findings": []
     },
     {
@@ -551,8 +551,8 @@
       "path": "backend/static/operator/operator.js",
       "kind": "backend",
       "status": "ok",
-      "bytes": 66614,
-      "lines": 1674,
+      "bytes": 65760,
+      "lines": 1583,
       "findings": []
     },
     {
@@ -607,23 +607,23 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 13615,
-      "lines": 311,
+      "bytes": 2696,
+      "lines": 86,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1404,
-      "lines": 21,
+      "bytes": 278,
+      "lines": 8,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/domain.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 1138,
+      "bytes": 1140,
       "lines": 36,
       "findings": []
     },
@@ -631,31 +631,31 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 85573,
-      "lines": 744,
+      "bytes": 84332,
+      "lines": 737,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 17360,
-      "lines": 358,
+      "bytes": 2702,
+      "lines": 86,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1361,
-      "lines": 22,
+      "bytes": 806,
+      "lines": 15,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/domain.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 1174,
+      "bytes": 1176,
       "lines": 40,
       "findings": []
     },
@@ -663,8 +663,8 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 57914,
-      "lines": 511,
+      "bytes": 57716,
+      "lines": 513,
       "findings": []
     },
     {
@@ -863,15 +863,15 @@
       "path": "frontend/app/admin/edit/[id]/page.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1457,
-      "lines": 50,
+      "bytes": 1500,
+      "lines": 52,
       "findings": []
     },
     {
       "path": "frontend/app/admin/login/page.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 3209,
+      "bytes": 3243,
       "lines": 90,
       "findings": []
     },
@@ -895,8 +895,8 @@
       "path": "frontend/app/admin/page.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 9740,
-      "lines": 208,
+      "bytes": 9783,
+      "lines": 210,
       "findings": []
     },
     {
@@ -919,8 +919,8 @@
       "path": "frontend/app/api/admin/auth/route.ts",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 1837,
-      "lines": 63,
+      "bytes": 1971,
+      "lines": 66,
       "findings": []
     },
     {
@@ -1695,8 +1695,8 @@
       "path": "frontend/proxy.ts",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 633,
-      "lines": 23,
+      "bytes": 998,
+      "lines": 33,
       "findings": []
     },
     {
@@ -1903,7 +1903,7 @@
       "path": "pinterest_automation/campaign.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 31325,
+      "bytes": 31328,
       "lines": 861,
       "findings": []
     },
@@ -1975,8 +1975,8 @@
       "path": "pinterest_automation/rate_limiter.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 13518,
-      "lines": 317,
+      "bytes": 24158,
+      "lines": 524,
       "findings": []
     },
     {
@@ -2068,6 +2068,14 @@
       "findings": []
     },
     {
+      "path": "rankstein/campaign_guard.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 785,
+      "lines": 23,
+      "findings": []
+    },
+    {
       "path": "rankstein/category_policy.py",
       "kind": "core",
       "status": "ok",
@@ -2079,8 +2087,16 @@
       "path": "rankstein/cli.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 34316,
-      "lines": 815,
+      "bytes": 34485,
+      "lines": 816,
+      "findings": []
+    },
+    {
+      "path": "rankstein/cloud_runtime.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 11478,
+      "lines": 277,
       "findings": []
     },
     {
@@ -2119,8 +2135,8 @@
       "path": "rankstein/gsc_connector.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 9650,
-      "lines": 244,
+      "bytes": 9961,
+      "lines": 251,
       "findings": []
     },
     {
@@ -2135,16 +2151,16 @@
       "path": "rankstein/launcher.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 24260,
-      "lines": 694,
+      "bytes": 25293,
+      "lines": 709,
       "findings": []
     },
     {
       "path": "rankstein/log_manager.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 5529,
-      "lines": 138,
+      "bytes": 5759,
+      "lines": 143,
       "findings": []
     },
     {
@@ -2167,8 +2183,8 @@
       "path": "rankstein/pipeline_events.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 6522,
-      "lines": 230,
+      "bytes": 10791,
+      "lines": 346,
       "findings": []
     },
     {
@@ -2185,6 +2201,14 @@
       "status": "ok",
       "bytes": 21078,
       "lines": 569,
+      "findings": []
+    },
+    {
+      "path": "rankstein/production_safety.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 2984,
+      "lines": 70,
       "findings": []
     },
     {
@@ -2207,16 +2231,24 @@
       "path": "rankstein/recipe_pin_generator.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 27641,
-      "lines": 817,
+      "bytes": 57256,
+      "lines": 1635,
+      "findings": []
+    },
+    {
+      "path": "rankstein/remaster_source_checkpoint.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 8303,
+      "lines": 192,
       "findings": []
     },
     {
       "path": "rankstein/remaster_variants.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 29178,
-      "lines": 830,
+      "bytes": 35363,
+      "lines": 947,
       "findings": []
     },
     {
@@ -2231,8 +2263,8 @@
       "path": "rankstein/seo_feedback_engine.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 37614,
-      "lines": 829,
+      "bytes": 16103,
+      "lines": 406,
       "findings": []
     },
     {
@@ -2247,8 +2279,8 @@
       "path": "rankstein/source_image_quality.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 6386,
-      "lines": 166,
+      "bytes": 7418,
+      "lines": 191,
       "findings": []
     },
     {
@@ -2271,8 +2303,8 @@
       "path": "rankstein/suite_controller.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 22636,
-      "lines": 611,
+      "bytes": 24179,
+      "lines": 636,
       "findings": []
     },
     {
@@ -2295,17 +2327,37 @@
       "path": "rankstein_mcp_server.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 228479,
-      "lines": 5424,
+      "bytes": 230426,
+      "lines": 5471,
       "findings": []
     },
     {
       "path": "requirements.txt",
       "kind": "project",
       "status": "ok",
-      "bytes": 4121,
+      "bytes": 4145,
       "lines": 193,
       "findings": []
+    },
+    {
+      "path": "scripts/debug/audit_all_105_urls.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2850,
+      "lines": 77,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/audit_and_clean_database.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 5388,
+      "lines": 136,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
     },
     {
       "path": "scripts/debug/audit_blog_admin.cjs",
@@ -2321,8 +2373,28 @@
       "path": "scripts/debug/audit_blog_preview.cjs",
       "kind": "scripts",
       "status": "review",
-      "bytes": 7413,
-      "lines": 121,
+      "bytes": 8099,
+      "lines": 130,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/audit_schemas.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1772,
+      "lines": 43,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/build_redirects_file.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1345,
+      "lines": 41,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2331,8 +2403,18 @@
       "path": "scripts/debug/capture_operator_dashboard.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2835,
-      "lines": 70,
+      "bytes": 1986,
+      "lines": 52,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/capture_operator_tabs.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2216,
+      "lines": 55,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2378,6 +2460,16 @@
       ]
     },
     {
+      "path": "scripts/debug/check_pollinations_and_deprecated.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2236,
+      "lines": 60,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/check_proof.py",
       "kind": "scripts",
       "status": "review",
@@ -2398,6 +2490,26 @@
       ]
     },
     {
+      "path": "scripts/debug/check_robots.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 453,
+      "lines": 14,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/check_soft404.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1928,
+      "lines": 63,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/dump_posts.py",
       "kind": "scripts",
       "status": "review",
@@ -2408,11 +2520,51 @@
       ]
     },
     {
+      "path": "scripts/debug/extract_arch_ribbons.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2126,
+      "lines": 54,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/extract_design_assets.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 6116,
+      "lines": 134,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/extract_straight_ribbons.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2624,
+      "lines": 63,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/fetch_urls.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 1651,
       "lines": 39,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/find_near_duplicates.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2546,
+      "lines": 57,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2438,11 +2590,41 @@
       ]
     },
     {
+      "path": "scripts/debug/fix_last_pollinations.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 3841,
+      "lines": 118,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/fuzzy_check.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2082,
+      "lines": 66,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/generate_ensalada_pasta.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 13475,
       "lines": 195,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/generate_redirect_rules.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 8861,
+      "lines": 129,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2458,11 +2640,71 @@
       ]
     },
     {
+      "path": "scripts/debug/inspect_and_fix_remaining_schemas.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 12116,
+      "lines": 258,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_issue_posts.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1924,
+      "lines": 45,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_page_schema.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 985,
+      "lines": 29,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/inspect_pinterest_remaster_dom.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 2431,
       "lines": 70,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_schema_issues.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2033,
+      "lines": 53,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/map_soft404_solutions.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 4212,
+      "lines": 120,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/match_posts_normalized.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1738,
+      "lines": 60,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2498,6 +2740,16 @@
       ]
     },
     {
+      "path": "scripts/debug/perfect_extract_ribbons.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2787,
+      "lines": 80,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/probe_source_ocr.ps1",
       "kind": "scripts",
       "status": "review",
@@ -2518,11 +2770,61 @@
       ]
     },
     {
+      "path": "scripts/debug/repair_all_supabase_schemas.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 4974,
+      "lines": 116,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_arc_text.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 4315,
+      "lines": 120,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/test_article_slug.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 1226,
       "lines": 28,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_asset_loading.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2547,
+      "lines": 62,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_bolder_color_headers.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 15473,
+      "lines": 361,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_bright_recipe_pin.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 16960,
+      "lines": 393,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2553,6 +2855,26 @@
       "status": "review",
       "bytes": 1867,
       "lines": 45,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_live_urls.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1161,
+      "lines": 30,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_local_server.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 725,
+      "lines": 21,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2608,11 +2930,81 @@
       ]
     },
     {
+      "path": "scripts/debug/test_paso_step_layouts.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 33312,
+      "lines": 835,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_perfect_culinary_pin_v8.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 31737,
+      "lines": 736,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_perfect_culinary_pin_v9.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 27531,
+      "lines": 712,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/test_primp_gemini.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 834,
       "lines": 23,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_professional_assets_pin.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 22709,
+      "lines": 521,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_professional_assets_pin_v6.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 27267,
+      "lines": 676,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_recipe_card_visual_ref.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 13066,
+      "lines": 335,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_recipe_suite_pins.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 29959,
+      "lines": 655,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2633,6 +3025,26 @@
       "status": "review",
       "bytes": 1769,
       "lines": 43,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/verify_final_deployment.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1620,
+      "lines": 44,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/verify_live_fixes.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1667,
+      "lines": 37,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2730,6 +3142,14 @@
       "findings": []
     },
     {
+      "path": "scripts/dev/runtime_backup.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 6311,
+      "lines": 138,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/runtime_maintenance.py",
       "kind": "scripts",
       "status": "ok",
@@ -2773,8 +3193,8 @@
       "path": "scripts/dev/validate_gemini_runtime.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 4771,
-      "lines": 134,
+      "bytes": 5291,
+      "lines": 144,
       "findings": []
     },
     {
@@ -2786,11 +3206,35 @@
       "findings": []
     },
     {
+      "path": "scripts/ops/backfill_metadata_descriptions.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 12908,
+      "lines": 285,
+      "findings": []
+    },
+    {
       "path": "scripts/ops/check_pins.py",
       "kind": "scripts",
       "status": "ok",
       "bytes": 2658,
       "lines": 78,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/clean_all_duplicates.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 6894,
+      "lines": 123,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/clean_duplicate_posts.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 6685,
+      "lines": 77,
       "findings": []
     },
     {
@@ -2821,8 +3265,8 @@
       "path": "scripts/ops/generate_campaign_pins.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 8020,
-      "lines": 223,
+      "bytes": 8207,
+      "lines": 228,
       "findings": []
     },
     {
@@ -2831,6 +3275,14 @@
       "status": "ok",
       "bytes": 4192,
       "lines": 141,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/organize_remaster_final.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 2133,
+      "lines": 62,
       "findings": []
     },
     {
@@ -2863,6 +3315,38 @@
       "status": "ok",
       "bytes": 3173,
       "lines": 96,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/unlock_queue_retries.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 1062,
+      "lines": 40,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/update_both_redirects.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 1781,
+      "lines": 53,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/update_codebase_redirects.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 5380,
+      "lines": 101,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/upload_replacement_images.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3081,
+      "lines": 75,
       "findings": []
     },
     {
@@ -2991,6 +3475,14 @@
       "status": "ok",
       "bytes": 8719,
       "lines": 201,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_campaign_guard.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 1220,
+      "lines": 42,
       "findings": []
     },
     {
@@ -3173,16 +3665,16 @@
       "path": "tests/unit/test_operator_live_status.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 9353,
-      "lines": 240,
+      "bytes": 11820,
+      "lines": 306,
       "findings": []
     },
     {
       "path": "tests/unit/test_operator_pipeline.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 49137,
-      "lines": 1360,
+      "bytes": 56503,
+      "lines": 1518,
       "findings": []
     },
     {
@@ -3210,6 +3702,14 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_pipeline_progress_deadlines.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 5930,
+      "lines": 158,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_production_batch.py",
       "kind": "tests",
       "status": "ok",
@@ -3234,6 +3734,14 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_production_safety.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2032,
+      "lines": 55,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_provisioner.py",
       "kind": "tests",
       "status": "ok",
@@ -3245,16 +3753,16 @@
       "path": "tests/unit/test_rate_limiter_persistence.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 6324,
-      "lines": 165,
+      "bytes": 18135,
+      "lines": 462,
       "findings": []
     },
     {
       "path": "tests/unit/test_remaster_deadlines_recovery.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 14033,
-      "lines": 375,
+      "bytes": 21020,
+      "lines": 540,
       "findings": []
     },
     {
@@ -3277,16 +3785,24 @@
       "path": "tests/unit/test_remaster_source_quality.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 7953,
-      "lines": 215,
+      "bytes": 8046,
+      "lines": 216,
       "findings": []
     },
     {
       "path": "tests/unit/test_remaster_variants.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 10036,
-      "lines": 281,
+      "bytes": 11331,
+      "lines": 311,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_runtime_backup.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 1870,
+      "lines": 50,
       "findings": []
     },
     {
@@ -3322,6 +3838,14 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_seo_feedback_engine.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2560,
+      "lines": 63,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_site_factory.py",
       "kind": "tests",
       "status": "ok",
@@ -3343,6 +3867,14 @@
       "status": "ok",
       "bytes": 10275,
       "lines": 287,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_step_images.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 5992,
+      "lines": 153,
       "findings": []
     },
     {
@@ -3389,8 +3921,8 @@
       "path": "tests/unit/test_turbo_articles.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 77933,
-      "lines": 2216,
+      "bytes": 93072,
+      "lines": 2620,
       "findings": []
     },
     {

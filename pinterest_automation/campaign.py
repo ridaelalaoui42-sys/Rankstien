@@ -71,7 +71,7 @@ class ImagePathIndex:
                 if not d.exists():
                     continue
                 try:
-                    for f in d.iterdir():
+                    for f in d.rglob("*"):
                         if not f.is_file() or f.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
                             continue
 
@@ -164,7 +164,7 @@ def find_best_image(slug: str, media_dirs: list[Path] | None = None) -> Path | N
         for d in media_dirs:
             if not d.exists():
                 continue
-            for f in d.iterdir():
+            for f in d.rglob("*"):
                 if not f.is_file() or f.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
                     continue
                 fname = f.name.lower()
@@ -310,7 +310,7 @@ def enqueue_folder(
 
     # Collect all images
     images = sorted(
-        f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
+        f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
     )
 
     if not images:

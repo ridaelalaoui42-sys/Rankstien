@@ -30,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from rankstein.pipeline_events import record_pipeline_stage, set_pipeline_run_status
-from rankstein.remaster_variants import create_recipe_card_pin, create_viral_visual_pin
+from rankstein.remaster_variants import _safe_slug, create_recipe_card_pin, create_viral_visual_pin
 from rankstein.source_image_quality import assess_source_image
 
 
@@ -85,7 +85,9 @@ COLLECTION_TIMEOUT_SECONDS = 600.0
 BROWSER_START_TIMEOUT_SECONDS = 60.0
 BROWSER_STOP_TIMEOUT_SECONDS = 20.0
 SOURCE_INTAKE_TIMEOUT_SECONDS = 680.0
+HELD_SOURCE_PREFLIGHT_TIMEOUT_SECONDS = 30.0
 COLLECTION_PROGRESS_INTERVAL_SECONDS = 5.0
+SOURCE_PROGRESS_WRITE_TIMEOUT_SECONDS = 0.5
 DEFAULT_CANDIDATE_LIMIT = 90
 PINTEREST_PIN_CARD_SELECTOR = '[data-test-id="pin"], [data-grid-item="true"]'
 PINTEREST_LOGIN_WALL_MARKERS = (
@@ -117,11 +119,21 @@ def _candidate_limit(requested=None) -> int:
     return max(1, min(value, 150))
 
 
-def _isolated_remaster_directories(domain_handle: str, pipeline_run_id: str) -> tuple[Path, Path]:
+def _isolated_remaster_directories(
+    domain_handle: str, pipeline_run_id: str = "", *, keyword: str = "", date_str: str = ""
+) -> tuple[Path, Path]:
     """Each attempt owns new paths; held queue payload files are never replaced."""
     domain = re.sub(r"[^a-zA-Z0-9_-]+", "-", domain_handle).strip("-") or "manual"
     run = re.sub(r"[^a-zA-Z0-9_-]+", "-", pipeline_run_id).strip("-") or "manual"
     attempt = f"{datetime.now(UTC):%Y%m%d_%H%M%S_%f}-{uuid4().hex[:8]}"
+    if keyword:
+        day = date_str or datetime.now(UTC).strftime("%Y-%m-%d")
+        clean_kw = _safe_slug(keyword)
+        raw_dir = DOWNLOAD_DIR / domain / day / clean_kw / attempt
+        final_dir = REMASTER_DIR / domain / day / clean_kw
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        final_dir.mkdir(parents=True, exist_ok=True)
+        return raw_dir, final_dir
     suffix = Path(domain) / run / attempt
     return DOWNLOAD_DIR / suffix, REMASTER_DIR / suffix
 
@@ -139,22 +151,23 @@ def _held_campaign_source_pin_ids(
     """
     if not domain_handle or not pipeline_run_id:
         return set()
+    deadline = time.monotonic() + HELD_SOURCE_PREFLIGHT_TIMEOUT_SECONDS
     if queue_paths is None:
-        from pinterest_automation.job_queue import DB_FILE
-        from rankstein.domain import get_registry
-
-        domain = get_registry().get(domain_handle)
-        queue_paths = [Path(DB_FILE), domain.root / "jobs.db"]
+        queue_paths = _configured_held_source_queue_paths(domain_handle)
     excluded: set[str] = set()
-    deadline = time.monotonic() + 3.0
     for path in dict.fromkeys(Path(value).resolve() for value in queue_paths):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("held source preflight deadline exceeded")
         if not path.is_file():
             continue
-        with sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True, timeout=3.0) as connection:
+        with sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True, timeout=min(3.0, remaining)) as connection:
             connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
             for (payload_json,) in connection.execute(
                 "SELECT payload_json FROM jobs WHERE status = 'held' AND type = 'pin_upload'"
             ):
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("held source preflight deadline exceeded")
                 payload = json.loads(payload_json)
                 extra = payload.get("extra") if isinstance(payload, dict) else None
                 if not isinstance(extra, dict):
@@ -172,7 +185,43 @@ def _held_campaign_source_pin_ids(
     return excluded
 
 
-def _emit_source_progress(studio, *, deadline: float) -> None:
+def _configured_held_source_queue_paths(domain_handle: str) -> list[Path]:
+    """Resolve maintained queue locations without booting the browser stack.
+
+    job_queue.DB_FILE uses PINTEREST_QUEUE_DB_FILE or data/queue/jobs.db.
+    DomainRegistry roots manifest domains at data/domains/<handle>, with a
+    project-root legacy default. Importing either package here would eagerly
+    initialize providers and automation services before the read-only check.
+    """
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", domain_handle):
+        raise ValueError("invalid domain handle")
+    configured = os.environ.get("PINTEREST_QUEUE_DB_FILE")
+    if "PINTEREST_QUEUE_DB_FILE" not in os.environ:
+        # Match config.load_dotenv(..., override=False), including its path
+        # override, without mutating other credentials or loading config.
+        from dotenv import dotenv_values
+
+        configured = dotenv_values(PROJECT_ROOT / ".env").get("PINTEREST_QUEUE_DB_FILE")
+    shared = Path(configured) if configured else PROJECT_ROOT / "data" / "queue" / "jobs.db"
+    domain_root = PROJECT_ROOT / "data" / "domains" / domain_handle
+    manifest = domain_root / "domain.json"
+    if manifest.is_file():
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        if (
+            not isinstance(data, dict)
+            or data.get("handle") != domain_handle
+            or not isinstance(data.get("domain"), str)
+            or not data["domain"].strip()
+        ):
+            raise ValueError("invalid domain manifest")
+    elif domain_handle == "recetadolce":
+        domain_root = PROJECT_ROOT
+    else:
+        raise ValueError("unknown domain handle")
+    return [shared, domain_root / "jobs.db"]
+
+
+def _emit_source_progress(studio, *, deadline: float) -> dict:
     diagnostics = getattr(studio, "last_collection_diagnostics", {})
     diagnostics["remaining_seconds"] = round(max(0.0, deadline - time.monotonic()), 1)
     print(
@@ -188,15 +237,125 @@ def _emit_source_progress(studio, *, deadline: float) -> None:
         f"remaining_seconds={diagnostics['remaining_seconds']}",
         flush=True,
     )
+    # Never copy arbitrary diagnostics into telemetry: OCR text, source text,
+    # file/session paths, and transient exception messages are not dashboard data.
+    return {
+        "phase": str(diagnostics.get("phase", "collecting")),
+        "accepted": int(diagnostics.get("accepted", 0)),
+        "examined": int(diagnostics.get("pins_examined", 0)),
+        "ocr_in_progress": int(diagnostics.get("ocr_in_progress", 0)),
+        "text_rejected": int(diagnostics.get("text_rejected", 0)),
+        "text_unavailable": int(diagnostics.get("text_unavailable", 0)),
+        "held_sources_skipped": int(diagnostics.get("held_sources_skipped", 0)),
+        "remaining_seconds": diagnostics["remaining_seconds"],
+    }
 
 
-async def _source_progress_heartbeat(studio, finished: asyncio.Event, *, deadline: float) -> None:
+def _sanitized_source_diagnostics(diagnostics: dict | None, *, source_target: int) -> dict:
+    """Persist collection decisions and counters, never OCR/source text or paths."""
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    result = {"target": source_target, "source_target": source_target}
+    for key in (
+        "accepted",
+        "pins_examined",
+        "ocr_started",
+        "ocr_completed",
+        "ocr_in_progress",
+        "text_rejected",
+        "text_unavailable",
+        "held_sources_skipped",
+        "excluded_source_count",
+        "candidate_limit",
+        "deadline_exceeded",
+        "download_failed",
+        "irrelevant",
+        "undersized",
+    ):
+        try:
+            result[key] = max(0, int(diagnostics.get(key, 0)))
+        except (TypeError, ValueError, OverflowError):
+            result[key] = 0
+    result["examined"] = result["pins_examined"]
+    result["remaining_sources"] = max(0, source_target - result["accepted"])
+    for key in ("phase", "failure_phase", "blocked_reason", "error_type", "cleanup_error_type"):
+        value = str(diagnostics.get(key) or "")
+        result[key] = value if re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", value) else ""
+    try:
+        remaining = float(diagnostics.get("remaining_seconds", 0))
+        result["remaining_seconds"] = round(max(0.0, remaining), 1) if math.isfinite(remaining) else 0.0
+    except (TypeError, ValueError, OverflowError):
+        result["remaining_seconds"] = 0.0
+    return result
+
+
+async def _source_progress_heartbeat(
+    studio, finished: asyncio.Event, *, deadline: float, progress_callback=None
+) -> None:
     # An Event waiter avoids a tight loop if a caller replaces asyncio.sleep.
     while not finished.is_set():
         try:
             await asyncio.wait_for(finished.wait(), timeout=COLLECTION_PROGRESS_INTERVAL_SECONDS)
         except TimeoutError:
-            _emit_source_progress(studio, deadline=deadline)
+            details = _emit_source_progress(studio, deadline=deadline)
+            if progress_callback is not None and not finished.is_set():
+                await progress_callback(details)
+
+
+async def _record_source_progress(
+    details: dict,
+    *,
+    finished: asyncio.Event,
+    deadline: float,
+    pipeline_run_id: str,
+    domain_handle: str,
+    keyword: str,
+    source_target: int,
+) -> None:
+    """Publish bounded running-only counters without delaying source intake."""
+    if (
+        not pipeline_run_id
+        or finished.is_set()
+        or details.get("phase") in {"source_intake_complete", "incomplete"}
+    ):
+        return
+    timeout = min(SOURCE_PROGRESS_WRITE_TIMEOUT_SECONDS, deadline - time.monotonic())
+    if timeout <= 0:
+        return
+    details = {
+        **details,
+        "target": source_target,
+        "source_target": source_target,
+        "remaining_sources": max(0, source_target - details["accepted"]),
+        "domain_handle": domain_handle,
+        "pipeline_run_id": pipeline_run_id,
+    }
+    message = (
+        f"Pinterest sources {details['accepted']}/{source_target} accepted · "
+        f"{details['examined']} examined · {details['remaining_sources']} remaining · "
+        f"{details['phase'].replace('_', ' ')} · "
+        f"{details['remaining_seconds']:.0f}s budget left"
+    )
+    try:
+        await asyncio.to_thread(
+            record_pipeline_stage,
+            pipeline_run_id,
+            "pinterest_siphon",
+            "running",
+            message,
+            details=details,
+            domain_handle=domain_handle,
+            keyword=keyword,
+            write_timeout_seconds=timeout,
+            # Checked AFTER acquiring SQLite's write lock. A cancelled or
+            # finished collector cannot append stale running events later.
+            should_skip=lambda: finished.is_set() or time.monotonic() >= deadline,
+            skip_terminal_stage=True,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        # Monitoring is best effort; source collection remains authoritative.
+        pass
 
 
 class _ProfileLease:
@@ -1684,6 +1843,7 @@ def write_article_remaster_report(
     enqueue_result: dict | None = None,
     scrape_brief: dict | None = None,
     pipeline_run_id: str = "",
+    source_collection_diagnostics: dict | None = None,
 ) -> dict:
     generated_count = len(assets)
     pair_ids = {str(item.get("pair_id", "")) for item in assets if item.get("pair_id")}
@@ -1698,8 +1858,23 @@ def write_article_remaster_report(
         if target_count == PRODUCTION_ASSET_TARGET
         else generated_count >= target_count
     )
+    collection_diagnostics = _sanitized_source_diagnostics(
+        source_collection_diagnostics, source_target=source_target
+    )
+    success = generated_contract_success and (enqueue_success is not False)
+    blocked_reason = collection_diagnostics["blocked_reason"]
+    if not success and not blocked_reason:
+        blocked_reason = "incomplete_asset_set" if not generated_contract_success else "queue_failed"
+    remaining_steps = []
+    if collection_diagnostics["accepted"] < source_target and not generated_contract_success:
+        remaining_steps.append("pinterest_siphon")
+    if not generated_contract_success:
+        remaining_steps.append("remaster")
+    if enqueue_success is not True:
+        remaining_steps.append("queue")
+    remaining_steps.extend(["distribution", "verification"])
     report = {
-        "success": generated_contract_success and (enqueue_success is not False),
+        "success": success,
         "completed_at": datetime.now(UTC).isoformat(),
         "campaign_type": "article_remaster_pairs",
         "variant_contract": {
@@ -1732,6 +1907,10 @@ def write_article_remaster_report(
         "assets": assets,
         "enqueue": enqueue_result,
         "scrape_brief": scrape_brief or {},
+        "source_collection_diagnostics": collection_diagnostics,
+        "blocked_reason": blocked_reason,
+        "error_type": collection_diagnostics["error_type"],
+        "remaining_workflow_steps": remaining_steps,
     }
     path = _campaign_report_path(
         slug or title or keyword,
@@ -1757,8 +1936,9 @@ async def _collect_campaign_sources(
 ) -> list[dict]:
     """Bound preflight/start/collection/recheck/stop to at most 680 seconds.
 
-    Phase upper bounds are start 60s, collection plus exact source rechecks
-    600s, and stop 20s. The total deadline includes exclusion reads and reserves
+    Phase upper bounds are held-source preflight 30s, start 60s, collection plus
+    exact source rechecks 600s, and stop 20s. The shared 680s deadline includes
+    exclusion reads and reserves
     cleanup time. Timed-out cleanup is failed intake, not success. No browser
     other than this studio's own context is cleaned up here.
     """
@@ -1770,7 +1950,21 @@ async def _collect_campaign_sources(
     deadline = time.monotonic() + total
     studio.last_collection_diagnostics = {"phase": "held_source_preflight", "accepted": 0}
     finished = asyncio.Event()
-    heartbeat = asyncio.create_task(_source_progress_heartbeat(studio, finished, deadline=deadline))
+
+    async def publish_progress(details):
+        await _record_source_progress(
+            details,
+            finished=finished,
+            deadline=deadline,
+            pipeline_run_id=pipeline_run_id,
+            domain_handle=domain_handle,
+            keyword=keyword,
+            source_target=source_target,
+        )
+
+    heartbeat = asyncio.create_task(
+        _source_progress_heartbeat(studio, finished, deadline=deadline, progress_callback=publish_progress)
+    )
     collected = []
     failure = ""
 
@@ -1783,7 +1977,7 @@ async def _collect_campaign_sources(
         return min(maximum, remaining)
 
     try:
-        preflight_budget = phase_budget(4.0)
+        preflight_budget = phase_budget(HELD_SOURCE_PREFLIGHT_TIMEOUT_SECONDS)
         excluded = await asyncio.wait_for(
             asyncio.to_thread(_held_campaign_source_pin_ids, domain_handle, pipeline_run_id),
             timeout=preflight_budget,
@@ -1816,11 +2010,17 @@ async def _collect_campaign_sources(
                     item["source_quality"] = quality
                     item["source_hash"] = quality.get("source_hash", "")
     except TimeoutError:
+        studio.last_collection_diagnostics["failure_phase"] = studio.last_collection_diagnostics.get(
+            "phase", "source_intake"
+        )
         failure = f"{studio.last_collection_diagnostics.get('phase', 'source_intake')}_timeout"
     except asyncio.CancelledError:
         failure = "source_intake_cancelled"
         raise
     except Exception as exc:
+        studio.last_collection_diagnostics["failure_phase"] = studio.last_collection_diagnostics.get(
+            "phase", "source_intake"
+        )
         failure = "remaster_profile_busy" if str(exc) == "remaster_profile_busy" else "source_intake_failed"
         studio.last_collection_diagnostics["error_type"] = type(exc).__name__
     finally:
@@ -1834,6 +2034,7 @@ async def _collect_campaign_sources(
         except Exception as exc:
             studio.last_collection_diagnostics["cleanup_error_type"] = type(exc).__name__
             failure = failure or "browser_cleanup_failed"
+            studio.last_collection_diagnostics.setdefault("failure_phase", "stopping_browser")
         finally:
             studio.last_collection_diagnostics["phase"] = (
                 "source_intake_complete" if not failure else "incomplete"
@@ -1866,13 +2067,21 @@ async def run_remasterer(
     recipe_ingredients: str | list[str] | tuple[str, ...] | set[str] | None = None,
     recipe_steps: str | list[str] | tuple[str, ...] | set[str] | None = None,
     tip_text: str = "",
+    source_collection_diagnostics: dict | None = None,
+    slug: str = "",
+    date_str: str = "",
 ):
     target_count = _paired_output_target(pins_per_keyword)
     source_target = target_count // 2
+    if source_collection_diagnostics is None:
+        source_collection_diagnostics = {}
+    source_collection_diagnostics.clear()
+    source_collection_diagnostics.update(phase="recipe_preflight", accepted=0)
     session_name = _resolve_session_name(session_name, domain_handle=domain_handle)
     ingredients = _value_list(recipe_ingredients)
     steps = _value_list(recipe_steps)
     if not ingredients or not steps:
+        source_collection_diagnostics.update(blocked_reason="recipe_context_missing")
         message = "Paired remastering requires real article ingredients and preparation steps"
         print(f"INCOMPLETE: {message}")
         _pipeline_event(
@@ -1887,7 +2096,10 @@ async def run_remasterer(
         return []
 
     remasterer = PinRemasterer(headless=True, session_name=session_name)
-    raw_output_dir, final_output_dir = _isolated_remaster_directories(domain_handle, pipeline_run_id)
+    kw_for_dir = slug or keyword or article_title
+    raw_output_dir, final_output_dir = _isolated_remaster_directories(
+        domain_handle, pipeline_run_id, keyword=kw_for_dir, date_str=date_str
+    )
 
     print("\n--- RankStein Remasterer V5 Paired Studio Active ---")
     print(f"Targeting: {keyword} | Title: {article_title} | Brand: {brand_name} | Session: {session_name}")
@@ -1919,6 +2131,13 @@ async def run_remasterer(
     scraped_count = len(collected)
     diagnostics = getattr(remasterer, "last_collection_diagnostics", {})
     source_intake_complete = scraped_count >= source_target
+    diagnostics["accepted"] = scraped_count
+    if not source_intake_complete:
+        diagnostics.setdefault("blocked_reason", "insufficient_clean_sources")
+        diagnostics["phase"] = "incomplete"
+    source_collection_diagnostics.update(
+        _sanitized_source_diagnostics(diagnostics, source_target=source_target)
+    )
     _pipeline_event(
         pipeline_run_id,
         "pinterest_siphon",
@@ -1957,6 +2176,9 @@ async def run_remasterer(
         or len(set(source_pin_ids)) != source_target
     )
     if invalid_source_set:
+        source_collection_diagnostics.update(
+            blocked_reason="invalid_pinterest_source_set", failure_phase="validating_source_identity"
+        )
         print(
             "INCOMPLETE: source intake did not contain exactly 15 unique Pinterest pins; "
             "no variants were created"
@@ -1984,6 +2206,9 @@ async def run_remasterer(
                 {"pin_id": item["pin_id"], "reason": source_quality.get("reason", "ocr_unavailable")}
             )
     if blocked_sources:
+        source_collection_diagnostics.update(
+            blocked_reason="selected_source_quality_failed", failure_phase="validating_source_quality"
+        )
         print(
             f"INCOMPLETE: {len(blocked_sources)}/{source_target} source images failed "
             "the text-free quality gate; no variants were created"
@@ -2024,6 +2249,7 @@ async def run_remasterer(
             pair_id=pair_id,
             output_dir=final_output_dir,
         )
+        card_style = "bright_infographic" if (i % 2 == 0) else "classic"
         recipe_card = create_recipe_card_pin(
             source_path=item["raw_path"],
             title=article_title,
@@ -2033,6 +2259,7 @@ async def run_remasterer(
             domain_handle=domain_handle,
             pair_id=pair_id,
             output_dir=final_output_dir,
+            card_style=card_style,
         )
         pair_results = (visual, recipe_card)
         if all(result.get("success") for result in pair_results):
@@ -2086,6 +2313,9 @@ async def run_remasterer(
             )
 
     if len(final_assets) < target_count:
+        source_collection_diagnostics.update(
+            blocked_reason="variant_composition_incomplete", failure_phase="remaster"
+        )
         print(f"\nINCOMPLETE: {len(final_assets)}/{target_count} luxury pins generated in {REMASTER_DIR}")
         _pipeline_event(
             pipeline_run_id,
@@ -2192,6 +2422,7 @@ async def run_all_domains(
                 expected_terms=scrape_brief.get("expected_terms", []),
                 blocked_terms=scrape_brief.get("blocked_terms", []),
                 domain_handle=item["domain"],
+                slug=kw,
             )
             total += len(assets)
         except Exception as e:
@@ -2227,7 +2458,7 @@ async def run_all_domains(
         except Exception:
             pass
 
-    pin_count = len(list(REMASTER_DIR.glob("*.jpg")) + list(REMASTER_DIR.glob("*.png")))
+    pin_count = len(list(REMASTER_DIR.rglob("*.jpg")) + list(REMASTER_DIR.rglob("*.png")))
     print(f"\n=== SIPHON COMPLETE — Generated: {total} pins | Total in folder: {pin_count} ===\n")
     return total
 
@@ -2356,6 +2587,7 @@ if __name__ == "__main__":
                 brand_name = domain.display_name
             except KeyError:
                 pass
+        source_collection_diagnostics = {}
         assets = asyncio.run(
             run_remasterer(
                 kw,
@@ -2374,6 +2606,8 @@ if __name__ == "__main__":
                 recipe_ingredients=args.recipe_ingredients_json,
                 recipe_steps=args.recipe_steps_json,
                 tip_text=args.tip_text,
+                source_collection_diagnostics=source_collection_diagnostics,
+                slug=args.slug,
             )
         )
         enqueue_result = None
@@ -2465,6 +2699,7 @@ if __name__ == "__main__":
                 assets=assets,
                 enqueue_result=enqueue_result,
                 pipeline_run_id=args.pipeline_run_id,
+                source_collection_diagnostics=source_collection_diagnostics,
                 scrape_brief={
                     "search_query": args.search_query,
                     "search_queries": _value_list(args.search_queries_json),

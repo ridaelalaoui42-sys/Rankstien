@@ -60,7 +60,7 @@ async def main():
         with open(UPLOADED_TRACKER) as f:
             uploaded_files = set(line.strip() for line in f.readlines())
 
-    all_files = list(MEDIA_DIR.glob("remastered_*.jpg")) + list(MEDIA_DIR.glob("remastered_*.png"))
+    all_files = list(MEDIA_DIR.rglob("remastered_*.jpg")) + list(MEDIA_DIR.rglob("remastered_*.png"))
 
     to_upload = []
 

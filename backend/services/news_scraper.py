@@ -215,11 +215,146 @@ def _google_news_rss(keyword, lang, country, count):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _extract_step_images(soup, base_url=""):
+    """Extract step-by-step preparation images from recipe pages (via JSON-LD, URL patterns, or HTML)."""
+    step_images = []
+    seen_urls = set()
+
+    # 1. JSON-LD Recipe Instructions
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            raw_text = script.string or script.get_text() or ""
+            if not raw_text.strip():
+                continue
+            data = json.loads(raw_text)
+            candidates = (
+                data.get("@graph", [data])
+                if isinstance(data, dict)
+                else (data if isinstance(data, list) else [])
+            )
+            for item in candidates:
+                if isinstance(item, dict) and item.get("@type") in ("Recipe", ["Recipe"]):
+                    instructions = item.get("recipeInstructions") or []
+                    for idx, step in enumerate(instructions):
+                        if isinstance(step, dict):
+                            img = step.get("image")
+                            if isinstance(img, list) and img:
+                                img = img[0]
+                            if isinstance(img, dict):
+                                img = img.get("url")
+                            text = step.get("text", "") or step.get("name", "")
+                            if isinstance(img, str) and img.startswith("http") and img not in seen_urls:
+                                seen_urls.add(img)
+                                step_images.append(
+                                    {"step_number": idx + 1, "image_url": img, "text": text[:200]}
+                                )
+        except Exception:
+            continue
+
+    if step_images:
+        return step_images
+
+    # 2. Filename and Alt-text Pattern Matching (e.g. paso-1, paso-2, step-1)
+    pattern_steps = {}
+    for img in soup.find_all("img"):
+        src = img.get("src") or img.get("data-src") or img.get("data-lazy-src") or ""
+        alt = img.get("alt") or ""
+        if src and not src.startswith("http") and base_url:
+            src = urllib.parse.urljoin(base_url, src)
+        if not src.startswith("http"):
+            continue
+
+        lower_src = src.lower()
+        if any(
+            bad in lower_src
+            for bad in [
+                "logo",
+                "avatar",
+                "icon",
+                "pixel",
+                "gravatar",
+                "/ads/",
+                "/ad/",
+                "ad-banner",
+                "advertisement",
+            ]
+        ):
+            continue
+
+        match = re.search(r"[-_]paso[-_]?(\d+)|[-_]step[-_]?(\d+)", src, re.I) or re.search(
+            r"paso\s*(\d+)", alt, re.I
+        )
+        if match:
+            num = int(match.group(1) or match.group(2) or len(pattern_steps) + 1)
+            if num not in pattern_steps and src not in seen_urls:
+                seen_urls.add(src)
+                pattern_steps[num] = {
+                    "step_number": num,
+                    "image_url": src,
+                    "text": alt[:200] or f"Paso {num}",
+                }
+
+    if pattern_steps:
+        # Return sorted by step number
+        return [pattern_steps[k] for k in sorted(pattern_steps.keys())]
+
+    # 3. HTML DOM extraction from step containers
+    selectors = [
+        ".recipe-instructions li",
+        ".recipe-steps li",
+        ".instrucciones li",
+        ".pasos li",
+        ".recipe-instruction",
+        ".step",
+        ".wp-block-recipe-step",
+        "[itemprop='recipeInstructions']",
+    ]
+    step_idx = 1
+    for sel in selectors:
+        nodes = soup.select(sel)
+        if len(nodes) >= 2:
+            for node in nodes:
+                img_tag = node.find("img")
+                if img_tag:
+                    src = img_tag.get("src") or img_tag.get("data-src") or img_tag.get("data-lazy-src") or ""
+                    if src and not src.startswith("http") and base_url:
+                        src = urllib.parse.urljoin(base_url, src)
+                    if src.startswith("http") and src not in seen_urls:
+                        lower_src = src.lower()
+                        if not any(
+                            bad in lower_src
+                            for bad in [
+                                "logo",
+                                "avatar",
+                                "icon",
+                                "pixel",
+                                "gravatar",
+                                "/ads/",
+                                "/ad/",
+                                "ad-banner",
+                                "advertisement",
+                            ]
+                        ):
+                            seen_urls.add(src)
+                            step_images.append(
+                                {
+                                    "step_number": step_idx,
+                                    "image_url": src,
+                                    "text": node.get_text(separator=" ", strip=True)[:200],
+                                }
+                            )
+                            step_idx += 1
+            if step_images:
+                break
+
+    return step_images
+
+
 def extract_article(url: str) -> dict:
     """
     Extract full article content from any URL.
     Multi-strategy: <article> → content selectors → largest text block → all <p>.
-    Returns: {success, url, title, content, author, date, word_count, key_sections}
+    Returns: {success, url, title, content, author, date, word_count, key_sections, step_images}
     """
     if not url or not url.startswith("http"):
         return {"success": False, "error": "Invalid or empty URL", "url": url}
@@ -241,6 +376,9 @@ def extract_article(url: str) -> dict:
         url = resp.url
         resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Extract step images BEFORE stripping scripts and tags
+        step_images = _extract_step_images(soup, url)
 
         # Strip noise
         for tag in soup.select(
@@ -296,6 +434,7 @@ def extract_article(url: str) -> dict:
             "word_count": wc,
             "key_sections": sections[:10],
             "videos": videos,
+            "step_images": step_images,
         }
     except requests.exceptions.Timeout:
         return {"success": False, "error": f"Timeout: {url}", "url": url}

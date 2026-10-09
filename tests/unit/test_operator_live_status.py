@@ -216,6 +216,72 @@ def test_waiting_research_lane_is_not_executing_and_counts_do_not_accumulate():
         assert pipeline["summary"]["waiting"] == pipeline["ongoing_total"] == 1
 
 
+@pytest.mark.parametrize(
+    ("reason", "expected_state", "stage_state", "label"),
+    [
+        (
+            "research_in_progress stage=pinterest_collection deadline_seconds=300",
+            "active",
+            "running",
+            "Pinterest candidate collection",
+        ),
+        (
+            "research_in_progress stage=exact_validation deadline_seconds=600",
+            "active",
+            "running",
+            "Exact Pinterest-phrase demand validation",
+        ),
+        (
+            "research_timeout stage=exact_validation deadline_seconds=600",
+            "attention",
+            "warning",
+            "Exact validation reached its 600s deadline",
+        ),
+        (
+            "research_failed stage=pinterest_collection error_type=RuntimeError",
+            "attention",
+            "warning",
+            "Pinterest candidate collection failed",
+        ),
+    ],
+)
+def test_research_reason_reports_actual_work_or_terminal_attention(
+    reason, expected_state, stage_state, label
+):
+    pipeline = {"ongoing_campaigns": [], "campaigns": [], "summary": {}}
+    batch = {
+        "batch_id": "current",
+        "domains": {"recetadolce": {"target": 10, "verified": 0, "state": "waiting", "detail": reason}},
+    }
+    action = {"alive": True, "stage": "Researching Pinterest candidates"}
+    for _ in range(2):
+        routes._attach_live_research_lanes(pipeline, production_batch=batch, production_action=action)
+        lane = pipeline["ongoing_campaigns"][0]
+        assert lane["overall_state"] == expected_state
+        assert lane["stages"][0]["state"] == stage_state
+        assert lane["current_label"] == label
+        assert pipeline["summary"].get(expected_state, 0) == 1
+        assert pipeline["summary"].get("active", 0) == int(expected_state == "active")
+
+
+def test_explicit_research_reason_does_not_require_stale_action_label():
+    pipeline = {"ongoing_campaigns": [], "campaigns": [], "summary": {}}
+    batch = {
+        "batch_id": "current",
+        "domains": {
+            "recetadolce": {
+                "target": 10,
+                "state": "waiting",
+                "detail": "research_in_progress stage=exact_validation deadline_seconds=600",
+            }
+        },
+    }
+    routes._attach_live_research_lanes(
+        pipeline, production_batch=batch, production_action={"alive": True, "stage": "Awaiting keyword"}
+    )
+    assert pipeline["ongoing_campaigns"][0]["overall_state"] == "active"
+
+
 def test_stopped_worker_preserves_current_campaign_quality_hold(monkeypatch):
     campaign = {
         "id": "held-run",

@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
 
-from rankstein import suite_controller
+from rankstein import log_manager, suite_controller
+from rankstein.domain import DomainRegistry
+from rankstein.production_safety import campaign_admission
 from rankstein.runtime_env import clean_python_env
 from rankstein.startup import StartupOptions, run_startup
 
@@ -107,16 +109,26 @@ def run_launch(options: LaunchOptions) -> dict[str, Any]:
         "Running Pinterest-first keyword research preflight "
         "(precise Pinterest candidates, then independent Google demand/freshness validation)",
     )
-    report["preflight"] = run_startup(
-        StartupOptions(
-            domains=options.domains,
-            keywords_per_domain=options.keywords_per_domain,
-            workers_per_domain=options.workers_per_domain,
-            launch=False,
-            refresh_trends=options.refresh_trends,
-            trend_limit_per_domain=options.trend_limit_per_domain,
-        )
+    domains = DomainRegistry(PROJECT_ROOT).all()
+    if options.domains:
+        domains = [domain for domain in domains if domain.handle in options.domains]
+    report["production_admission"] = campaign_admission(
+        domains, campaigns_per_domain=options.keywords_per_domain
     )
+    if options.start_articles and not report["production_admission"]["ok"]:
+        reason = "; ".join(report["production_admission"]["issues"])
+        report["preflight"] = {"brief": {"work_ready": False, "launch_blocked_reason": reason}}
+    else:
+        report["preflight"] = run_startup(
+            StartupOptions(
+                domains=options.domains,
+                keywords_per_domain=options.keywords_per_domain,
+                workers_per_domain=options.workers_per_domain,
+                launch=False,
+                refresh_trends=options.refresh_trends,
+                trend_limit_per_domain=options.trend_limit_per_domain,
+            )
+        )
 
     if options.start_articles:
         if report["preflight"]["brief"].get("work_ready"):
@@ -155,6 +167,7 @@ def run_launch(options: LaunchOptions) -> dict[str, Any]:
     report["issues"].extend(report["log_scan"].get("issues", []))
     report["issues"] = sorted(set(report["issues"]))
     report["finished_at"] = datetime.now(UTC).isoformat()
+    report["ok"] = not report["issues"] and not report.get("article_start_blocked", False)
     report["report_path"] = str(_write_report(report))
     _remember(
         "rankstein_launcher_finish",
@@ -225,20 +238,30 @@ def _serializable_options(options: LaunchOptions) -> dict[str, Any]:
 
 
 def _ensure_article_workers(options: LaunchOptions) -> dict[str, Any]:
+    resources = log_manager.check_resource_budget()
+    if not resources["ok"]:
+        return {"running": False, "started": False, "error": "; ".join(resources["issues"])}
     matches = _find_processes("turbo_articles.py")
     if matches:
         return {"running": True, "started": False, "processes": matches}
     proxy_url = _model_proxy_url()
+    command = [
+        str(PROJECT_PYTHON),
+        str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+        "--workers",
+        str(options.workers_per_domain),
+        "--limit",
+        str(options.keywords_per_domain),
+        "--once",
+    ]
+    if options.domains:
+        if len(options.domains) != 1:
+            return {"running": False, "started": False, "error": "Select one domain or all domains"}
+        command.extend(["--domain", options.domains[0]])
+    else:
+        command.append("--all-domains")
     proc = _start_background(
-        [
-            str(PROJECT_PYTHON),
-            str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py"),
-            "--all-domains",
-            "--workers",
-            str(options.workers_per_domain),
-            "--limit",
-            str(options.keywords_per_domain),
-        ],
+        command,
         PROJECT_ROOT,
         "articles.log",
         "articles_err.log",
@@ -370,17 +393,9 @@ def _add_duplicate_process_issues(report: dict[str, Any]) -> None:
 
 
 def _dedupe_singleton_processes(report: dict[str, Any]) -> None:
-    processes = report.get("processes", {})
-    cleanup: dict[str, Any] = {}
-    for label in ("article_workers", "pinterest_supervisors", "odysseus_proxy"):
-        matches = processes.get(label, [])
-        if len(matches) <= 1:
-            continue
-        result = _dedupe_matches(matches)
-        cleanup[label] = result
-        processes[label] = result["kept"]
-    if cleanup:
-        report["process_cleanup"] = cleanup
+    # Python virtualenv shims and their child interpreter share a command.
+    # Matching text is not ownership proof and must never authorize a kill.
+    report["process_cleanup"] = {"automatic_kills": False, "reason": "Lease-owned execution only"}
 
 
 def _dedupe_matches(matches: list[dict[str, Any]]) -> dict[str, Any]:

@@ -34,6 +34,23 @@ def _domain(categories: tuple[str, ...]) -> Domain:
     )
 
 
+def _inline_trend_validation(monkeypatch) -> None:
+    """Exercise the unchanged strict service with isolated mocked providers."""
+
+    async def validate(domain, pinterest_terms, **kwargs):
+        return trend_intelligence.refresh_domain_trend_lists(
+            [domain],
+            limit_per_domain=15,
+            append_to_roadmap=True,
+            pinterest_terms=pinterest_terms,
+            region=kwargs["region"],
+            use_playwright=True,
+            candidate_origin_policy="pinterest_required",
+        )
+
+    monkeypatch.setattr(turbo, "_run_bounded_trend_validation", validate)
+
+
 @pytest.mark.unit
 def test_normalize_category_maps_main_dishes_to_domain_category() -> None:
     domain = _domain(("Aperitivos", "Postres", "Carnes", "Pescados", "Ensaladas"))
@@ -118,6 +135,7 @@ def test_empty_queue_refresh_requires_pinterest_origin_candidates(monkeypatch) -
 
     monkeypatch.setattr(trend_intelligence, "refresh_domain_trend_lists", fake_refresh)
     monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
+    _inline_trend_validation(monkeypatch)
 
     added = asyncio.run(turbo._auto_refresh_keywords(_domain(("Postres",))))
 
@@ -159,6 +177,7 @@ async def test_refresh_ranks_new_longtails_after_excluding_attempted_and_publish
     monkeypatch.setattr(trend_intelligence, "fetch_google_autocomplete_terms", google_only)
     monkeypatch.setattr(trend_intelligence, "fetch_google_news_discovery_terms", google_only)
     monkeypatch.setattr(trend_intelligence, "fetch_google_trending_terms", google_only)
+    _inline_trend_validation(monkeypatch)
 
     added = await turbo._auto_refresh_keywords(domain, excluded_keywords=set(old_terms))
 
@@ -195,6 +214,7 @@ async def test_production_refresh_exclusions_are_domain_local(tmp_path, monkeypa
 
     monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
     monkeypatch.setattr(trend_intelligence, "refresh_domain_trend_lists", refresh)
+    _inline_trend_validation(monkeypatch)
     await asyncio.gather(turbo._auto_refresh_keywords(first), turbo._auto_refresh_keywords(second))
     assert calls == {"first": [], "second": ["tarta de coco"]}
 
@@ -265,7 +285,7 @@ async def test_worker_does_not_reserve_old_pending_foreign_generic_or_off_domain
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_production_refresh_deadline_cancels_and_cleans_up_collector(monkeypatch) -> None:
+async def test_production_refresh_deadline_cancels_and_cleans_up_collector(monkeypatch, caplog) -> None:
     cleaned_up = []
     real_wait_for = asyncio.wait_for
 
@@ -287,6 +307,191 @@ async def test_production_refresh_deadline_cancels_and_cleans_up_collector(monke
     monkeypatch.setattr(turbo.asyncio, "wait_for", short_deadline)
     assert await turbo._auto_refresh_keywords(_domain(("Postres",))) == 0
     assert cleaned_up == [True]
+    assert "TimeoutError during pinterest_collection (deadline=300s" in caplog.text
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["timeout", "error", "cancel", "success"])
+async def test_research_reason_tracks_real_stage_deadline_and_terminal_state(monkeypatch, failure) -> None:
+    reasons = []
+
+    class Tracker:
+        def mark_domain_waiting(self, handle, reason):
+            reasons.append((handle, reason))
+
+    async def collect(*args):
+        return ["tarta de coco"]
+
+    async def validate(*args, **kwargs):
+        assert reasons[-1][1].startswith("research_in_progress stage=exact_validation")
+        assert "deadline_seconds=600" in reasons[-1][1]
+        if failure == "timeout":
+            raise TimeoutError
+        if failure == "error":
+            raise ValueError("isolated validation error")
+        if failure == "cancel":
+            raise asyncio.CancelledError
+        return {"domains": {"test": {"roadmap_added": 2}}}
+
+    monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", Tracker())
+    monkeypatch.setattr(trend_intelligence, "_fetch_pinterest_niche_trending_terms_async", collect)
+    monkeypatch.setattr(turbo, "_run_bounded_trend_validation", validate)
+    if failure == "cancel":
+        with pytest.raises(asyncio.CancelledError):
+            await turbo._auto_refresh_keywords(_domain(("Postres",)))
+    else:
+        assert await turbo._auto_refresh_keywords(_domain(("Postres",))) == (2 if failure == "success" else 0)
+
+    assert reasons[0][1].startswith("research_in_progress stage=pinterest_collection")
+    assert "deadline_seconds=300" in reasons[0][1]
+    assert "deadline_at=" in reasons[0][1]
+    expected = {
+        "timeout": "research_timeout",
+        "error": "research_failed",
+        "cancel": "research_cancelled",
+        "success": "research_complete",
+    }[failure]
+    assert reasons[-1][1].startswith(f"{expected} stage=exact_validation")
+    if failure != "success":
+        assert "error_type=" in reasons[-1][1]
+    else:
+        assert "new_pending_count=2" in reasons[-1][1]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_trend_validation_child_receives_exact_phrases_and_no_credentials(monkeypatch) -> None:
+    captured = {}
+
+    class Process:
+        returncode = None
+        pid = 42001
+
+        async def communicate(self, request):
+            captured["request"] = json.loads(request)
+            self.returncode = 0
+            return b'{"report":{"domains":{"test":{"roadmap_added":1}}}}', b""
+
+    async def spawn(*args, **kwargs):
+        captured["args"] = args
+        return Process()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    report = await turbo._run_bounded_trend_validation(
+        _domain(("Postres",)), ["tarta de coco"], region="ES", timeout=5
+    )
+
+    assert report["domains"]["test"]["roadmap_added"] == 1
+    request = captured["request"]
+    assert request["pinterest_terms"] == ["tarta de coco"]
+    assert request["domain"]["handle"] == "test"
+    assert request["domain"]["domain"] == "test.example"
+    assert not {"pinterest_email", "pinterest_password", "supabase_url", "supabase_service_role_key"} & set(
+        request["domain"]
+    )
+    assert 'candidate_origin_policy="pinterest_required"' in captured["args"][-1]
+    assert "tarta de coco" not in " ".join(captured["args"])
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["timeout", "cancel", "exception"])
+async def test_trend_validation_failure_reaps_child_and_prevents_late_roadmap_writes(
+    monkeypatch, failure
+) -> None:
+    started = asyncio.Event()
+    terminated = []
+    late_writes = []
+
+    class Process:
+        returncode = None
+        pid = 42002
+        writing = None
+
+        async def communicate(self, request):
+            async def write_later():
+                await asyncio.sleep(0.02)
+                late_writes.append("unauthorized late roadmap write")
+
+            self.writing = asyncio.create_task(write_later())
+            started.set()
+            if failure == "exception":
+                raise OSError("isolated pipe failure")
+            await asyncio.Future()
+
+    process = Process()
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    async def terminate(owned):
+        assert owned is process
+        terminated.append(owned.pid)
+        owned.writing.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await owned.writing
+        owned.returncode = -9
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    monkeypatch.setattr(turbo, "_terminate_process_tree", terminate)
+    task = asyncio.create_task(
+        turbo._run_bounded_trend_validation(
+            _domain(("Postres",)), ["tarta de coco"], region="ES", timeout=0.001
+        )
+    )
+    await started.wait()
+    if failure == "cancel":
+        task.cancel()
+    error = {"timeout": TimeoutError, "cancel": asyncio.CancelledError, "exception": OSError}[failure]
+    with pytest.raises(error):
+        await task
+    await asyncio.sleep(0.025)
+    assert terminated == [process.pid]
+    assert late_writes == []
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_real_cancelled_validation_process_cannot_write_roadmap_after_return(
+    tmp_path, monkeypatch
+) -> None:
+    domain = replace(_domain(("Postres",)), root=tmp_path, keywords_file=tmp_path / "roadmap.md")
+    children = []
+    original_spawn = turbo._create_owned_subprocess
+    worker = """
+import json,sys,time
+from pathlib import Path
+request=json.loads(sys.stdin.buffer.read().decode('utf-8'))
+roadmap=Path(request['domain']['keywords_file'])
+roadmap.with_suffix('.started').write_text('started')
+time.sleep(10)
+roadmap.write_text('late write must never happen')
+"""
+
+    async def capture_spawn(*args, **kwargs):
+        process = await original_spawn(*args, **kwargs)
+        children.append(process)
+        return process
+
+    monkeypatch.setattr(turbo, "_TREND_VALIDATION_WORKER", worker)
+    monkeypatch.setattr(turbo, "_create_owned_subprocess", capture_spawn)
+    try:
+        with pytest.raises(TimeoutError):
+            await turbo._run_bounded_trend_validation(domain, ["tarta de coco"], region="ES", timeout=5)
+        assert domain.keywords_file.with_suffix(".started").exists()
+        assert len(children) == 1 and children[0].returncode is not None
+        assert not domain.keywords_file.exists()
+    finally:
+        for process in children:
+            await turbo._cleanup_owned_process(process)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("configured,expected", [("900", 300), ("nan", 300), ("-1", 300), ("12", 12)])
+def test_trend_deadlines_are_bounded(configured, expected, monkeypatch) -> None:
+    monkeypatch.setenv("TEST_TREND_DEADLINE", configured)
+    assert turbo._trend_research_deadline("TEST_TREND_DEADLINE", 300) == expected
 
 
 @pytest.mark.unit
@@ -393,7 +598,7 @@ async def test_published_target_waits_for_pins_without_creating_extra_articles(m
         def mark_domain_waiting(self, handle, reason):
             reasons.append(reason)
 
-    async def reconcile(_):
+    async def reconcile(_, **kwargs):
         pass
 
     async def sleep(seconds):
@@ -512,6 +717,205 @@ async def test_late_primary_pin_is_reconciled_with_the_shared_live_tracker(tmp_p
     assert calls[0]["batch_tracker"] is tracker
     assert calls[0]["primary_job_id"] == "primary-exact"
     assert calls[0]["pipeline_run_id"] == run_id
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_article_worker_generates_while_owned_campaign_repair_is_running(tmp_path, monkeypatch) -> None:
+    import rankstein.production_safety as safety
+    from rankstein.keyword_roadmap import EXPECTED_HEADER
+
+    domain = replace(_domain(("Postres",)), root=tmp_path, keywords_file=tmp_path / "keywords.md")
+    domain.keywords_file.write_text(
+        f"# Test\n\n{EXPECTED_HEADER}\n|---|---|---|---|---|---|\n"
+        "| tarta de coco | Postres | Pinterest Trends | test | High | Pending |\n",
+        encoding="utf-8",
+    )
+    repair_started = asyncio.Event()
+    repair_cleaned = asyncio.Event()
+    created = []
+
+    class Tracker:
+        def __init__(self):
+            self.data = {"domains": {"test": {"articles": []}}}
+
+        def attempted_keyword_keys(self, handle):
+            return set()
+
+        def verified(self, handle):
+            return 0
+
+        def published_count(self, handle):
+            return len(created)
+
+        def start_keyword(self, *args):
+            pass
+
+        def complete_keyword(self, *args):
+            pass
+
+    async def repair(_, **kwargs):
+        assert kwargs["max_campaigns"] == 1
+        repair_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            repair_cleaned.set()
+
+    async def article(keyword, *args, **kwargs):
+        await repair_started.wait()
+        assert not repair_cleaned.is_set()
+        created.append(keyword)
+        return "Needs Verification"
+
+    async def sleep(seconds):
+        assert seconds == 2
+        raise RuntimeError("test worker checkpoint")
+
+    monkeypatch.setattr(safety, "campaign_admission", lambda *args, **kwargs: {"ok": True})
+    monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", Tracker())
+    monkeypatch.setattr(turbo, "_reconcile_awaiting_articles", repair)
+    monkeypatch.setattr(turbo, "_load_pinterest_qualified_keyword_keys", lambda _: ({"tarta de coco"}, "ok"))
+    monkeypatch.setattr(turbo, "process_keyword", article)
+    monkeypatch.setattr(turbo.asyncio, "sleep", sleep)
+    with pytest.raises(RuntimeError, match="test worker checkpoint"):
+        await turbo._run_domain(domain, workers=1, limit=1, once=False, success_target=10)
+    assert created == ["tarta de coco"]
+    assert repair_cleaned.is_set()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_campaign_repair_lane_singleflight_cooldown_and_cursor(monkeypatch) -> None:
+    now = [100.0]
+    calls = []
+
+    async def repair(_, **kwargs):
+        calls.append(kwargs)
+        return kwargs["cursor"] + 1
+
+    monkeypatch.setattr(turbo, "_reconcile_awaiting_articles", repair)
+    monkeypatch.setattr(turbo.time, "monotonic", lambda: now[0])
+    lane = turbo._DomainRepairLane(_domain(("Postres",)))
+    lane.schedule()
+    first = lane.task
+    lane.schedule()
+    assert lane.task is first
+    await first
+    lane.schedule()
+    assert lane.task is None
+    assert lane.cursor == 1
+    now[0] += 61
+    lane.schedule()
+    await lane.task
+    await lane.close()
+    assert calls == [{"max_campaigns": 1, "cursor": 0}, {"max_campaigns": 1, "cursor": 1}]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_campaign_repair_close_waits_for_cleanup_despite_repeated_parent_cancel(monkeypatch) -> None:
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def repair(_, **kwargs):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+
+    monkeypatch.setattr(turbo, "_reconcile_awaiting_articles", repair)
+    lane = turbo._DomainRepairLane(_domain(("Postres",)))
+    lane.schedule()
+    await started.wait()
+    closing = asyncio.create_task(lane.close())
+    await cleaning.wait()
+    closing.cancel()
+    await asyncio.sleep(0)
+    assert not closing.done()
+    release.set()
+    await closing
+    assert lane.task is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_bounded_campaign_reconciliation_rotates_failed_reports(tmp_path, monkeypatch) -> None:
+    import pinterest_automation
+    import rankstein.pipeline_events as events
+    import rankstein.production_reconcile as reconcile
+    from rankstein.production_batch import ProductionBatchTracker
+
+    domain = replace(_domain(("Postres",)), root=tmp_path)
+    db = tmp_path / "events.db"
+    tracker = ProductionBatchTracker(
+        project_root=tmp_path,
+        batch_id="production-fair-repair",
+        domain_handles=[domain.handle],
+        target_per_domain=10,
+    )
+    runs = []
+    for keyword in ("tarta de coco", "tarta de pera"):
+        run_id = events.start_pipeline_run(domain_handle=domain.handle, keyword=keyword, db_path=db)
+        runs.append(run_id)
+        events.record_pipeline_stage(
+            run_id, "primary_pin_publish", "complete", details={"primary_job_id": run_id}, db_path=db
+        )
+        tracker.start_keyword(domain.handle, keyword, "Postres", "Pinterest Trends")
+        tracker.attach_run(domain.handle, keyword, run_id)
+        tracker.complete_keyword(domain.handle, keyword, "Needs Verification")
+
+    class Queue:
+        async def get_job_outcome_async(self, job_id):
+            return {"state": "completed"}
+
+    calls = []
+
+    async def failed_campaign(**kwargs):
+        calls.append(kwargs["pipeline_run_id"])
+        raise reconcile.ReconciliationError("insufficient_clean_sources")
+
+    monkeypatch.setattr(events, "PIPELINE_DB", db)
+    monkeypatch.setattr(turbo, "_PRODUCTION_BATCH_TRACKER", tracker)
+    monkeypatch.setattr(pinterest_automation, "get_job_queue", lambda: Queue())
+    monkeypatch.setattr(reconcile, "reconcile_production_article", failed_campaign)
+    cursor = await turbo._reconcile_awaiting_articles(domain, max_campaigns=1)
+    await turbo._reconcile_awaiting_articles(domain, max_campaigns=1, cursor=cursor)
+    assert calls == runs
+    assert tracker.verified(domain.handle) == 0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_remaster_launches_share_domain_lock_and_recheck_after_wait(monkeypatch) -> None:
+    first_started = asyncio.Event()
+    release = asyncio.Event()
+    proven = []
+
+    async def launch(**kwargs):
+        if proven:
+            return {"success": True, "reused_existing_report": True}
+        first_started.set()
+        await release.wait()
+        proven.append(kwargs["pipeline_run_id"])
+        return {"success": True}
+
+    monkeypatch.setattr(turbo, "_launch_article_remaster_campaign_unlocked", launch)
+    args = dict(
+        keyword="tarta", title="Tarta", slug="tarta", category="Postres", domain=_domain(("Postres",))
+    )
+    first = asyncio.create_task(turbo._launch_article_remaster_campaign(**args, pipeline_run_id="exact"))
+    await first_started.wait()
+    second = asyncio.create_task(turbo._launch_article_remaster_campaign(**args, pipeline_run_id="exact"))
+    await asyncio.sleep(0)
+    assert not second.done()
+    release.set()
+    results = await asyncio.gather(first, second)
+    assert proven == ["exact"]
+    assert results[1]["reused_existing_report"] is True
 
 
 @pytest.mark.unit

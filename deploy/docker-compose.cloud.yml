@@ -1,0 +1,81 @@
+name: rankstein-cloud
+
+x-runtime: &runtime
+  image: rankstein-cloud:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.cloud
+  # Linux only. Keep the control plane private; access it through an SSH tunnel.
+  network_mode: host
+  init: true
+  user: "1000:1000"
+  env_file:
+    - ${RANKSTEIN_CLOUD_ENV_FILE:-/srv/rankstein/secrets/runtime.env}
+  environment:
+    RANKSTEIN_EXTERNAL_SERVICES: operator,hermes_codex,hermes_dashboard,agentmemory
+    RANKSTEIN_ARTICLE_PROVIDER: hermes-codex
+    PINTEREST_DEFAULT_BROWSER: chromium
+    PINTEREST_CHROMIUM_CHANNEL: ""
+    PINTEREST_WORKER_COUNT: "2"
+    PINTEREST_MAX_WORKERS: "2"
+    PINTEREST_MAX_SESSIONS: "2"
+    RANKSTEIN_SKIP_SUPERVISOR_ARTICLES: "1"
+    RANKSTEIN_ENABLE_REMASTER_SIPHON: "0"
+    RANKSTEIN_ENQUEUE_UNPINNED_POSTS: "0"
+    RANKSTEIN_ENQUEUE_REMASTER_FOLDER: "0"
+  volumes:
+    - ${RANKSTEIN_CLOUD_STATE_DIR:-/srv/rankstein/state}/data:/app/data
+    - ${RANKSTEIN_CLOUD_STATE_DIR:-/srv/rankstein/state}/memory:/app/memory
+    - ${RANKSTEIN_CLOUD_STATE_DIR:-/srv/rankstein/state}/nanobanana-output:/app/nanobanana-output
+  read_only: true
+  tmpfs:
+    - /tmp:size=512m,mode=1777
+  shm_size: 512m
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  pids_limit: 256
+  stop_grace_period: 90s
+  restart: unless-stopped
+
+services:
+  operator:
+    <<: *runtime
+    mem_limit: 1g
+    cpus: 0.75
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:7000/health]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+  supervisor:
+    <<: *runtime
+    profiles: [production]
+    command: [python, -m, rankstein.cloud_runtime, supervisor]
+    mem_limit: 3g
+    cpus: 1.5
+    depends_on:
+      operator:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -m, rankstein.cloud_runtime, health, --role, supervisor]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+  scheduler:
+    <<: *runtime
+    profiles: [production]
+    command: [python, -m, rankstein.cloud_runtime, scheduler]
+    mem_limit: 3g
+    cpus: 1.5
+    depends_on:
+      supervisor:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -m, rankstein.cloud_runtime, health, --role, scheduler]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3

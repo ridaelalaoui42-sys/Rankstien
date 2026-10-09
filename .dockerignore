@@ -79,6 +79,29 @@ BACKEND_BLUEPRINT.md
 gemini_rankstein_prompt.md
 *.md
 
+# Maintained runtime contracts must accompany the application.
+!README.md
+!AGENTS.md
+!GEMINI.md
+!docs/**/*.md
+
+# No private domain payload, snapshot, or local tool identity enters any image.
+data/
+memory/
+.codex/
+.agentmemory/
+.hermes/
+.gcloud/
+scratch/
+secrets/
+**/auth.json
+**/credentials.json
+**/storage-state*.json
+*.exe
+*.dll
+*.pyd
+*.log.gz
+
 # ── Archived / one-off / duplicate trees ──────────────────────────────
 archive
 scripts/oneoff

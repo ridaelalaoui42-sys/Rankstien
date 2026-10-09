@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,7 +21,9 @@ from . import log_manager
 from .config import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data"
-PROJECT_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
+PROJECT_PYTHON = PROJECT_ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+if not PROJECT_PYTHON.exists():
+    PROJECT_PYTHON = Path(sys.executable)
 
 RUNTIME_DIR = DATA_DIR / "runtime"
 CAMPAIGN_LEASE_FILE = RUNTIME_DIR / "campaign_lease.json"
@@ -264,9 +268,9 @@ def _http_probe(url: str, timeout: float = 2.0) -> dict[str, Any]:
             if secret:
                 headers["Authorization"] = f"Bearer {secret}"
         req = Request(url, headers=headers)  # noqa: S310
-        response = urlopen(req, timeout=timeout)  # noqa: S310
-        status = response.getcode()
-        body = response.read().decode("utf-8")[:200]
+        with urlopen(req, timeout=timeout) as response:  # noqa: S310
+            status = response.getcode()
+            body = response.read(4096).decode("utf-8", errors="replace")[:200]
         return {"ok": 200 <= status < 300, "status": status, "body": body}
     except URLError as e:
         return {"ok": False, "error": str(e.reason)}
@@ -311,7 +315,7 @@ def preflight() -> dict[str, Any]:
         report["issues"].append(f"Virtualenv python missing: {PROJECT_PYTHON}")
 
     # Check Hermes
-    if not _hermes_exe or not shutil.which(_hermes_exe):
+    if "hermes_codex" not in external_services() and (not _hermes_exe or not shutil.which(_hermes_exe)):
         report["ok"] = False
         report["issues"].append("Hermes CLI not found on PATH")
 
@@ -564,8 +568,12 @@ def restart_services() -> dict[str, Any]:
     return start_services()
 
 
-def install_tasks() -> None:
+def install_tasks(*, daily_at: str = "06:30") -> None:
     """Install Windows Scheduled Tasks."""
+    if os.name != "nt":
+        raise RuntimeError("Windows tasks are only supported on Windows")
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", daily_at):
+        raise ValueError("Daily time must be HH:MM in local time")
     script_path = str(PROJECT_ROOT / "rankstein.py")
     python_exe = str(PROJECT_PYTHON)
 
@@ -573,27 +581,27 @@ def install_tasks() -> None:
     cmd1 = f"""
     $Action = New-ScheduledTaskAction -Execute "{python_exe}" -Argument '"{script_path}" suite start' -WorkingDirectory "{PROJECT_ROOT}"
     $Trigger = New-ScheduledTaskTrigger -AtLogOn
-    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5)
     Register-ScheduledTask -TaskName "RankStein-Suite-Startup" -Action $Action -Trigger $Trigger -Settings $Settings -Force
     """
 
     # 2. Daily Campaign Task (starts the pipeline)
     cmd2 = f"""
-    $Action = New-ScheduledTaskAction -Execute "{python_exe}" -Argument '"{script_path}" launch --all' -WorkingDirectory "{PROJECT_ROOT}"
-    $Trigger = New-ScheduledTaskTrigger -Daily -At 06:30
-    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+    $Action = New-ScheduledTaskAction -Execute "{python_exe}" -Argument '"{script_path}" launch --all --keywords 1 --workers 1' -WorkingDirectory "{PROJECT_ROOT}"
+    $Trigger = New-ScheduledTaskTrigger -Daily -At {daily_at}
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1)
     Register-ScheduledTask -TaskName "RankStein-Daily-Campaign" -Action $Action -Trigger $Trigger -Settings $Settings -Force
     """
 
-    subprocess.run(["powershell.exe", "-Command", cmd1], check=True)
-    subprocess.run(["powershell.exe", "-Command", cmd2], check=True)
+    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", cmd1], check=True)
+    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", cmd2], check=True)
     print("Installed Windows Scheduled Tasks: RankStein-Suite-Startup, RankStein-Daily-Campaign")
 
 
 def uninstall_tasks() -> None:
     """Uninstall Windows Scheduled Tasks."""
     cmd = """
-    $Tasks = @("RankStein-Suite-Startup", "RankStein-Daily-Campaign", "Hermes_Gateway", "Hermes_Web_UI", "Odysseus_Server", "RankStein_Launch_All")
+    $Tasks = @("RankStein-Suite-Startup", "RankStein-Daily-Campaign")
     foreach ($T in $Tasks) {
         if (Get-ScheduledTask -TaskName $T -ErrorAction SilentlyContinue) {
             Unregister-ScheduledTask -TaskName $T -Confirm:$false
@@ -603,6 +611,23 @@ def uninstall_tasks() -> None:
     """
     subprocess.run(["powershell.exe", "-Command", cmd], check=True)
     print("Uninstalled Windows Scheduled Tasks")
+
+
+def restart_service(name: str) -> dict[str, Any]:
+    """Restart one suite-owned service, never unrelated or externally owned processes."""
+    spec = next((service for service in SERVICES if service.name == name), None)
+    if spec is None:
+        return {"ok": False, "error": "Unknown suite service"}
+    if name in external_services():
+        return {"ok": False, "error": "Service is externally managed; restart it through its owner"}
+    if _port_open(spec.port) and not _stop_owned_service(spec):
+        return {"ok": False, "error": "Service ownership could not be verified; no process was stopped"}
+    deadline = time.monotonic() + 10
+    while _port_open(spec.port) and time.monotonic() < deadline:
+        time.sleep(0.2)
+    if _port_open(spec.port):
+        return {"ok": False, "error": "Service port remains occupied"}
+    return start_services()
 
 
 def ensure_services_running() -> dict[str, Any]:

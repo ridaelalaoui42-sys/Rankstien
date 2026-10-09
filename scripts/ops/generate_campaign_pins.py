@@ -143,12 +143,17 @@ def create_pin_image(hero_path: str, title: str, brand: str, style: str = "class
 def move_to_remaster(pin_path: str, slug: str, domain_handle: str) -> str:
     """Move/copy final pin to remaster_final with proper naming."""
     src = Path(pin_path)
-    dst = REMASTER_DIR / f"remastered_v4_{domain_handle}_{slug}.jpg"
+    from datetime import datetime as _dt
+
+    day = _dt.now().strftime("%Y-%m-%d")
+    target_dir = REMASTER_DIR / domain_handle / day / slug
+    target_dir.mkdir(parents=True, exist_ok=True)
+    dst = target_dir / f"remastered_v4_{domain_handle}_{slug}.jpg"
     if src.exists():
         import shutil
 
         shutil.copy2(str(src), str(dst))
-        logger.info("Saved to remaster_final: %s", dst.name)
+        logger.info("Saved to remaster_final: %s", dst)
         return str(dst)
     return ""
 
@@ -214,7 +219,7 @@ def main():
     logger.info("Output directory: %s", REMASTER_DIR)
 
     # Count final files
-    final_count = len(list(REMASTER_DIR.glob("*.jpg")) + list(REMASTER_DIR.glob("*.png")))
+    final_count = len(list(REMASTER_DIR.rglob("*.jpg")) + list(REMASTER_DIR.rglob("*.png")))
     logger.info("Files in remaster_final: %d", final_count)
 
 

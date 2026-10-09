@@ -278,3 +278,33 @@ def test_codex_portrait_response_is_normalized_to_landscape(tmp_path: Path) -> N
     assert dimensions == (1536, 1024)
     with Image.open(path) as image:
         assert image.size == (1536, 1024)
+
+
+@pytest.mark.unit
+def test_recipe_card_pin_supports_bright_infographic_and_classic_styles(
+    food_source: Path, tmp_path: Path
+) -> None:
+    common = {
+        "source_path": str(food_source),
+        "title": "Tarta de queso vasca",
+        "domain_handle": "recetagenial",
+        "pair_id": "source-01",
+        "output_dir": tmp_path,
+        "ingredients": ["600 g queso crema", "4 huevos", "200 g azúcar"],
+        "steps": ["Bate el queso con azúcar.", "Añade huevos.", "Hornea a 210 °C."],
+        "tip_text": "Dejar enfriar a temperatura ambiente.",
+    }
+    bright = create_recipe_card_pin(**common, card_style="bright_infographic")
+    assert bright["success"] is True
+    assert bright["variant"] == "recipe_card"
+    assert bright["card_style"] == "bright_infographic"
+    assert Path(bright["output_path"]).name.endswith("source-01-recipe-card.jpg")
+    with Image.open(bright["output_path"]) as img:
+        assert img.size == (1000, 1500)
+
+    classic = create_recipe_card_pin(**common, card_style="classic")
+    assert classic["success"] is True
+    assert classic["variant"] == "recipe_card"
+    assert Path(classic["output_path"]).name.endswith("source-01-recipe-card.jpg")
+    with Image.open(classic["output_path"]) as img:
+        assert img.size == (1000, 1500)

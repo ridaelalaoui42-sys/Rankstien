@@ -58,6 +58,7 @@ def selected_sources(monkeypatch, tmp_path):
     monkeypatch.setattr(remasterer, "_held_campaign_source_pin_ids", lambda *_args, **_kwargs: set())
     monkeypatch.setattr(remasterer, "_pipeline_event", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(remasterer, "_pipeline_status", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(remasterer, "record_pipeline_stage", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(remasterer, "REMASTER_DIR", tmp_path)
     return sources
 

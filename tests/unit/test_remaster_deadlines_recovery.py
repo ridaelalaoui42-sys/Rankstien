@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import json
 import sqlite3
+import time
 import warnings
 from io import BytesIO
 from pathlib import Path
@@ -12,15 +14,18 @@ import pytest
 from PIL import Image
 
 from backend.services import remasterer
+from rankstein import pipeline_events
 
 
 @pytest.fixture(autouse=True)
 def isolated_artifacts(monkeypatch, tmp_path):
+    monkeypatch.setattr(remasterer, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(remasterer, "DOWNLOAD_DIR", tmp_path / "raw")
     monkeypatch.setattr(remasterer, "REMASTER_DIR", tmp_path / "final")
     monkeypatch.setattr(remasterer, "SESSION_DIR", tmp_path / "profiles" / "default")
     monkeypatch.setattr(remasterer, "_pipeline_event", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(remasterer, "_pipeline_status", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(remasterer, "record_pipeline_stage", lambda *_args, **_kwargs: None)
 
 
 class FakeStudio:
@@ -203,6 +208,152 @@ def test_actual_held_source_exclusions_are_exact_read_only_domain_run_scoped(tmp
 
 
 @pytest.mark.unit
+def test_preflight_resolves_configured_queue_without_cold_automation_import(monkeypatch, tmp_path):
+    shared = tmp_path / "configured.db"
+    monkeypatch.setenv("PINTEREST_QUEUE_DB_FILE", str(shared))
+    domain_root = tmp_path / "data" / "domains" / "recetagenial"
+    domain_root.mkdir(parents=True)
+    (domain_root / "domain.json").write_text(
+        json.dumps({"handle": "recetagenial", "domain": "recetagenial.com"}), encoding="utf-8"
+    )
+    original_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name.startswith("pinterest_automation") or name == "rankstein.domain":
+            raise AssertionError("held preflight must not cold-boot automation or domain providers")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    assert remasterer._configured_held_source_queue_paths("recetagenial") == [
+        shared,
+        domain_root / "jobs.db",
+    ]
+    assert remasterer._held_campaign_source_pin_ids("recetagenial", "isolated-run") == set()
+
+
+@pytest.mark.unit
+def test_preflight_queue_path_honors_dotenv_and_environment_precedence(monkeypatch, tmp_path):
+    monkeypatch.delenv("PINTEREST_QUEUE_DB_FILE", raising=False)
+    (tmp_path / ".env").write_text("PINTEREST_QUEUE_DB_FILE=configured-from-dotenv.db\n", encoding="utf-8")
+    assert remasterer._configured_held_source_queue_paths("recetadolce") == [
+        Path("configured-from-dotenv.db"),
+        tmp_path / "jobs.db",
+    ]
+    monkeypatch.setenv("PINTEREST_QUEUE_DB_FILE", "")
+    assert remasterer._configured_held_source_queue_paths("recetadolce")[0] == (
+        tmp_path / "data" / "queue" / "jobs.db"
+    )
+    with pytest.raises(ValueError, match="unknown domain"):
+        remasterer._configured_held_source_queue_paths("unknown")
+
+
+@pytest.mark.unit
+def test_preflight_has_bounded_cold_start_allowance_before_browser(monkeypatch, tmp_path):
+    studio = FakeStudio()
+
+    def delayed_read(*_args):
+        time.sleep(0.05)
+        return {"123"}
+
+    monkeypatch.setattr(remasterer, "_held_campaign_source_pin_ids", delayed_read)
+    assert remasterer.HELD_SOURCE_PREFLIGHT_TIMEOUT_SECONDS == 30.0
+    assert asyncio.run(_intake(studio, tmp_path)) == []
+    assert studio.started is True
+    assert studio.arguments["excluded_pin_ids"] == {"123"}
+    assert "blocked_reason" not in studio.last_collection_diagnostics
+
+
+@pytest.mark.unit
+def test_collector_heartbeat_reaches_dashboard_events_without_raw_ocr(monkeypatch, tmp_path):
+    studio = FakeStudio()
+    database = tmp_path / "telemetry.db"
+    # Production already owns a keyword run before launching the child. Wait
+    # for a committed progress event rather than assuming an 80ms write on a
+    # loaded host: late writes after completion must intentionally be dropped.
+    pipeline_events.record_pipeline_stage(
+        "isolated-run",
+        "keyword_selected",
+        "complete",
+        domain_handle="recetadolce",
+        keyword="pastel de zanahoria sin horno",
+        db_path=database,
+    )
+    progress_seen = asyncio.Event()
+    loop_holder = []
+    monkeypatch.setattr(remasterer, "_held_campaign_source_pin_ids", lambda *_args: set())
+    monkeypatch.setattr(remasterer, "COLLECTION_PROGRESS_INTERVAL_SECONDS", 0.01)
+
+    def isolated_record(*args, **kwargs):
+        pipeline_events.record_pipeline_stage(*args, **kwargs, db_path=database)
+        loop_holder[0].call_soon_threadsafe(progress_seen.set)
+
+    monkeypatch.setattr(remasterer, "record_pipeline_stage", isolated_record)
+
+    async def slow_collection(*_args, **kwargs):
+        studio.arguments = kwargs
+        studio.last_collection_diagnostics.update(
+            accepted=3, pins_examined=12, ocr_in_progress=1, raw_ocr="PRIVATE SOURCE TEXT"
+        )
+        await asyncio.wait_for(progress_seen.wait(), timeout=3.0)
+        return []
+
+    monkeypatch.setattr(studio, "collect_and_download", slow_collection)
+
+    async def exercise():
+        loop_holder.append(asyncio.get_running_loop())
+        return await _intake(studio, tmp_path)
+
+    assert asyncio.run(exercise()) == []
+    with sqlite3.connect(database) as connection:
+        run = connection.execute("SELECT domain_handle,keyword FROM pipeline_runs").fetchone()
+        events = connection.execute(
+            "SELECT stage,state,message,details_json FROM pipeline_events WHERE stage='pinterest_siphon' ORDER BY id"
+        ).fetchall()
+    assert run == ("recetadolce", "pastel de zanahoria sin horno")
+    assert events
+    assert all(row[0:2] == ("pinterest_siphon", "running") for row in events)
+    progress = next(row for row in events if json.loads(row[3])["accepted"] == 3)
+    counters = json.loads(progress[3])
+    assert counters["accepted"] == 3
+    assert counters["examined"] == 12
+    assert counters["target"] == 15
+    assert counters["remaining_sources"] == 12
+    assert counters["ocr_in_progress"] == 1
+    assert counters["domain_handle"] == "recetadolce"
+    assert "3/15 accepted" in progress[2]
+    assert "12 examined" in progress[2]
+    assert "12 remaining" in progress[2]
+    assert "PRIVATE SOURCE TEXT" not in str(events)
+    assert "raw_ocr" not in str(events)
+
+
+@pytest.mark.unit
+def test_failed_progress_writer_does_not_interrupt_source_collection(monkeypatch, tmp_path):
+    studio = FakeStudio()
+    writes = []
+    monkeypatch.setattr(remasterer, "_held_campaign_source_pin_ids", lambda *_args: set())
+    monkeypatch.setattr(remasterer, "COLLECTION_PROGRESS_INTERVAL_SECONDS", 0.01)
+
+    def unavailable(*_args, **_kwargs):
+        writes.append(True)
+        raise sqlite3.OperationalError("isolated lock failure")
+
+    monkeypatch.setattr(remasterer, "record_pipeline_stage", unavailable)
+
+    async def slow_collection(*_args, **kwargs):
+        studio.arguments = kwargs
+        await asyncio.sleep(0.04)
+        return [{"pin_id": "123", "raw_path": "unused"}]
+
+    monkeypatch.setattr(studio, "collect_and_download", slow_collection)
+    result = asyncio.run(_intake(studio, tmp_path))
+    assert writes
+    assert len(result) == 1
+    assert studio.stopped is True
+    assert "blocked_reason" not in studio.last_collection_diagnostics
+
+
+@pytest.mark.unit
 def test_held_exclusions_are_passed_and_legacy_collector_cannot_return_held_sources(monkeypatch, tmp_path):
     sources = [{"pin_id": str(index), "raw_path": "unused"} for index in range(15)]
     studio = FakeStudio(sources)
@@ -235,6 +386,20 @@ def test_fresh_attempt_paths_cannot_overwrite_held_paths(tmp_path):
     assert first_final != next_final
     assert first_raw.parent == tmp_path / "raw" / "recetadolce" / "run-a"
     assert first_final.parent == tmp_path / "final" / "recetadolce" / "run-a"
+
+
+@pytest.mark.unit
+def test_remaster_directories_separated_by_blog_day_keyword(tmp_path):
+    raw_dir, final_dir = remasterer._isolated_remaster_directories(
+        "recetagenial",
+        "run-123",
+        keyword="Pollo al horno con patatas",
+        date_str="2026-10-09",
+    )
+    assert final_dir == tmp_path / "final" / "recetagenial" / "2026-10-09" / "pollo-al-horno-con-patatas"
+    assert raw_dir.parent == tmp_path / "raw" / "recetagenial" / "2026-10-09" / "pollo-al-horno-con-patatas"
+    assert final_dir.is_dir()
+    assert raw_dir.is_dir()
 
 
 @pytest.mark.unit

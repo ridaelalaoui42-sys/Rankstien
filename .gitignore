@@ -109,3 +109,28 @@ health_state.json
 *.final
 session-state.json
 prefs.js
+
+# Private operational state is transported separately from source.
+data/
+memory/
+.codex/
+.agentmemory/
+.hermes/
+.gcloud/
+**/auth.json
+**/credentials.json
+**/storage-state*.json
+*.log.gz
+*.exe
+*.dll
+*.pyd
+*.sqlite3
+secrets/
+scratch/
+archive/
+cli-harness/
+nanobanana-extension/node_modules/
+frontend.zip
+
+# Product assets are source; generated campaign media stays in ignored data/.
+!frontend/public/**

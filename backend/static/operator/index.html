@@ -302,20 +302,16 @@
             <div class="seo-exploitation-header">
               <div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:18px;">⚡</span>
-                  <strong style="font-size:15px;">Live System Exploitation Console</strong>
-                  <span class="badge ok">Direct Autonomous Link</span>
+                  <i data-lucide="list-checks"></i>
+                  <strong style="font-size:15px;">Content Actions</strong>
                 </div>
-                <p class="muted" style="margin:4px 0 0; font-size:12px;">
-                  Directly inject high-velocity keywords into roadmaps, purge zero-demand topics, or launch targeted visual remasters.
-                </p>
               </div>
               <div class="seo-exploitation-actions">
                 <button class="button primary" id="btn-inject-all-post-more">
-                  <i data-lucide="rocket"></i>Inject All POST MORE
+                  <i data-lucide="list-plus"></i>Add Qualified Keywords
                 </button>
                 <button class="button danger" id="btn-purge-avoid-topics">
-                  <i data-lucide="shield-alert"></i>Purge AVOID Topics
+                  <i data-lucide="list-filter"></i>Deprioritize Topics
                 </button>
                 <button class="button secondary" id="btn-launch-remaster-queue">
                   <i data-lucide="repeat"></i>Launch Remaster Queue
@@ -327,8 +323,7 @@
 
           <!-- Visual Telemetry Charts Grid -->
           <div class="section-heading" style="margin-top:24px;">
-            <h2>Visual Performance Telemetry</h2>
-            <span class="muted">Native 2D Canvas Intelligence</span>
+            <h2>Search And Audience</h2>
           </div>
           <div class="seo-charts-grid">
             <!-- SERP Quadrant -->
@@ -338,7 +333,7 @@
                   <strong>SERP Opportunity Quadrant (Rank vs Impressions)</strong>
                   <p class="muted" style="margin:2px 0 0; font-size:11px;">Green: Dominating (#1-#3) • Gold: Striking Distance (#4-#10) • Red: Low CTR</p>
                 </div>
-                <span class="badge ok">Live GSC Scatter</span>
+                <span class="badge" id="seoGscChartState">Not collected</span>
               </div>
               <div class="seo-canvas-container" style="height:250px; position:relative;">
                 <canvas id="serpQuadrantCanvas" style="width:100%; height:100%; display:block;"></canvas>
@@ -351,25 +346,24 @@
               <div class="seo-chart-header">
                 <div>
                   <strong>Audience Acquisition Channels</strong>
-                  <p class="muted" style="margin:2px 0 0; font-size:11px;">Pinterest Social Siphon vs Google Search vs Direct</p>
                 </div>
-                <span class="badge ok">GA4 Verified</span>
+                <span class="badge" id="seoGa4ChartState">Not collected</span>
               </div>
               <div class="seo-canvas-container" style="height:190px;">
                 <canvas id="channelShareCanvas" style="width:100%; height:100%; display:block;"></canvas>
               </div>
               <div class="seo-channel-breakdown">
                 <div class="seo-channel-stat">
-                  <span class="muted">Pinterest</span>
-                  <strong id="seoDonutPinterest" style="color:var(--violet, #c084fc);">68.4%</strong>
+                  <span class="muted">Social</span>
+                  <strong id="seoDonutPinterest" style="color:var(--violet, #c084fc);">Unavailable</strong>
                 </div>
                 <div class="seo-channel-stat">
-                  <span class="muted">Google Search</span>
-                  <strong id="seoDonutGoogle" style="color:var(--cyan, #00f0ff);">26.2%</strong>
+                  <span class="muted">Organic Search</span>
+                  <strong id="seoDonutGoogle" style="color:var(--cyan, #00f0ff);">Unavailable</strong>
                 </div>
                 <div class="seo-channel-stat">
                   <span class="muted">Direct/Ref</span>
-                  <strong id="seoDonutDirect" style="color:var(--gold, #ffd700);">5.4%</strong>
+                  <strong id="seoDonutDirect" style="color:var(--gold, #ffd700);">Unavailable</strong>
                 </div>
               </div>
             </div>
@@ -379,10 +373,9 @@
           <div class="seo-chart-card" style="margin-top:16px;">
             <div class="seo-chart-header">
               <div>
-                <strong>Google Trends Velocity Curves & Seasonal Trajectory</strong>
-                <p class="muted" style="margin:2px 0 0; font-size:11px;">0-100 search volume interest index over 30 days (Spain - ES)</p>
+                <strong>Trend History</strong>
               </div>
-              <span class="badge ok">Velocity Radar</span>
+              <span class="badge">Not collected</span>
             </div>
             <div class="seo-canvas-container" style="height:190px; position:relative;">
               <canvas id="velocityTrendsCanvas" style="width:100%; height:100%; display:block;"></canvas>

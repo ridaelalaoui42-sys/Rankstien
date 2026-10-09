@@ -1,145 +1,86 @@
 {
-  "generated_at": "2026-10-08T19:52:17.485739+00:00",
+  "generated_at": "2026-10-09T11:10:32.807839+00:00",
   "domain": "recetadolce",
-  "methodology": {
-    "candidate_origin": "Pinterest Trends/Search only",
-    "candidate_origin_policy": "pinterest_required",
-    "specificity_gate": "dish plus concrete qualifier",
-    "external_validation": "Google search demand plus optional Google News freshness",
-    "fail_closed": true
-  },
   "items": [
     {
-      "keyword": "mousse de chocolate chantilly",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "High",
-      "score": 160.0,
-      "pinterest_score": 97.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Las 16 mejores tartas de chocolate de Madrid",
-        "Postre exprés de Karlos Arguiñano: mousse de chocolate con chantilly",
-        "Día del Chocolate: las recetas más ricas y los mejores lugares para probar pastelería en Buenos Aires",
-        "Mousse de cerveza: una receta perfecta para el mes de Oktoberfest",
-        "Qué hacer en Concepción: ruta por las mejores pastelerías artesanales"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
-      "search_demand_source": "Google Autocomplete Demand",
+      "keyword": "brownie de chocolate con nueces",
+      "qualified": true,
       "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "mousse de chocolate para vender",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "High",
-      "score": 159.0,
-      "pinterest_score": 96.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "FITTA: postres con criterio que combinan sabor y aporte nutricional",
-        "Santiago Rivera inventó la tarta de queso vasca, pero prefiere el chocolate",
-        "Mousse de chocolate y aguacate (receta sin desperdicio)",
-        "\"Nuestros postres\": las recetas de siempre y versiones más actuales, saludables y muy fáciles",
-        "De mousses y chocolates finos a café por suscripción: dejaron la oficina y empezaron a pensar con el paladar"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "mousse de chocolate pote",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "High",
-      "score": 157.0,
-      "pinterest_score": 94.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Mousse de chocolate de Paulina Cocina",
-        "Jordi Roca, chef Michelin, cocina a Ibai Llanos 'el postre del verano': una receta fácil y ligera con sólo dos ingredientes",
-        "Se especializó en un postre que le fascinaba de chico y hoy hacen cola para comprarlo: “Me gusta que le dé felicidad a la gente”",
-        "El helado es el postre preferido en el mundo, su origen y los gustos preferidos de los argentinos",
-        "Las 5 recetas más tentadoras para celebrar al dulce de leche en su día"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "arroz con leche casero",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "High",
-      "score": 156.0,
-      "pinterest_score": 93.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "La receta de crema de arroz con leche de Karlos Arguiñano para \"chuparse los dedos\"",
-        "Los cocineros asturianos lo confirman: para hacer el mejor arroz con leche, el arroz hay que cocerlo en agua",
-        "Alberto Chicote, chef: \"Un arroz con leche cremoso no lleva desnatada, usa entera, 200 g de nata y 30 g de mantequilla\"",
-        "Fray Ángel Ramón, cocinero: “Mi truco para un arroz con leche perfecto es añadir el azúcar al final, así nos quitamos el problema de que se pegue al fondo”",
-        "Dani García, chef malagueño: \"El mejor arroz con leche del mundo se hace con arroz, leche y nata, y es fundamental añadir una vaina de vainilla\""
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 20.0,
-      "search_demand_score": 20.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "mousse de chocolate emplatado",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "High",
-      "score": 143.0,
-      "pinterest_score": 98.0,
-      "google_news_hits": 5,
-      "google_news_titles": [
-        "Receta de chocolate, maíz y helado de vainilla de MasterChef 14",
-        "Unilever Food Solutions presenta la Mousse de Chocolate Carte D’Or Professional",
-        "Ana Irie, la pastelera que convierte los recuerdos en postres inolvidables: “Cuando algo es tendencia, hay que...",
-        "Jordi Roca enseña a Ibai Llanos la receta del mejor postre del verano, con solo dos ingredientes y en pocos minutos",
-        "Juan Mari y Elena Arzak: “La cocina siempre está viva”"
-      ],
-      "source": "Google Autocomplete Demand + Google News + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 2.0,
-      "search_demand_score": 2.0,
-      "search_demand_source": "Google Autocomplete Demand",
-      "pinterest_origin": true,
-      "qualified": true
-    },
-    {
-      "keyword": "helado de pistacho sarita",
-      "domain": "recetadolce",
-      "cluster": "fresas-y-nata",
-      "priority": "Medium",
-      "score": 117.0,
-      "pinterest_score": 95.0,
-      "google_news_hits": 0,
-      "google_news_titles": [],
       "source": "Google Autocomplete Demand + Pinterest Trends",
-      "specificity_score": 3.0,
-      "search_volume_score": 4.0,
-      "search_demand_score": 4.0,
-      "search_demand_source": "Google Autocomplete Demand",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "tarta de manzana casera facil",
+      "qualified": true,
       "pinterest_origin": true,
-      "qualified": true
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "flan de huevo al bano maria",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "churros rellenos de chocolate",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "bizcocho de yogur esponjoso",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "coulant de chocolate fundente",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "tarta de queso japonesa",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "profiteroles de chocolate y nata",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "tarta de santiago con almendra",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
+    },
+    {
+      "keyword": "bizcocho de zanahoria con frosting",
+      "qualified": true,
+      "pinterest_origin": true,
+      "source": "Google Autocomplete Demand + Pinterest Trends",
+      "search_demand_score": 10.0,
+      "specificity_score": 3.0
     }
   ]
 }

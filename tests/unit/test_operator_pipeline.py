@@ -72,6 +72,164 @@ def _execution_counts(pending: int = 0) -> dict:
     }
 
 
+def test_compact_status_preserves_all_live_lanes_and_full_history_counts(tmp_path, monkeypatch):
+    from backend.services import operator_pipeline as pipeline
+
+    now = time.time()
+    connection = _create_queue_db(tmp_path)
+    rows = []
+    for index in range(60):
+        payload = _payload()["payload"]
+        payload["link"] = f"https://recetadolce.com/historical-{index}/"
+        payload["extra"]["slug"] = f"historical-{index}"
+        rows.append((f"job-{index}", json.dumps(payload), "pending", now - index))
+    for index in range(3):
+        payload = _payload()["payload"]
+        payload["link"] = f"https://recetadolce.com/processing-{index}/"
+        payload["extra"]["slug"] = f"processing-{index}"
+        rows.append((f"processing-{index}", json.dumps(payload), "processing", now - 100))
+    connection.executemany("INSERT INTO jobs VALUES (?, ?, ?, ?, NULL, NULL, NULL)", rows)
+    connection.commit()
+    connection.close()
+    baseline = build_pipeline_payload(tmp_path, limit=100)
+    created = []
+    original = pipeline._new_campaign
+
+    def record_expansion(**kwargs):
+        created.append(kwargs["run_id"])
+        return original(**kwargs)
+
+    monkeypatch.setattr(pipeline, "_new_campaign", record_expansion)
+    compact = build_pipeline_payload(tmp_path, limit=1, live_only=True, history_limit=12)
+    assert compact["summary"] == baseline["summary"]
+    assert compact["total_campaigns"] == 63
+    assert compact["history_total"] == 60
+    assert compact["ongoing_total"] == 3
+    assert compact["campaigns"] == compact["ongoing_campaigns"]
+    assert len(compact["ongoing_campaigns"]) == 3
+    assert len(compact["history_campaigns"]) == 12
+    assert compact["history_truncated"] is True
+    assert [row["slug"] for row in compact["history_campaigns"]] == [
+        f"historical-{index}" for index in range(12)
+    ]
+    assert all(len(row["stages"]) == len(STAGE_DEFINITIONS) for row in compact["history_campaigns"])
+    assert len(created) == 15  # Expand only processing lanes and the selected recent history.
+
+
+def test_remaster_report_exposes_only_sanitized_source_collection_progress():
+    campaign = _new_campaign(
+        domain="recetadolce", keyword="Tarta", title="Tarta", slug="tarta", updated_at=1, run_id="source-run"
+    )
+    report = {
+        "_updated_at": 2,
+        "generated_count": 0,
+        "source_target": 15,
+        "source_collection_diagnostics": {
+            "accepted": 1,
+            "pins_examined": 14,
+            "text_rejected": 7,
+            "text_unavailable": 4,
+            "held_sources_skipped": 2,
+            "phase": "ocr_quality",
+            "ocr_text": "PRIVATE OCR TEXT",
+            "source_text": "PRIVATE SOURCE TEXT",
+            "session_path": "PRIVATE SESSION PATH",
+        },
+        "blocked_reason": "collection_timeout",
+        "error_type": "TimeoutError",
+        "remaining_workflow_steps": [
+            "pinterest_siphon",
+            "remaster",
+            "queue",
+            "PRIVATE STEP",
+            {"ocr": "PRIVATE"},
+        ],
+    }
+    _apply_remaster_report(campaign, report)
+    stage = next(stage for stage in campaign["stages"] if stage["key"] == "pinterest_siphon")
+    progress = stage["metrics"]["source_collection"]
+    assert progress["accepted"] == 1
+    assert progress["examined"] == 14
+    assert progress["text_rejected"] == 7
+    assert progress["text_unavailable"] == 4
+    assert progress["remaining_sources"] == 14
+    assert progress["blocked_reason"] == "collection_timeout"
+    assert progress["remaining_workflow_steps"] == ["pinterest_siphon", "remaster", "queue"]
+    assert "1 of 15 clean photos accepted" in stage["detail"]
+    assert "phase: ocr_quality" in stage["detail"]
+    assert "blocked: collection_timeout" in stage["detail"]
+    assert "PRIVATE" not in json.dumps(campaign)
+    assert campaign["remaster"]["source_collection"] == progress
+
+
+@pytest.mark.parametrize("status", ["pending", "retry", "completed", "failed", "dead", "held"])
+@pytest.mark.parametrize("roadmap_status", ["", "Needs Verification", "Failed"])
+def test_lightweight_history_classification_matches_full_stage_tree(status, roadmap_status):
+    from backend.services.operator_pipeline import _queue_history_summary
+
+    key = ("recetadolce", "tarta")
+    queue = {status: 2, "updated_at": time.time(), "title": "Tarta", "jobs": {}}
+    full = _new_campaign(
+        domain=key[0],
+        keyword="Tarta",
+        title="Tarta",
+        slug=key[1],
+        updated_at=queue["updated_at"],
+        run_id="old",
+    )
+    _apply_queue_evidence(full, queue)
+    full["roadmap_status"] = roadmap_status
+    _finalize_campaign(full, now=time.time())
+    compact = _queue_history_summary(key, queue, {key: roadmap_status})
+    assert compact["overall_state"] == full["overall_state"]
+    for field in ("active", "completed", "dead", "failed", "held"):
+        assert compact["queue"][field] == full["queue"][field]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node binary not on PATH")
+def test_frontend_compact_history_research_activity_and_source_photo_labels():
+    source = (Path(__file__).parents[2] / "backend" / "static" / "operator" / "operator.js").read_text(
+        encoding="utf-8"
+    )
+    selectors = source[source.index("function campaigns(") : source.index("function indexCampaigns(")]
+    collection = source[
+        source.index("function sourceCollectionMarkup(") : source.index("function showCampaign(")
+    ]
+    script = (
+        """
+      const state = {data: {actions: {production: {alive: true}}, pipeline: {
+        history_campaigns: [{id: 'recent'}], history_total: 2000,
+        research_lanes: [{overall_state: 'active', current_label: 'Pinterest candidate collection'}]
+      }}};
+      const domainScope = () => '';
+      const number = value => Number(value || 0);
+      const esc = value => String(value || '');
+    """
+        + selectors
+        + collection
+        + """
+      const activity = productionActivity();
+      state.data.pipeline.research_lanes[0] = {overall_state: 'attention', current_label: 'Collection timeout'};
+      const attention = productionActivity();
+      const markup = sourceCollectionMarkup({remaster: {source_collection: {
+        accepted: 1, target: 15, examined: 14, text_rejected: 7,
+        remaining_workflow_steps: ['pinterest_siphon', 'remaster'], blocked_reason: 'collection_timeout'
+      }}});
+      console.log(JSON.stringify({coverage: historyCoverage(), activity, attention, markup}));
+    """
+    )
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=20, check=False)
+    assert result.returncode == 0, result.stderr
+    actual = json.loads(result.stdout)
+    assert actual["coverage"] == "1 recent / 2000 historical or deferred total"
+    assert actual["activity"] == {"state": "running", "label": "Pinterest candidate collection"}
+    assert actual["attention"] == {"state": "attention", "label": "Collection timeout"}
+    assert "1 / 15 accepted" in actual["markup"]
+    assert "14 examined" in actual["markup"]
+    assert "not composed-pair or queued-job proof" in actual["markup"]
+    assert "collection_timeout" in actual["markup"]
+
+
 def _create_queue_db(root) -> sqlite3.Connection:
     path = root / "data" / "queue" / "jobs.db"
     path.parent.mkdir(parents=True)
