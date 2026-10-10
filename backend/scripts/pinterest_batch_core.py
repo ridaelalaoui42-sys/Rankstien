@@ -878,6 +878,16 @@ async def select_board(page, board_name, worker_id):
         # 1. Open dropdown
         dropdown_selectors = [
             '[data-test-id="board-dropdown-select-button"]',
+            '[data-test-id="board-selection-button"]',
+            '[data-test-id="PinBetterSaveCanvas"] button',
+            '[data-test-id="PinBetterSaveDropdown"]',
+            '[data-test-id="save-to-board-button"]',
+            'button[aria-label*="board" i]',
+            'button[aria-label*="tablero" i]',
+            'div[role="button"][aria-label*="board" i]',
+            'div[role="button"][aria-label*="tablero" i]',
+            'button:has-text("Save to")',
+            'button:has-text("Guardar en")',
             '[aria-label*="Choose a board" i]',
             '[aria-label*="Select board" i]',
             'div[role="button"]:has-text("Choose a board")',
@@ -906,11 +916,24 @@ async def select_board(page, board_name, worker_id):
 
         # 2. Search first because Pinterest virtualizes long board lists.
         try:
-            search = await page.query_selector(
-                'input[placeholder*="Search" i], input[placeholder*="Buscar" i], input[aria-label*="Search" i], input[aria-label*="Buscar" i]'
-            )
+            search = None
+            search_selectors = [
+                '[data-test-id="board-picker-flyout"] input:not([disabled])',
+                '[role="dialog"] input:not([disabled]):not([id*="tag" i]):not([id*="interest" i])',
+                '[role="listbox"] input:not([disabled])',
+                'input[placeholder*="Search" i]:not([disabled]):not([id*="tag" i]):not([id*="interest" i])',
+                'input[placeholder*="Buscar" i]:not([disabled]):not([id*="tag" i]):not([id*="interest" i])',
+            ]
+            for sel in search_selectors:
+                try:
+                    el = await page.query_selector(sel)
+                    if el and await el.is_visible() and await el.is_enabled():
+                        search = el
+                        break
+                except Exception:
+                    continue
             if search:
-                await search.fill(board_name)
+                await search.fill(board_name, timeout=3000)
                 await asyncio.sleep(1.5)
         except Exception as exc:
             if is_browser_session_lost(exc):
@@ -1015,12 +1038,36 @@ async def dismiss_publish_success_overlays(page):
     except Exception:
         pass
     try:
+        for sel in [
+            'button[aria-label*="close" i]',
+            'button[aria-label*="cerrar" i]',
+            '[aria-modal="true"] button[aria-label*="close" i]',
+            '[role="dialog"] button[aria-label*="close" i]',
+            '[data-test-id*="close" i]',
+            'button:has-text("Not now")',
+            'button:has-text("Ahora no")',
+            'button:has-text("Maybe later")',
+            'button:has-text("Quizás más tarde")',
+        ]:
+            try:
+                btn = page.locator(sel).first
+                if await btn.count() > 0 and await btn.is_visible(timeout=300):
+                    await btn.click(force=True)
+                    await asyncio.sleep(0.2)
+                    break
+            except Exception:
+                continue
+    except Exception:
+        pass
+    try:
         await page.evaluate(
             """() => {
                 const needles = [
                     'install the pinterest browser extension',
                     'find it. love it. save it.',
-                    'install now'
+                    'install now',
+                    'instalar la extensión',
+                    'instalar ahora'
                 ];
                 for (const el of Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"], div'))) {
                     const text = (el.innerText || el.textContent || '').toLowerCase();
@@ -1038,6 +1085,8 @@ async def dismiss_publish_success_overlays(page):
 async def extract_published_pin_id(page, worker_id, click_view=True):
     """Return the published pin id from current URL, toast links, or the success View button."""
     try:
+        await dismiss_publish_success_overlays(page)
+
         match = re.search(r"/pin/(\d+)", page.url)
         if match:
             return match.group(1)
@@ -1057,7 +1106,6 @@ async def extract_published_pin_id(page, worker_id, click_view=True):
             success_visible = False
 
         if success_visible and click_view:
-            await dismiss_publish_success_overlays(page)
             for locator in (
                 page.get_by_role("button", name=re.compile(r"^(View|Ver)$", re.I)).first,
                 page.get_by_text(re.compile(r"^(View|Ver)$", re.I)).first,
@@ -1266,8 +1314,10 @@ async def turbo_create_pin(
             raise PinCreationError(f"{worker_id}: publish button not found or not clickable")
 
         # 5. Extraction loop
-        for _ in range(50):
+        for loop_idx in range(75):
             await asyncio.sleep(1)
+            if loop_idx % 5 == 0:
+                await dismiss_publish_success_overlays(page)
             pin_id = await extract_published_pin_id(page, worker_id)
             if pin_id:
                 return pin_id
@@ -1329,7 +1379,7 @@ async def turbo_create_pin(
         except Exception as shot_err:
             logger.warning(f"[{worker_id}] Could not save timeout screenshot: {shot_err}")
 
-        raise PinCreationError(f"{worker_id}: publish clicked but no Pin ID found within 50s timeout")
+        raise PinCreationError(f"{worker_id}: publish clicked but no Pin ID found within 75s timeout")
 
     except BrowserSessionLost:
         raise

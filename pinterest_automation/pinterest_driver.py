@@ -146,7 +146,16 @@ class PinterestDriver:
                 post_data = (response.request.post_data or "").lower()
                 if not any(
                     marker in post_data
-                    for marker in ("pinresourcecreate", "createpin", "pin_create", "pinbuilder")
+                    for marker in (
+                        "pinresourcecreate",
+                        "createpin",
+                        "pin_create",
+                        "pinbuilder",
+                        "storyboard",
+                        "story_pin",
+                        "pin",
+                        "creation",
+                    )
                 ):
                     return
             try:
