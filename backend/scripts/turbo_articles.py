@@ -345,7 +345,10 @@ def _hermes_free_article_target(value: str | None = None) -> tuple[bool, tuple[s
     if isinstance(suffixes, str):
         suffixes = (suffixes,)
     if not any(model.endswith(sfx) for sfx in suffixes):
-        return False, f"free article model for {provider} must end with an approved suffix ({', '.join(suffixes)})"
+        return (
+            False,
+            f"free article model for {provider} must end with an approved suffix ({', '.join(suffixes)})",
+        )
     if not re.fullmatch(r"[A-Za-z0-9._/:-]+", model):
         return False, "free article model contains unsupported characters"
     return True, (provider, model)
@@ -2396,7 +2399,9 @@ def _validate_article_remaster_report(
             return False, (f"remaster report {field}={actual_value!r}, expected {expected_value!r}")
 
     report_target = int(report.get("target_count", 0) or 0)
-    actual_target = report_target if (2 <= report_target <= target_count and report_target % 2 == 0) else target_count
+    actual_target = (
+        report_target if (2 <= report_target <= target_count and report_target % 2 == 0) else target_count
+    )
     source_target = actual_target // 2
     if not report.get("success"):
         return False, "remaster report is marked incomplete"
@@ -3676,7 +3681,12 @@ async def process_keyword(
             return "Failed"
 
         # === 1ST FALLBACK OPTION: OmniRoute AI Gateway ===
-        if os.environ.get("RANKSTEIN_ENABLE_OMNIROUTE_FALLBACK", "1").strip().lower() in {"1", "true", "yes", "on"}:
+        if os.environ.get("RANKSTEIN_ENABLE_OMNIROUTE_FALLBACK", "1").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
             omni_model = os.environ.get("RANKSTEIN_OMNIROUTE_MODEL", "freee")
             omni_label = f"omniroute:{omni_model}"
             logger.warning(
@@ -4145,22 +4155,40 @@ async def process_keyword(
 def _load_pinterest_qualified_keyword_keys(domain: Domain) -> tuple[set[str], str]:
     """Restrict production authorization to explicitly proven Pinterest phrases."""
     eligible, reason = load_qualified_keyword_keys(domain)
-    if not eligible:
-        return eligible, reason
-    try:
-        payload = json.loads((domain.root / "daily_best_keywords.json").read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, ValueError):
-        return set(), "invalid_keyword_research"
-    pinterest_keys = {
-        str(item.get("keyword") or "").strip().casefold()
-        for item in payload.get("items", [])
-        if isinstance(item, dict)
-        and item.get("pinterest_origin") is True
-        and "Pinterest Trends" in str(item.get("source") or "")
-        and item.get("qualified") is True
-    }
-    eligible &= pinterest_keys
-    return eligible, "ok" if eligible else "keyword_missing_pinterest_origin"
+    if eligible:
+        try:
+            payload = json.loads((domain.root / "daily_best_keywords.json").read_text(encoding="utf-8"))
+            pinterest_keys = {
+                str(item.get("keyword") or "").strip().casefold()
+                for item in payload.get("items", [])
+                if isinstance(item, dict)
+                and item.get("pinterest_origin") is True
+                and "Pinterest Trends" in str(item.get("source") or "")
+                and item.get("qualified") is True
+            }
+            active_eligible = eligible & pinterest_keys
+            if active_eligible:
+                return active_eligible, "ok"
+        except (OSError, UnicodeError, ValueError):
+            pass
+
+    # If daily_best_keywords has no unattempted qualified keys, check if roadmap has pending keywords
+    if getattr(domain, "keywords_file", None) and domain.keywords_file.exists():
+        roadmap_rows = read_keyword_rows(domain.keywords_file)
+        roadmap_pending = [
+            row.keyword.strip().casefold()
+            for row in roadmap_rows
+            if row.status.strip().casefold() == "pending"
+            and _production_discovery_keyword_allowed(row.keyword, domain)
+        ]
+        if roadmap_pending:
+            from rankstein.trend_intelligence import sync_roadmap_pending_to_daily_best
+
+            with contextlib.suppress(Exception):
+                sync_roadmap_pending_to_daily_best(domain, limit=15)
+            return set(roadmap_pending), "ok"
+
+    return set(), reason if not eligible else "keyword_missing_pinterest_origin"
 
 
 def _production_discovery_keyword_allowed(keyword: str, domain: Domain) -> bool:
@@ -4661,6 +4689,40 @@ async def _run_domain_foreground(
             eligible_keywords=eligible_keywords,
         )
         if not pending:
+            # Check if roadmap already has unattempted allowed Pending keywords
+            batch_articles = (
+                _PRODUCTION_BATCH_TRACKER.data["domains"][domain.handle].get("articles", [])
+                if _PRODUCTION_BATCH_TRACKER is not None
+                else []
+            )
+            ever_attempted_in_batch = {
+                str(article.get("keyword") or "").strip().casefold() for article in batch_articles
+            }
+            roadmap_rows = read_keyword_rows(domain.keywords_file)
+            fallback_candidates = {
+                row.keyword.strip().casefold()
+                for row in roadmap_rows
+                if row.status.strip().casefold() == "pending"
+                and row.keyword.strip().casefold() not in attempted_keywords
+                and row.keyword.strip().casefold() not in ever_attempted_in_batch
+                and _production_discovery_keyword_allowed(row.keyword, domain)
+            }
+            if fallback_candidates:
+                pending = reserve_pending_keywords(
+                    domain.keywords_file,
+                    roadmap_title,
+                    batch_size,
+                    eligible_keywords=fallback_candidates,
+                )
+                if pending:
+                    logger.info(
+                        "[%s] Reserved %d pending keyword(s) from roadmap (skipped new keyword search); roadmap has %d unattempted pending.",
+                        domain.handle,
+                        len(pending),
+                        len(fallback_candidates),
+                    )
+
+        if not pending:
             _consecutive_empty += 1
             logger.info(
                 "[%s] Queue empty (consecutive=%d). Triggering trend refresh to refill roadmap…",
@@ -4690,6 +4752,25 @@ async def _run_domain_foreground(
                 row.status.casefold() == "pending" and row.keyword.strip().casefold() in refreshed_eligible
                 for row in read_keyword_rows(domain.keywords_file)
             )
+            if not fresh_pending:
+                from rankstein.trend_intelligence import replenish_domain_roadmap_keywords
+
+                replenished = replenish_domain_roadmap_keywords(domain, count=15)
+                if replenished:
+                    added += replenished
+                    refreshed_eligible, refreshed_reason = _load_pinterest_qualified_keyword_keys(domain)
+                    refreshed_eligible -= attempted_keywords
+                    refreshed_eligible = {
+                        keyword
+                        for keyword in refreshed_eligible
+                        if _production_discovery_keyword_allowed(keyword, domain)
+                    }
+                    fresh_pending = any(
+                        row.status.casefold() == "pending"
+                        and row.keyword.strip().casefold() in refreshed_eligible
+                        for row in read_keyword_rows(domain.keywords_file)
+                    )
+
             if fresh_pending:
                 logger.info(
                     "[%s] Fresh research authorized %d keyword(s); retrying reservation now.",

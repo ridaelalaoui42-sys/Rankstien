@@ -944,7 +944,35 @@ async def select_board(page, board_name, worker_id):
                     raise BrowserSessionLost(str(exc)) from exc
                 logger.debug(f"[{worker_id}] Board row candidate failed: {exc}")
 
-        logger.warning(f"[{worker_id}] Board selection failed: no options found")
+        # 4. Fallback: Automatically create the missing board if not found in account
+        logger.info(f"[{worker_id}] Board '{board_name}' not found in account; attempting automatic board creation...")
+        flyout = page.locator('[data-test-id="board-picker-flyout"]').first
+        create_btn = page.locator(
+            '[data-test-id="create-board-button"], button:has-text("Create board"), button:has-text("Crear tablero")'
+        ).first
+        if await create_btn.count() > 0 and await create_btn.is_visible():
+            await create_btn.scroll_into_view_if_needed()
+            await create_btn.click(force=True)
+            await asyncio.sleep(1.5)
+
+            dialog = page.locator('[role="dialog"]:has(#boardEditName), [role="dialog"][aria-label*="Board" i]').first
+            if await dialog.count() > 0 and await dialog.is_visible():
+                name_input = dialog.locator('#boardEditName, input[name="name"]').first
+                if await name_input.count() > 0:
+                    await name_input.fill(board_name)
+                    await asyncio.sleep(0.5)
+
+                submit_btn = dialog.locator(
+                    '[data-test-id="board-form-submit-button"], button:has-text("Create"), button:has-text("Crear")'
+                ).first
+                if await submit_btn.count() > 0:
+                    await submit_btn.click(force=True)
+                    await asyncio.sleep(3)
+                    logger.info(f"[{worker_id}] Successfully created and selected missing board: {board_name}")
+                    circuit.record_success(f"board_selection:{worker_id}")
+                    return True
+
+        logger.warning(f"[{worker_id}] Board selection failed: no options found and could not create board")
         circuit.record_failure(f"board_selection:{worker_id}")
         return False
 

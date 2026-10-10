@@ -79,6 +79,9 @@ async def clear_drafts_for_page(page, account_name: str = "account") -> int:
 
             # 2. Bulk Select Checkbox
             bulk_selectors = [
+                'label:has-text("Select all")',
+                'div:has-text("Select all")',
+                '#storyboard-drafts-sidebar-bulk-select-checkbox',
                 '[data-test-id="bulk-select-drafts-checkbox"]',
                 'input[type="checkbox"][aria-label*="Select all" i]',
                 'input[type="checkbox"][aria-label*="Seleccionar todo" i]',
@@ -91,6 +94,7 @@ async def clear_drafts_for_page(page, account_name: str = "account") -> int:
                 try:
                     bulk = page.locator(b_sel).first
                     if await bulk.count() > 0 and await bulk.is_visible(timeout=1000):
+                        await bulk.scroll_into_view_if_needed()
                         await bulk.click(force=True)
                         bulk_clicked = True
                         logger.info(f"[{account_name}] Clicked Bulk Select ({b_sel})")
@@ -103,10 +107,11 @@ async def clear_drafts_for_page(page, account_name: str = "account") -> int:
             if bulk_clicked:
                 delete_selectors = [
                     '[data-test-id="bulk-delete-drafts-button"]',
+                    'button[aria-label*="Delete Pins" i]',
+                    'button[aria-label*="Delete" i]',
                     '[data-test-id="delete-drafts-button"]',
                     'button:has-text("Delete")',
                     'button:has-text("Eliminar")',
-                    '[aria-label*="Delete" i]',
                     '[aria-label*="Eliminar" i]',
                 ]
                 delete_clicked = False
