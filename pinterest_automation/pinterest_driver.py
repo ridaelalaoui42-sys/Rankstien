@@ -728,6 +728,9 @@ class PinterestDriver:
             except Exception as e:
                 self.debug(f"Drafts sidebar collapse failed: {e}")
 
+            if not local.exists():
+                return {"success": False, "error": f"Image not found on disk: {local}"}
+
             file_input = page.locator('input[type="file"]')
             await file_input.set_input_files(str(local), timeout=15000)
             self.info("Image upload triggered via set_input_files")

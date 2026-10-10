@@ -1,10 +1,21 @@
 # Daily Best Keywords - Receta Dolce
 
-Generated: 2026-10-10T08:28:33.153699+00:00
+Generated: 2026-10-10T08:50:15.047628+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|
-| bizcocho de chocolate saludable | fresas-y-nata | High | 144.00 | 4.0 | 20.0 | 5 |
-| pastel de zanahoria receta facil | fresas-y-nata | High | 140.00 | 3.0 | 20.0 | 5 |
-| bizcocho de chocolate con dulce de leche | fresas-y-nata | High | 136.00 | 4.0 | 8.0 | 5 |
-| pastel de zanahoria navideño | fresas-y-nata | High | 122.00 | 4.0 | 4.0 | 5 |
+| Recetas de galletas caseras | Galletas | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| El Secreto del Pastel de Limón Perfecto Revelado | Pasteles | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| pastel cumpleaños | Pasteles | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| Como hacer torta o pastel Red Velvet original | Pasteles | Low | 100.00 | 3.0 | 8.0 | 1 |
+| ideas galletas de jengibre | Galletas | High | 100.00 | 3.0 | 8.0 | 1 |
+| pasteles recetas caseras | Pasteles | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| pasteles recetas de chocolate | Pasteles | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| galletas recetas caseras | Galletas | High | 100.00 | 3.0 | 8.0 | 1 |
+| galletas recetas mantequilla | Galletas | High | 100.00 | 3.0 | 8.0 | 1 |
+| galletas recetas saludables | Galletas | High | 100.00 | 3.0 | 8.0 | 1 |
+| galletas nutella | Galletas | High | 100.00 | 3.0 | 8.0 | 1 |
+| Ensaladas, brochetas y batido helado de chocolate | Chocolates | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| ideas pasteles cumpleaños | Pasteles | Low | 100.00 | 3.0 | 8.0 | 1 |
+| ideas galletas de arroz | Galletas | Medium | 100.00 | 3.0 | 8.0 | 1 |
+| Día Mundial de la Tarta de Queso | fresas-y-nata | Low | 100.00 | 3.0 | 8.0 | 1 |

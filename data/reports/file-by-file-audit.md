@@ -1,13 +1,13 @@
 # File-by-file Project Audit
 
-Generated: 2026-10-10T08:28:44.447261+00:00
+Generated: 2026-10-10T09:00:22.467946+00:00
 Root: `C:\Users\REDX420\Desktop\Rankstein`
 
 ## Summary
 
-- Files audited: 476
+- Files audited: 488
 - OK: 401
-- Review: 68
+- Review: 80
 - Fail: 7
 
 ## Scope
@@ -65,10 +65,10 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 50 | 1799 | `backend/scripts/force_fix_visibility.py` |  |
 | ok | backend | 106 | 2872 | `backend/scripts/gemini_token_rotator.py` |  |
 | ok | backend | 677 | 21466 | `backend/scripts/hero_image_pipeline.py` |  |
-| ok | backend | 1665 | 66362 | `backend/scripts/pinterest_batch_core.py` |  |
+| ok | backend | 1693 | 68066 | `backend/scripts/pinterest_batch_core.py` |  |
 | ok | backend | 656 | 25121 | `backend/scripts/pinterest_uploader_v4.py` |  |
 | ok | backend | 33 | 806 | `backend/scripts/trigger_funnel.py` |  |
-| ok | backend | 4882 | 196440 | `backend/scripts/turbo_articles.py` |  |
+| ok | backend | 4963 | 200096 | `backend/scripts/turbo_articles.py` |  |
 | ok | backend | 2 | 27 | `backend/services/__init__.py` |  |
 | ok | backend | 75 | 2665 | `backend/services/competitor_analyzer.py` |  |
 | ok | backend | 140 | 5324 | `backend/services/harvester.py` |  |
@@ -92,14 +92,14 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | project | 4 | 104 | `cli-harness/cli_anything_rankstein/__init__.py` |  |
 | ok | project | 471 | 19685 | `cli-harness/cli_anything_rankstein/__main__.py` |  |
 | ok | project | 23 | 546 | `cli-harness/pyproject.toml` |  |
-| ok | domain-data | 12 | 409 | `data/domains/recetadolce/daily_best_keywords.json` |  |
-| ok | docs | 7 | 199 | `data/domains/recetadolce/daily_best_keywords.md` |  |
+| ok | domain-data | 268 | 8989 | `data/domains/recetadolce/daily_best_keywords.json` |  |
+| ok | docs | 22 | 1396 | `data/domains/recetadolce/daily_best_keywords.md` |  |
 | ok | domain-data | 36 | 1140 | `data/domains/recetadolce/domain.json` |  |
-| ok | docs | 754 | 86791 | `data/domains/recetadolce/keywords.md` |  |
-| ok | domain-data | 12 | 410 | `data/domains/recetagenial/daily_best_keywords.json` |  |
-| ok | docs | 7 | 200 | `data/domains/recetagenial/daily_best_keywords.md` |  |
+| ok | docs | 754 | 86783 | `data/domains/recetadolce/keywords.md` |  |
+| ok | domain-data | 268 | 8739 | `data/domains/recetagenial/daily_best_keywords.json` |  |
+| ok | docs | 22 | 1402 | `data/domains/recetagenial/daily_best_keywords.md` |  |
 | ok | domain-data | 40 | 1176 | `data/domains/recetagenial/domain.json` |  |
-| ok | docs | 548 | 62613 | `data/domains/recetagenial/keywords.md` |  |
+| ok | docs | 548 | 62632 | `data/domains/recetagenial/keywords.md` |  |
 | ok | docs | 96 | 4883 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
 | ok | docs | 111 | 11732 | `docs/system/CAMPAIGN_PIPELINE.md` |  |
 | ok | docs | 0 | 0 | `docs/system/HERMES_SOUL.md` |  |
@@ -258,12 +258,11 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 246 | 9752 | `pinterest_automation/circuit_breaker.py` |  |
 | ok | core | 499 | 18541 | `pinterest_automation/config.py` |  |
 | ok | core | 281 | 11121 | `pinterest_automation/health_monitor.py` |  |
-| ok | core | 109 | 3787 | `pinterest_automation/interactive_login.py` |  |
 | ok | core | 1331 | 55174 | `pinterest_automation/job_queue.py` |  |
 | ok | core | 282 | 11776 | `pinterest_automation/mcp_bridge.py` |  |
 | ok | core | 172 | 6217 | `pinterest_automation/mcp_client.py` |  |
 | ok | core | 343 | 12660 | `pinterest_automation/mcp_integration.py` |  |
-| ok | core | 1364 | 61087 | `pinterest_automation/pinterest_driver.py` |  |
+| ok | core | 1364 | 61099 | `pinterest_automation/pinterest_driver.py` |  |
 | ok | core | 524 | 24158 | `pinterest_automation/rate_limiter.py` |  |
 | ok | core | 86 | 3468 | `pinterest_automation/routing.py` |  |
 | ok | core | 152 | 5309 | `pinterest_automation/runtime_state.py` |  |
@@ -306,7 +305,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 401 | 15062 | `rankstein/startup.py` |  |
 | ok | core | 181 | 6033 | `rankstein/subscribers.py` |  |
 | ok | core | 634 | 24116 | `rankstein/suite_controller.py` |  |
-| ok | core | 1839 | 62988 | `rankstein/trend_intelligence.py` |  |
+| ok | core | 2043 | 70306 | `rankstein/trend_intelligence.py` |  |
 | ok | core | 29 | 886 | `rankstein/windows_compat.py` |  |
 | ok | project | 5521 | 232589 | `rankstein_mcp_server.py` |  |
 | ok | project | 193 | 4145 | `requirements.txt` |  |
@@ -319,7 +318,9 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 52 | 1986 | `scripts/debug/capture_operator_dashboard.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 55 | 2216 | `scripts/debug/capture_operator_tabs.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 45 | 1608 | `scripts/debug/check_articles.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 35 | 1486 | `scripts/debug/check_boards_list.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 38 | 1533 | `scripts/debug/check_fresh_keywords.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 33 | 1382 | `scripts/debug/check_media_boards.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 45 | 1677 | `scripts/debug/check_models.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 11 | 407 | `scripts/debug/check_nvidia_log.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 60 | 2236 | `scripts/debug/check_pollinations_and_deprecated.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -328,6 +329,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 14 | 453 | `scripts/debug/check_robots.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 63 | 1928 | `scripts/debug/check_soft404.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 32 | 1173 | `scripts/debug/dump_posts.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 115 | 4791 | `scripts/debug/ensure_all_boards.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 54 | 2126 | `scripts/debug/extract_arch_ribbons.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 134 | 6116 | `scripts/debug/extract_design_assets.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 63 | 2624 | `scripts/debug/extract_straight_ribbons.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -342,10 +344,15 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 129 | 8861 | `scripts/debug/generate_redirect_rules.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 197 | 14668 | `scripts/debug/generate_tarta_tatin.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 259 | 12385 | `scripts/debug/inspect_and_fix_remaining_schemas.py` | python syntax error: line 7: invalid syntax<br>non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 57 | 2816 | `scripts/debug/inspect_boards_medridaelalaoui6.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 73 | 3560 | `scripts/debug/inspect_create_board.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 66 | 3004 | `scripts/debug/inspect_create_board_modal.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 46 | 1980 | `scripts/debug/inspect_issue_posts.py` | python syntax error: line 34: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 29 | 985 | `scripts/debug/inspect_page_schema.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 70 | 2431 | `scripts/debug/inspect_pinterest_remaster_dom.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 54 | 2097 | `scripts/debug/inspect_schema_issues.py` | python syntax error: line 14: invalid syntax<br>non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 54 | 2427 | `scripts/debug/inspect_user_boards.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 48 | 2033 | `scripts/debug/list_dropdown_boards.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 120 | 4212 | `scripts/debug/map_soft404_solutions.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 60 | 1738 | `scripts/debug/match_posts_normalized.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 26 | 1554 | `scripts/debug/operator_accessibility_audit.js` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -354,13 +361,16 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 80 | 2787 | `scripts/debug/perfect_extract_ribbons.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 167 | 5170 | `scripts/debug/post_remediation_audit.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 32 | 1942 | `scripts/debug/probe_source_ocr.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 128 | 5083 | `scripts/debug/provision_boards_medridaelalaoui6.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 23 | 721 | `scripts/debug/publish_test_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 117 | 5101 | `scripts/debug/repair_all_supabase_schemas.py` | python syntax error: line 115: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 120 | 4315 | `scripts/debug/test_arc_text.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 28 | 1226 | `scripts/debug/test_article_slug.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 62 | 2547 | `scripts/debug/test_asset_loading.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 93 | 4300 | `scripts/debug/test_board_dropdown_live.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 361 | 15473 | `scripts/debug/test_bolder_color_headers.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 393 | 16960 | `scripts/debug/test_bright_recipe_pin.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 73 | 3364 | `scripts/debug/test_create_missing_board.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 96 | 4006 | `scripts/debug/test_full_nemotron_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 22 | 700 | `scripts/debug/test_gemini_api.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 45 | 1867 | `scripts/debug/test_gemini_rest.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -379,6 +389,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 676 | 27267 | `scripts/debug/test_professional_assets_pin_v6.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 335 | 13066 | `scripts/debug/test_recipe_card_visual_ref.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 655 | 29959 | `scripts/debug/test_recipe_suite_pins.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 57 | 2645 | `scripts/debug/test_submit_board.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 17 | 778 | `scripts/debug/verify_20.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 43 | 1769 | `scripts/debug/verify_dashboard.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 44 | 1620 | `scripts/debug/verify_final_deployment.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -408,7 +419,8 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | scripts | 78 | 2658 | `scripts/ops/check_pins.py` |  |
 | ok | scripts | 164 | 7342 | `scripts/ops/clean_all_duplicates.py` |  |
 | ok | scripts | 232 | 8039 | `scripts/ops/clean_duplicate_posts.py` |  |
-| ok | scripts | 298 | 13687 | `scripts/ops/clear_pinterest_drafts.py` |  |
+| ok | scripts | 299 | 13761 | `scripts/ops/clear_pinterest_drafts.py` |  |
+| ok | scripts | 223 | 10383 | `scripts/ops/ensure_pinterest_boards.py` |  |
 | ok | scripts | 46 | 1432 | `scripts/ops/force_chromium_env.py` |  |
 | ok | scripts | 174 | 6551 | `scripts/ops/force_chromium_login.py` |  |
 | ok | scripts | 228 | 8207 | `scripts/ops/generate_campaign_pins.py` |  |

@@ -575,14 +575,14 @@
 | Pastel decorado con fresas | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
 | Galletas de maicena y leche condensada | Galletas | Pinterest Trends + Google News | Receta Dolce | High | Live |
 | Postre Casero | Postres | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
-| Recetas de galletas caseras | Galletas | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
+| Recetas de galletas caseras | Galletas | Pinterest Trends + Google News | Receta Dolce | Medium | Failed |
 | Recetas de Galletas Fáciles y Deliciosas | Galletas | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
 | Te doy una receta y tendrás cinco variantes | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
-| El Secreto del Pastel de Limón Perfecto Revelado | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
-| pastel cumpleaños | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
+| El Secreto del Pastel de Limón Perfecto Revelado | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Needs Verification |
+| pastel cumpleaños | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Failed |
 | ensaladilla rusa receta | Pasteles | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
 | comida verano | Pasteles | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
-| Como hacer torta o pastel Red Velvet original | Pasteles | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
+| Como hacer torta o pastel Red Velvet original | Pasteles | Pinterest Trends + Google News | Receta Dolce | Low | Failed |
 | Nestlé Postres España | Postres | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
 | a birthday cake with chocolate and white frosting | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
 | a chocolate cake with strawberries on top | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
@@ -590,14 +590,14 @@
 | De chocolate | Chocolates | Pinterest Trends + Google News | Receta Dolce | Low | Pending |
 | galletas ideas | Galletas | Google News + Google Suggestions | Receta Dolce | High | Pending |
 | ideas galletas halloween | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| ideas galletas de jengibre | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| ideas galletas de jengibre | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | ideas galletas san valentin | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | ideas galletas dia del niño | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | ideas galletas decoradas | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | 5 recetas para disfrutar del chocolate en verano | Chocolates | Google News | Receta Dolce | Medium | Pending |
 | pasteles recetas fáciles | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles recetas faciles y economicas | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
-| pasteles recetas caseras | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
+| pasteles recetas caseras | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Failed |
 | pasteles recetas faciles y rapidas | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles recetas puerto rico | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles recetas de chocolate | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
@@ -605,10 +605,10 @@
 | recetas pasteles de belem | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | galletas recetas de la abuela | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | galletas recetas faciles | Galletas | Google News + Google Suggestions | Receta Dolce | High | Pending |
-| galletas recetas caseras | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| galletas recetas mantequilla | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| galletas recetas caseras | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Needs Verification |
+| galletas recetas mantequilla | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | galletas recetas faciles para niños | Galletas | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
-| galletas recetas saludables | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| galletas recetas saludables | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | galletas maria | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
 | galletas mercadona | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
 | galletas de marruecos | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
@@ -622,7 +622,7 @@
 | galletas milka | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | pasteles ideas | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles ideas pinterest | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| Ensaladas, brochetas y batido helado de chocolate | Chocolates | Google News | Receta Dolce | Medium | Pending |
+| Ensaladas, brochetas y batido helado de chocolate | Chocolates | Google News | Receta Dolce | Medium | Needs Verification |
 | pasteles ideas para hombre | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles ideas mujer | Pasteles | Google News + Google Suggestions | Receta Dolce | High | Pending |
 | Cuáles son las 10 mejores galletas del mundo | Galletas | Google News | Receta Dolce | Medium | Pending |

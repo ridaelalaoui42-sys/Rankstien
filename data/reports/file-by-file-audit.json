@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-10-10T08:28:44.447261+00:00",
+  "generated_at": "2026-10-10T09:00:22.467946+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 476,
+  "files_audited": 488,
   "status_counts": {
     "ok": 401,
-    "review": 68,
+    "review": 80,
     "fail": 7
   },
   "kind_counts": {
     "agent-config": 1,
     "backend": 65,
-    "core": 54,
+    "core": 53,
     "docs": 29,
     "domain-data": 4,
     "frontend": 130,
     "project": 8,
-    "scripts": 117,
+    "scripts": 130,
     "tests": 68
   },
   "files": [
@@ -391,8 +391,8 @@
       "path": "backend/scripts/pinterest_batch_core.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 66362,
-      "lines": 1665,
+      "bytes": 68066,
+      "lines": 1693,
       "findings": []
     },
     {
@@ -415,8 +415,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 196440,
-      "lines": 4882,
+      "bytes": 200096,
+      "lines": 4963,
       "findings": []
     },
     {
@@ -607,16 +607,16 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 409,
-      "lines": 12,
+      "bytes": 8989,
+      "lines": 268,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 199,
-      "lines": 7,
+      "bytes": 1396,
+      "lines": 22,
       "findings": []
     },
     {
@@ -631,7 +631,7 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 86791,
+      "bytes": 86783,
       "lines": 754,
       "findings": []
     },
@@ -639,16 +639,16 @@
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 410,
-      "lines": 12,
+      "bytes": 8739,
+      "lines": 268,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 200,
-      "lines": 7,
+      "bytes": 1402,
+      "lines": 22,
       "findings": []
     },
     {
@@ -663,7 +663,7 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 62613,
+      "bytes": 62632,
       "lines": 548,
       "findings": []
     },
@@ -1932,14 +1932,6 @@
       "findings": []
     },
     {
-      "path": "pinterest_automation/interactive_login.py",
-      "kind": "core",
-      "status": "ok",
-      "bytes": 3787,
-      "lines": 109,
-      "findings": []
-    },
-    {
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
@@ -1975,7 +1967,7 @@
       "path": "pinterest_automation/pinterest_driver.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 61087,
+      "bytes": 61099,
       "lines": 1364,
       "findings": []
     },
@@ -2319,8 +2311,8 @@
       "path": "rankstein/trend_intelligence.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 62988,
-      "lines": 1839,
+      "bytes": 70306,
+      "lines": 2043,
       "findings": []
     },
     {
@@ -2440,11 +2432,31 @@
       ]
     },
     {
+      "path": "scripts/debug/check_boards_list.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1486,
+      "lines": 35,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/check_fresh_keywords.py",
       "kind": "scripts",
       "status": "review",
       "bytes": 1533,
       "lines": 38,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/check_media_boards.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1382,
+      "lines": 33,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2525,6 +2537,16 @@
       "status": "review",
       "bytes": 1173,
       "lines": 32,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/ensure_all_boards.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 4791,
+      "lines": 115,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2672,6 +2694,36 @@
       ]
     },
     {
+      "path": "scripts/debug/inspect_boards_medridaelalaoui6.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2816,
+      "lines": 57,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_create_board.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 3560,
+      "lines": 73,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_create_board_modal.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 3004,
+      "lines": 66,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/inspect_issue_posts.py",
       "kind": "scripts",
       "status": "fail",
@@ -2710,6 +2762,26 @@
       "lines": 54,
       "findings": [
         "python syntax error: line 14: invalid syntax",
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_user_boards.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2427,
+      "lines": 54,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/list_dropdown_boards.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2033,
+      "lines": 48,
+      "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2794,6 +2866,16 @@
       ]
     },
     {
+      "path": "scripts/debug/provision_boards_medridaelalaoui6.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 5083,
+      "lines": 128,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/publish_test_article.py",
       "kind": "scripts",
       "status": "review",
@@ -2845,6 +2927,16 @@
       ]
     },
     {
+      "path": "scripts/debug/test_board_dropdown_live.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 4300,
+      "lines": 93,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/test_bolder_color_headers.py",
       "kind": "scripts",
       "status": "review",
@@ -2860,6 +2952,16 @@
       "status": "review",
       "bytes": 16960,
       "lines": 393,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_create_missing_board.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 3364,
+      "lines": 73,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -3040,6 +3142,16 @@
       "status": "review",
       "bytes": 29959,
       "lines": 655,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/test_submit_board.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 2645,
+      "lines": 57,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -3292,8 +3404,16 @@
       "path": "scripts/ops/clear_pinterest_drafts.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 13687,
-      "lines": 298,
+      "bytes": 13761,
+      "lines": 299,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/ensure_pinterest_boards.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 10383,
+      "lines": 223,
       "findings": []
     },
     {

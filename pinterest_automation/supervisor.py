@@ -423,6 +423,15 @@ class AutonomousSupervisor:
                                     await self.queue.retry_or_fail_async(job.id, "Login failed")
                                     continue
 
+                                # Validate image file existence
+                                img_path = payload.get("image_path", "")
+                                if not img_path or not Path(img_path).exists():
+                                    logger.warning(
+                                        f"Worker {worker_id}: Image file not found: {img_path}. Moving job {job.id} to DLQ."
+                                    )
+                                    await self.queue.fail_async(job.id, f"Image file not found: {img_path}")
+                                    continue
+
                                 # Create pin
                                 start = time.time()
                                 result = await asyncio.wait_for(

@@ -2,7 +2,7 @@
 
 | Keyword | Cluster | Source | Target Blog | Priority | Status |
 |---|---|---|---|---|---|
-| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | 5 Aperitivos Sencillos Rapidos Fiestas | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos De Navidad Originales Y Faciles Para Triunfar | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos Fiestas Faciles Economicos V2 | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
@@ -242,13 +242,13 @@
 | gazpacho de sandía y jengibre | Sopas | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | salmorejo con virutas de jamón | Sopas | Pinterest Trends + Google News | Receta Genial | High | Live |
 | ensalada de pasta con verduras asadas | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| pollo al horno con limón y romero | Carnes | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
+| pollo al horno con limón y romero | Carnes | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | berenjenas rellenas de verduras y queso | General | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| pimientos rellenos de arroz y verduras | General | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
+| pimientos rellenos de arroz y verduras | General | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | sepia a la plancha con aliño de limón | Pescados | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | brochetas de pollo y verduras | Carnes | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | panna cotta de coco y mango | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
-| tarta de queso al horno tradicional | Postres | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| tarta de queso al horno tradicional | Postres | Pinterest Trends + Google News | Receta Genial | High | Failed |
 | flan de café tradicional | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | lentejas frías estilo ensalada | General | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | rollitos de jamón y queso fresco | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
@@ -256,11 +256,11 @@
 | crema fría de pepino y yogur griego | Sopas | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | mejillones en escabeche casero | Pescados | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | patatas aliñadas con mojo picón | General | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
-| ensalada de garbanzos y aguacate | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
+| ensalada de garbanzos y aguacate | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | aperitivos salados saludables | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | ideas de mesa de postre | Postres | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | comida canaria | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
-| ensalada lentejas | Ensaladas | Pinterest Trends + Google News | Receta Genial | Low | Pending |
+| ensalada lentejas | Ensaladas | Pinterest Trends + Google News | Receta Genial | Low | Failed |
 | recetas verano | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | ensalada de pasta | Ensaladas | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | recetas con calabacín | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Pending |
@@ -288,8 +288,8 @@
 | Postres fáciles y deliciosos para sorprender desde casa | Postres | Pinterest Trends + Google News | Receta Genial | High | Pending |
 | Postres Aesthetic | Postres | Pinterest Trends + Google News | Receta Genial | High | Pending |
 | receta de Eclairs de chocolate | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Tarta de Queso y Cuajada | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
-| Tarta de queso con mango | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
+| Tarta de Queso y Cuajada | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
+| Tarta de queso con mango | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Un Postre Exótico y Cremoso | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Pending |
 | Para aperitivos sencillos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Pending |
 | De aperitivos para reuniones | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Pending |
@@ -384,7 +384,7 @@
 | postres italianos | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
 | Esta es la mejor grasa para freír carne | Carnes | Google News | Receta Genial | Medium | Pending |
 | postres peruanos | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
-| recetas aperitivos fríos en rodajas de pan | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
+| recetas aperitivos fríos en rodajas de pan | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Live |
 | recetas aperitivos thermomix | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
 | La Cocina del Once | Aperitivos | Google News | Receta Genial | Medium | Pending |
 | aperitivos faciles de hacer | Aperitivos | Google News + Google Suggestions | Receta Genial | Medium | Pending |
