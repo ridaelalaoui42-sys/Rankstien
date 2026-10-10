@@ -4,6 +4,7 @@ Production-ready central config with env validation and defaults.
 """
 
 import json
+import logging
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -11,6 +12,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .browser_utils import DEFAULT_BROWSER_MAP, FIREFOX_USER_AGENT, normalize_browser_type
+
+logger = logging.getLogger("rankstein.config")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -343,7 +346,9 @@ class AutomationConfig:
         if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("PINTEREST_ACCOUNTS_FILE"):
             return
         accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
-        accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        accounts_file = (
+            Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        )
         if not accounts_file.is_file():
             return
         try:

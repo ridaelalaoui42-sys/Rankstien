@@ -6,6 +6,7 @@ Keeps the system running 24/7 with automatic recovery, queue processing, and hea
 import asyncio
 import logging
 import os
+import re
 import signal
 import time
 from datetime import datetime
@@ -52,6 +53,19 @@ class AutonomousSupervisor:
     - Manages graceful shutdown
     - Reports status
     """
+
+    @staticmethod
+    def is_verified_upload(result: dict) -> bool:
+        """Return True only if upload result has an attested Pinterest pin_id (>=15 digits) or valid pin_url."""
+        if not isinstance(result, dict) or not result.get("success"):
+            return False
+        pin_id = str(result.get("pin_id") or "").strip()
+        pin_url = str(result.get("pin_url") or "").strip()
+        if pin_id and re.match(r"^\d{15,22}$", pin_id):
+            return True
+        if pin_url and "/pin/" in pin_url:
+            return True
+        return False
 
     def __init__(self, worker_count: int | None = None):
         config_obj = get_config()
@@ -259,32 +273,23 @@ class AutonomousSupervisor:
                     logger.info(f"Job {job.id} succeeded in {elapsed:.1f}s")
                     await self.queue.complete_async(job.id, result)
 
-                    # Delete local image to free space after successful upload
+                    # Delete local image only after verified upload with real pin_id / pin_url
                     image_path = payload.get("image_path")
                     if image_path:
-                        if await self.queue.image_path_already_queued_async(image_path):
+                        if not self.is_verified_upload(result):
+                            logger.warning(
+                                f"Preserving image {image_path}: Upload result is not verified with a valid pin_id or pin_url."
+                            )
+                        elif await self.queue.image_path_already_queued_async(image_path):
                             logger.info(
-                                f"Skipping deletion of {image_path} because other jobs are still queued"
+                                f"Preserving image {image_path} because other jobs are still queued or in DLQ"
                             )
                         elif os.path.exists(image_path):
                             try:
                                 os.remove(image_path)
-                                logger.info(f"Deleted uploaded image {image_path}")
+                                logger.info(f"Deleted verified uploaded image {image_path}")
                             except Exception as e:
                                 logger.warning(f"Failed to delete {image_path}: {e}")
-
-                        # Also try to delete from remaster_raw if it exists
-                        _raw_dir = Path(__file__).resolve().parent.parent / "data" / "media" / "remaster_raw"
-                        filename = os.path.basename(image_path)
-                        raw_path = str(_raw_dir / filename)
-                        if os.path.exists(raw_path) and not await self.queue.image_path_already_queued_async(
-                            image_path
-                        ):
-                            try:
-                                os.remove(raw_path)
-                                logger.info(f"Deleted raw image {raw_path}")
-                            except Exception as e:
-                                logger.warning(f"Failed to delete raw image {raw_path}: {e}")
 
                     return True
                 else:
@@ -464,47 +469,26 @@ class AutonomousSupervisor:
                                     if result.get("pin_url"):
                                         await self._enqueue_cross_save(job, result["pin_url"])
 
-                                    # Delete local image to free space after successful upload
+                                    # Delete local image only after verified upload with real pin_id / pin_url
                                     image_path = payload.get("image_path")
                                     if image_path:
-                                        if await self.queue.image_path_already_queued_async(image_path):
+                                        if not self.is_verified_upload(result):
+                                            logger.warning(
+                                                f"Worker {worker_id}: Preserving image {image_path}: Upload result is not verified with a valid pin_id or pin_url."
+                                            )
+                                        elif await self.queue.image_path_already_queued_async(image_path):
                                             logger.info(
-                                                f"Worker {worker_id}: Skipping deletion of {image_path} "
-                                                "because other jobs are still queued"
+                                                f"Worker {worker_id}: Preserving image {image_path} because other jobs are still queued or in DLQ"
                                             )
                                         elif os.path.exists(image_path):
                                             try:
                                                 os.remove(image_path)
                                                 logger.info(
-                                                    f"Worker {worker_id}: Deleted uploaded image {image_path}"
+                                                    f"Worker {worker_id}: Deleted verified uploaded image {image_path}"
                                                 )
                                             except Exception as e:
                                                 logger.warning(
                                                     f"Worker {worker_id}: Failed to delete {image_path}: {e}"
-                                                )
-
-                                        # Also try to delete from remaster_raw if it exists
-                                        _raw_dir = (
-                                            Path(__file__).resolve().parent.parent
-                                            / "data"
-                                            / "media"
-                                            / "remaster_raw"
-                                        )
-                                        filename = os.path.basename(image_path)
-                                        raw_path = str(_raw_dir / filename)
-                                        if os.path.exists(
-                                            raw_path
-                                        ) and not await self.queue.image_path_already_queued_async(
-                                            image_path
-                                        ):
-                                            try:
-                                                os.remove(raw_path)
-                                                logger.info(
-                                                    f"Worker {worker_id}: Deleted raw image {raw_path}"
-                                                )
-                                            except Exception as e:
-                                                logger.warning(
-                                                    f"Worker {worker_id}: Failed to delete raw image {raw_path}: {e}"
                                                 )
                                 else:
                                     error = result.get("error", "Unknown error")
@@ -518,23 +502,45 @@ class AutonomousSupervisor:
                                         )
                                     else:
                                         # Self-healing: if draft limit / upload editor unlock failed, trigger draft purge
-                                        if any(m in error.lower() for m in ("draft", "limit", "unlock within timeout", "50 drafts", "creator")):
+                                        if any(
+                                            m in error.lower()
+                                            for m in (
+                                                "draft",
+                                                "limit",
+                                                "unlock within timeout",
+                                                "50 drafts",
+                                                "creator",
+                                            )
+                                        ):
                                             logger.warning(
                                                 f"Worker {worker_id}: Draft/upload limit detected ({error}). Triggering self-healing draft purge for account '{account_handle}'..."
                                             )
                                             try:
-                                                from scripts.ops.clear_pinterest_drafts import aggressive_clear
                                                 from types import SimpleNamespace
+
+                                                from scripts.ops.clear_pinterest_drafts import (
+                                                    aggressive_clear,
+                                                )
+
                                                 acc_session = get_config().accounts.get(account_handle)
                                                 if acc_session:
                                                     acc_obj = SimpleNamespace(
                                                         name=account_handle,
-                                                        session_dir=get_config().session_dir_for(account_handle) if hasattr(get_config(), "session_dir_for") else (Path("data/sessions") / (acc_session.session_name or account_handle)),
+                                                        session_dir=get_config().session_dir_for(
+                                                            account_handle
+                                                        )
+                                                        if hasattr(get_config(), "session_dir_for")
+                                                        else (
+                                                            Path("data/sessions")
+                                                            / (acc_session.session_name or account_handle)
+                                                        ),
                                                         browser=acc_session.browser or "chromium",
                                                     )
                                                     await aggressive_clear(acc_obj)
                                             except Exception as heal_exc:
-                                                logger.warning(f"Worker {worker_id}: Self-healing draft purge failed: {heal_exc}")
+                                                logger.warning(
+                                                    f"Worker {worker_id}: Self-healing draft purge failed: {heal_exc}"
+                                                )
 
                                         await driver.close(healthy=False)
                                         driver = PinterestDriver()
@@ -676,6 +682,8 @@ class AutonomousSupervisor:
                         "board_name": normalize_board_name(job.payload.get("board_name", "")),
                         "domain_handle": domain_handle,
                         "source_job_id": job.id,
+                        "source_account": current_handle,
+                        "originator_account": current_handle,
                     },
                     # Cross-saves run just after new uploads (priority + 1 = lower urgency),
                     # clamped to [2, 9] so they never starve new content when the queue grows.
@@ -796,8 +804,11 @@ class AutonomousSupervisor:
             logger.info("Running pre-session draft purge across configured Pinterest accounts...")
             try:
                 from scripts.ops.clear_pinterest_drafts import clear_all_accounts_drafts
+
                 purge_results = await clear_all_accounts_drafts()
-                logger.info(f"Startup draft purge completed for {len(purge_results)} account(s): {purge_results}")
+                logger.info(
+                    f"Startup draft purge completed for {len(purge_results)} account(s): {purge_results}"
+                )
             except Exception as draft_exc:
                 logger.warning(f"Startup draft purge non-fatal error: {draft_exc}")
 

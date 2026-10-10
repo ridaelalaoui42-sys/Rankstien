@@ -446,7 +446,9 @@ class PinterestDriver:
                 self.info(f"Successfully purged {deleted} draft(s) using bulk purge engine.")
                 return deleted
         except Exception as purge_err:
-            self.warning(f"Bulk draft purge engine encountered error: {purge_err}; attempting direct DOM purge.")
+            self.warning(
+                f"Bulk draft purge engine encountered error: {purge_err}; attempting direct DOM purge."
+            )
 
         try:
             body_text = await page.locator("body").inner_text(timeout=3000)
@@ -497,13 +499,17 @@ class PinterestDriver:
         deleted = 0
         for _ in range(min(max_delete, 10)):
             try:
-                actions = page.locator('button[aria-label*="Pin draft actions" i], [data-test-id="draft-actions-button"]')
+                actions = page.locator(
+                    'button[aria-label*="Pin draft actions" i], [data-test-id="draft-actions-button"]'
+                )
                 if await actions.count() == 0:
                     break
                 await actions.first.click(force=True)
                 await page.wait_for_timeout(500)
 
-                delete_action = page.locator('[data-test-id="delete-draft-action"], button:has-text("Delete")').first
+                delete_action = page.locator(
+                    '[data-test-id="delete-draft-action"], button:has-text("Delete")'
+                ).first
                 await delete_action.wait_for(state="visible", timeout=3000)
                 await delete_action.click(force=True)
                 await page.wait_for_timeout(500)

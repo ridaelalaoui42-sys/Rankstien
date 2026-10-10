@@ -1437,6 +1437,14 @@ class PinManager:
         return filename in self.uploaded
 
     async def mark_completed(self, filename, post, pin_id):
+        # Strict validation: Only consider completed and safe to delete if pin_id is verified
+        clean_pin_id = str(pin_id or "").strip()
+        if not clean_pin_id or not re.match(r"^\d{15,22}$", clean_pin_id):
+            logger.warning(
+                f"Refusing to delete image {filename}: pin_id '{pin_id}' is not verified as a valid Pinterest pin"
+            )
+            return
+
         async with self.lock:
             if filename in self.uploaded:
                 return
@@ -1444,14 +1452,14 @@ class PinManager:
             with open(UPLOADED_TRACKER, "a", encoding="utf-8") as tracker:
                 tracker.write(filename + "\n")
             try:
-                update_pin_id(self.sb, post["id"], pin_id)
+                update_pin_id(self.sb, post["id"], clean_pin_id)
             except Exception as exc:
                 logger.error(f"Supabase pin update failed for {filename}: {exc}")
             path = MEDIA_DIR / filename
             if path.exists():
                 try:
                     path.unlink()
-                    logger.info(f"Deleted uploaded image: {filename}")
+                    logger.info(f"Deleted verified uploaded image: {filename}")
                 except Exception as exc:
                     logger.error(f"Delete failed for {filename}: {exc}")
 

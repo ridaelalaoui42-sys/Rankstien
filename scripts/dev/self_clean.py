@@ -82,7 +82,6 @@ CLEAN_DIR_GLOBS = [
     ".pytest_cache",
     ".playwright-mcp",
     "htmlcov",
-    "nanobanana-output",
     "data/domains/*/data/.cache",
     "data/domains/*/data/tmp",
     "data/recetadolce_backup_final",
@@ -100,6 +99,8 @@ PROTECTED_DIR_NAMES = {".venv", "node_modules"}
 PROTECTED_RUNTIME_ROOTS = {
     (ROOT / "data" / "sessions").resolve(),
     (ROOT / "data" / "queue").resolve(),
+    (ROOT / "data" / "media").resolve(),
+    (ROOT / "nanobanana-output").resolve(),
 }
 
 

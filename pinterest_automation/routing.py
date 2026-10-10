@@ -10,6 +10,16 @@ from pathlib import Path
 from .config import get_config
 
 
+class DeduplicationRole:
+    """Formal Pinterest deduplication roles across accounts and domains."""
+
+    PRIMARY_ORIGINATOR = "PRIMARY_ORIGINATOR"  # Upload unique asset exactly once; partition across cohort
+    CROSS_SAVE_AMPLIFIER = "CROSS_SAVE_AMPLIFIER"  # Repin canonical pin_url; no duplicate saves per account
+    PORTFOLIO_SYNDICATOR = (
+        "PORTFOLIO_SYNDICATOR"  # Multi-account cross-domain amplification with matching boards
+    )
+
+
 def _positive_int_env(name: str, default: int = 5) -> int:
     try:
         return max(0, int(os.environ.get(name, str(default))))
@@ -29,7 +39,9 @@ def account_cohort(domain_handle: str, *, config=None) -> list[str]:
             from .config import DATA_DIR
 
             accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
-            accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+            accounts_file = (
+                Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+            )
             if accounts_file.is_file():
                 data = json.loads(accounts_file.read_text(encoding="utf-8"))
                 mapping = data.get("domain_account_map")

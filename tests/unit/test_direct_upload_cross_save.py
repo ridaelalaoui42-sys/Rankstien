@@ -71,6 +71,8 @@ async def test_direct_upload_enqueues_cross_save_jobs_for_other_accounts(monkeyp
         "board_name": "Chocolate",
         "domain_handle": "recetadolce",
         "source": "automation_upload_pin_direct",
+        "source_account": "rida",
+        "originator_account": "rida",
     }
 
 

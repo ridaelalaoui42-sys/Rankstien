@@ -1237,7 +1237,10 @@ def apply_luxury_overlay(
         if domain_handle:
             clean_domain = re.sub(r"[^a-zA-Z0-9_-]+", "-", domain_handle).strip("-") or "manual"
             day = date_str or datetime.now(UTC).strftime("%Y-%m-%d")
-            clean_kw = re.sub(r"[^a-zA-Z0-9_-]+", "-", slugify(keyword or title_text).get("slug", "")).strip("-") or "general"
+            clean_kw = (
+                re.sub(r"[^a-zA-Z0-9_-]+", "-", slugify(keyword or title_text).get("slug", "")).strip("-")
+                or "general"
+            )
             out_dir = REMASTER_DIR / clean_domain / day / clean_kw
         else:
             out_dir = REMASTER_DIR
@@ -5238,6 +5241,8 @@ async def automation_upload_pin_direct(
                                 "board_name": normalized_board,
                                 "domain_handle": domain_handle,
                                 "source": "automation_upload_pin_direct",
+                                "source_account": source_handle,
+                                "originator_account": source_handle,
                             },
                             priority=3,
                         )

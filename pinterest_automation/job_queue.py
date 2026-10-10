@@ -244,6 +244,229 @@ LIMIT 1
 """
 
 
+def _find_dedupe_match_sync(conn: sqlite3.Connection, job: Job) -> str | None:
+    payload = job.payload or {}
+    extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
+
+    # 1. Idempotency Key (e.g. from article remaster batches)
+    idempotency_key = extra.get("idempotency_key") if isinstance(extra, dict) else None
+    if idempotency_key:
+        row = conn.execute(
+            """
+            SELECT id FROM jobs WHERE json_extract(payload_json, '$.extra.idempotency_key') = ?
+            UNION ALL
+            SELECT id FROM completed_log WHERE json_extract(job_json, '$.payload.extra.idempotency_key') = ?
+            UNION ALL
+            SELECT id FROM dlq WHERE json_extract(job_json, '$.payload.extra.idempotency_key') = ?
+            LIMIT 1
+            """,
+            (str(idempotency_key), str(idempotency_key), str(idempotency_key)),
+        ).fetchone()
+        if row:
+            return str(row["id"])
+
+    # 2. CROSS_SAVE_AMPLIFIER role for pin_save
+    if job.type == "pin_save":
+        account = str(payload.get("account_handle") or extra.get("account_handle") or "").strip()
+        pin_url = str(payload.get("pin_url") or "").strip()
+        src_account = str(payload.get("source_account") or payload.get("originator_account") or "").strip()
+
+        # Rule 1: No self-cross-save
+        if src_account and account and src_account == account:
+            logger.warning(
+                "[CROSS_SAVE_AMPLIFIER] Blocked self-cross-save: %s cannot save own pin %s",
+                account,
+                pin_url,
+            )
+            return str(job.id)
+
+        # Rule 2: No duplicate save of the same pin_url by the same account
+        if account and pin_url:
+            row = conn.execute(
+                """
+                SELECT id FROM jobs
+                WHERE type = 'pin_save'
+                  AND json_extract(payload_json, '$.account_handle') = ?
+                  AND json_extract(payload_json, '$.pin_url') = ?
+                UNION ALL
+                SELECT id FROM completed_log
+                WHERE json_extract(job_json, '$.type') = 'pin_save'
+                  AND json_extract(job_json, '$.payload.account_handle') = ?
+                  AND json_extract(job_json, '$.payload.pin_url') = ?
+                UNION ALL
+                SELECT id FROM dlq
+                WHERE json_extract(job_json, '$.type') = 'pin_save'
+                  AND json_extract(job_json, '$.payload.account_handle') = ?
+                  AND json_extract(job_json, '$.payload.pin_url') = ?
+                LIMIT 1
+                """,
+                (account, pin_url, account, pin_url, account, pin_url),
+            ).fetchone()
+            if row:
+                logger.info(
+                    "[CROSS_SAVE_AMPLIFIER] Skipped duplicate save: %s already saved %s (existing=%s)",
+                    account,
+                    pin_url,
+                    row["id"],
+                )
+                return str(row["id"])
+
+    # 3. PRIMARY_ORIGINATOR role for pin_upload
+    if job.type == "pin_upload":
+        image_path = str(payload.get("image_path") or "").strip()
+        if image_path:
+            norm_path = str(Path(image_path).resolve())
+            row = conn.execute(
+                """
+                SELECT id FROM jobs
+                WHERE type = 'pin_upload'
+                  AND (json_extract(payload_json, '$.image_path') = ? OR json_extract(payload_json, '$.image_path') = ?)
+                UNION ALL
+                SELECT id FROM completed_log
+                WHERE json_extract(job_json, '$.type') = 'pin_upload'
+                  AND (json_extract(job_json, '$.payload.image_path') = ? OR json_extract(job_json, '$.payload.image_path') = ?)
+                UNION ALL
+                SELECT id FROM dlq
+                WHERE json_extract(job_json, '$.type') = 'pin_upload'
+                  AND (json_extract(job_json, '$.payload.image_path') = ? OR json_extract(job_json, '$.payload.image_path') = ?)
+                LIMIT 1
+                """,
+                (image_path, norm_path, image_path, norm_path, image_path, norm_path),
+            ).fetchone()
+            if row:
+                logger.info(
+                    "[PRIMARY_ORIGINATOR] Skipped duplicate upload for %s (existing=%s)",
+                    image_path,
+                    row["id"],
+                )
+                return str(row["id"])
+
+    # 4. Standard duplicate identity check
+    identity = _job_identity(job)
+    if _dedupe_identity_is_specific(identity):
+        existing = conn.execute(_DUPLICATE_ACTIVE_SQL, identity).fetchone()
+        if existing:
+            return str(existing["id"])
+        dead = conn.execute(_DUPLICATE_DLQ_SQL, identity).fetchone()
+        if dead:
+            return str(dead["id"])
+    return None
+
+
+async def _find_dedupe_match_async(db, job: Job) -> str | None:
+    payload = job.payload or {}
+    extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
+
+    # 1. Idempotency Key (e.g. from article remaster batches)
+    idempotency_key = extra.get("idempotency_key") if isinstance(extra, dict) else None
+    if idempotency_key:
+        cursor = await db.execute(
+            """
+            SELECT id FROM jobs WHERE json_extract(payload_json, '$.extra.idempotency_key') = ?
+            UNION ALL
+            SELECT id FROM completed_log WHERE json_extract(job_json, '$.payload.extra.idempotency_key') = ?
+            UNION ALL
+            SELECT id FROM dlq WHERE json_extract(job_json, '$.payload.extra.idempotency_key') = ?
+            LIMIT 1
+            """,
+            (str(idempotency_key), str(idempotency_key), str(idempotency_key)),
+        )
+        row = await cursor.fetchone()
+        if row:
+            return str(row["id"])
+
+    # 2. CROSS_SAVE_AMPLIFIER role for pin_save
+    if job.type == "pin_save":
+        account = str(payload.get("account_handle") or extra.get("account_handle") or "").strip()
+        pin_url = str(payload.get("pin_url") or "").strip()
+        src_account = str(payload.get("source_account") or payload.get("originator_account") or "").strip()
+
+        # Rule 1: No self-cross-save
+        if src_account and account and src_account == account:
+            logger.warning(
+                "[CROSS_SAVE_AMPLIFIER] Blocked self-cross-save: %s cannot save own pin %s",
+                account,
+                pin_url,
+            )
+            return str(job.id)
+
+        # Rule 2: No duplicate save of the same pin_url by the same account
+        if account and pin_url:
+            cursor = await db.execute(
+                """
+                SELECT id FROM jobs
+                WHERE type = 'pin_save'
+                  AND json_extract(payload_json, '$.account_handle') = ?
+                  AND json_extract(payload_json, '$.pin_url') = ?
+                UNION ALL
+                SELECT id FROM completed_log
+                WHERE json_extract(job_json, '$.type') = 'pin_save'
+                  AND json_extract(job_json, '$.payload.account_handle') = ?
+                  AND json_extract(job_json, '$.payload.pin_url') = ?
+                UNION ALL
+                SELECT id FROM dlq
+                WHERE json_extract(job_json, '$.type') = 'pin_save'
+                  AND json_extract(job_json, '$.payload.account_handle') = ?
+                  AND json_extract(job_json, '$.payload.pin_url') = ?
+                LIMIT 1
+                """,
+                (account, pin_url, account, pin_url, account, pin_url),
+            )
+            row = await cursor.fetchone()
+            if row:
+                logger.info(
+                    "[CROSS_SAVE_AMPLIFIER] Skipped duplicate save: %s already saved %s (existing=%s)",
+                    account,
+                    pin_url,
+                    row["id"],
+                )
+                return str(row["id"])
+
+    # 3. PRIMARY_ORIGINATOR role for pin_upload
+    if job.type == "pin_upload":
+        image_path = str(payload.get("image_path") or "").strip()
+        if image_path:
+            norm_path = str(Path(image_path).resolve())
+            cursor = await db.execute(
+                """
+                SELECT id FROM jobs
+                WHERE type = 'pin_upload'
+                  AND (json_extract(payload_json, '$.image_path') = ? OR json_extract(payload_json, '$.image_path') = ?)
+                UNION ALL
+                SELECT id FROM completed_log
+                WHERE json_extract(job_json, '$.type') = 'pin_upload'
+                  AND (json_extract(job_json, '$.payload.image_path') = ? OR json_extract(job_json, '$.payload.image_path') = ?)
+                UNION ALL
+                SELECT id FROM dlq
+                WHERE json_extract(job_json, '$.type') = 'pin_upload'
+                  AND (json_extract(job_json, '$.payload.image_path') = ? OR json_extract(job_json, '$.payload.image_path') = ?)
+                LIMIT 1
+                """,
+                (image_path, norm_path, image_path, norm_path, image_path, norm_path),
+            )
+            row = await cursor.fetchone()
+            if row:
+                logger.info(
+                    "[PRIMARY_ORIGINATOR] Skipped duplicate upload for %s (existing=%s)",
+                    image_path,
+                    row["id"],
+                )
+                return str(row["id"])
+
+    # 4. Standard duplicate identity check
+    identity = _job_identity(job)
+    if _dedupe_identity_is_specific(identity):
+        cursor = await db.execute(_DUPLICATE_ACTIVE_SQL, identity)
+        existing = await cursor.fetchone()
+        if existing:
+            return str(existing["id"])
+        cursor = await db.execute(_DUPLICATE_DLQ_SQL, identity)
+        dead = await cursor.fetchone()
+        if dead:
+            return str(dead["id"])
+    return None
+
+
 _INSERT_OR_REPLACE_JOB = """
 INSERT OR REPLACE INTO jobs (
     id, type, payload_json, status, created_at, started_at, completed_at,
@@ -380,35 +603,21 @@ class JobQueue:
     def enqueue(self, job: Job) -> str:
         _normalize_job_payload_board(job)
         with self._lock, self._conn() as conn:
-            identity = _job_identity(job)
-            if _dedupe_identity_is_specific(identity):
-                existing = conn.execute(_DUPLICATE_ACTIVE_SQL, identity).fetchone()
-                if existing:
-                    logger.info("Skipped duplicate active job %s (existing=%s)", job.id, existing["id"])
-                    return str(existing["id"])
-                dead = conn.execute(_DUPLICATE_DLQ_SQL, identity).fetchone()
-                if dead:
-                    logger.info("Skipped duplicate DLQ job %s (dlq=%s)", job.id, dead["id"])
-                    return str(dead["id"])
+            match_id = _find_dedupe_match_sync(conn, job)
+            if match_id:
+                logger.info("Skipped duplicate job %s (existing=%s)", job.id, match_id)
+                return match_id
             conn.execute(_INSERT_OR_REPLACE_JOB, _job_to_row(job))
         logger.info(f"Enqueued job {job.id} (type={job.type}, priority={job.priority})")
         return job.id
 
     async def enqueue_async(self, job: Job) -> str:
         _normalize_job_payload_board(job)
-        identity = _job_identity(job)
         async with self._aconn() as db:
-            if _dedupe_identity_is_specific(identity):
-                cursor = await db.execute(_DUPLICATE_ACTIVE_SQL, identity)
-                existing = await cursor.fetchone()
-                if existing:
-                    logger.info("Skipped duplicate active job %s (existing=%s)", job.id, existing["id"])
-                    return str(existing["id"])
-                cursor = await db.execute(_DUPLICATE_DLQ_SQL, identity)
-                dead = await cursor.fetchone()
-                if dead:
-                    logger.info("Skipped duplicate DLQ job %s (dlq=%s)", job.id, dead["id"])
-                    return str(dead["id"])
+            match_id = await _find_dedupe_match_async(db, job)
+            if match_id:
+                logger.info("Skipped duplicate job %s (existing=%s)", job.id, match_id)
+                return match_id
             await db.execute(_INSERT_OR_REPLACE_JOB, _job_to_row(job))
             await db.commit()
         logger.info(f"Enqueued job {job.id} (type={job.type}, priority={job.priority})")
@@ -854,6 +1063,35 @@ class JobQueue:
                 await db.commit()
                 logger.warning(f"Job {job_id} scheduled for retry in {backoff:.1f}s (attempt {job.attempt})")
 
+    def fail(self, job_id: str, error: str) -> None:
+        """Immediately move a job to DLQ without further retries."""
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if row is None:
+                return
+            job = _row_to_job(row)
+            job.error_log.append(f"Fatal error: {error}")
+            job.status = JobStatus.DEAD.value
+            try:
+                conn.execute("BEGIN IMMEDIATE;")
+                conn.execute(
+                    "INSERT OR REPLACE INTO dlq (id, job_json, moved_at) VALUES (?, ?, ?)",
+                    (
+                        job.id,
+                        json.dumps(job.to_dict(), ensure_ascii=False),
+                        datetime.now(UTC).timestamp(),
+                    ),
+                )
+                conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+                conn.execute("COMMIT;")
+            except sqlite3.Error:
+                conn.execute("ROLLBACK;")
+                raise
+            logger.error(f"Job {job_id} moved to DLQ: {error}")
+
+    async def fail_async(self, job_id: str, error: str) -> None:
+        await asyncio.to_thread(self.fail, job_id, error)
+
     def hold_campaign_jobs(self, job_ids: list[str], *, pipeline_run_id: str, reason: str) -> dict:
         """Atomically quarantine exact, unleased remaster jobs without deleting them.
 
@@ -1077,7 +1315,7 @@ class JobQueue:
                 """
                 SELECT id FROM jobs
                 WHERE type = 'pin_upload'
-                  AND status IN (?, ?, ?)
+                  AND status IN (?, ?, ?, ?)
                   AND payload_json LIKE ?
                 LIMIT 1
                 """,
@@ -1085,6 +1323,7 @@ class JobQueue:
                     JobStatus.PENDING.value,
                     JobStatus.PROCESSING.value,
                     JobStatus.RETRY.value,
+                    JobStatus.DEAD.value,
                     f'%"{raw_escaped}"%',
                 ),
             ).fetchone()
@@ -1095,7 +1334,7 @@ class JobQueue:
                 """
                 SELECT id FROM jobs
                 WHERE type = 'pin_upload'
-                  AND status IN (?, ?, ?)
+                  AND status IN (?, ?, ?, ?)
                   AND payload_json LIKE ?
                 LIMIT 1
                 """,
@@ -1103,6 +1342,7 @@ class JobQueue:
                     JobStatus.PENDING.value,
                     JobStatus.PROCESSING.value,
                     JobStatus.RETRY.value,
+                    JobStatus.DEAD.value,
                     f'%"{norm_escaped}"%',
                 ),
             ).fetchone()
@@ -1119,9 +1359,14 @@ class JobQueue:
                 """
                 SELECT payload_json FROM jobs
                 WHERE type = 'pin_upload'
-                  AND status IN (?, ?, ?)
+                  AND status IN (?, ?, ?, ?)
                 """,
-                (JobStatus.PENDING.value, JobStatus.PROCESSING.value, JobStatus.RETRY.value),
+                (
+                    JobStatus.PENDING.value,
+                    JobStatus.PROCESSING.value,
+                    JobStatus.RETRY.value,
+                    JobStatus.DEAD.value,
+                ),
             ).fetchall()
             for r in rows:
                 try:
