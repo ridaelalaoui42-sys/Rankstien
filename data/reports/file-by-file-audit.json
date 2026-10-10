@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-10-10T03:04:38.840822+00:00",
+  "generated_at": "2026-10-10T08:28:44.447261+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 474,
+  "files_audited": 476,
   "status_counts": {
     "ok": 401,
-    "review": 66,
+    "review": 68,
     "fail": 7
   },
   "kind_counts": {
     "agent-config": 1,
     "backend": 65,
-    "core": 53,
+    "core": 54,
     "docs": 29,
     "domain-data": 4,
     "frontend": 130,
     "project": 8,
-    "scripts": 116,
+    "scripts": 117,
     "tests": 68
   },
   "files": [
@@ -639,16 +639,16 @@
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 11474,
-      "lines": 243,
+      "bytes": 410,
+      "lines": 12,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 936,
-      "lines": 17,
+      "bytes": 200,
+      "lines": 7,
       "findings": []
     },
     {
@@ -1932,6 +1932,14 @@
       "findings": []
     },
     {
+      "path": "pinterest_automation/interactive_login.py",
+      "kind": "core",
+      "status": "ok",
+      "bytes": 3787,
+      "lines": 109,
+      "findings": []
+    },
+    {
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
@@ -2603,6 +2611,16 @@
       ]
     },
     {
+      "path": "scripts/debug/fix_single_calamares.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1632,
+      "lines": 47,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/fuzzy_check.py",
       "kind": "scripts",
       "status": "review",
@@ -2751,6 +2769,16 @@
       "status": "review",
       "bytes": 2787,
       "lines": 80,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/post_remediation_audit.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 5170,
+      "lines": 167,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -3101,19 +3129,19 @@
       "findings": []
     },
     {
+      "path": "scripts/dev/data/sessions/DD/extensions_crx_cache/metadata.json",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 13,
+      "lines": 1,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/disable_legacy_odysseus_task.ps1",
       "kind": "scripts",
       "status": "ok",
       "bytes": 994,
       "lines": 21,
-      "findings": []
-    },
-    {
-      "path": "scripts/dev/execute_database_remediation.py",
-      "kind": "scripts",
-      "status": "ok",
-      "bytes": 16736,
-      "lines": 337,
       "findings": []
     },
     {
@@ -3133,19 +3161,11 @@
       "findings": []
     },
     {
-      "path": "scripts/dev/login_medridaelalaoui6.py",
-      "kind": "scripts",
-      "status": "ok",
-      "bytes": 3846,
-      "lines": 109,
-      "findings": []
-    },
-    {
       "path": "scripts/dev/project_audit.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 9256,
-      "lines": 296,
+      "bytes": 9508,
+      "lines": 307,
       "findings": []
     },
     {

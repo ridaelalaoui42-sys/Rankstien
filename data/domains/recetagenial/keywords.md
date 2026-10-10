@@ -2,7 +2,7 @@
 
 | Keyword | Cluster | Source | Target Blog | Priority | Status |
 |---|---|---|---|---|---|
-| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
 | 5 Aperitivos Sencillos Rapidos Fiestas | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos De Navidad Originales Y Faciles Para Triunfar | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos Fiestas Faciles Economicos V2 | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
@@ -510,12 +510,12 @@
 | arroz con bogavante y gambas | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Live |
 | caldo de pollo con verduras casero | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Live |
 | arroz con pollo al horno jugoso | Aperitivos | Google Autocomplete Demand + Pinterest Trends | Receta Genial | High | Live |
-| paella de marisco video | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| tarta de queso mascarpone | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| tortilla española gourmet | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| croquetas caseras de carne | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| paella de marisco en casa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Failed |
-| tortilla española saludable | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Failed |
+| paella de marisco video | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tarta de queso mascarpone | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tortilla española gourmet | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| croquetas caseras de carne | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| paella de marisco en casa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Pending |
+| tortilla española saludable | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Pending |
 | Pescados al horno | Pescados | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Carnes de cerdo | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | pollo al horno con ensalada rusa | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |

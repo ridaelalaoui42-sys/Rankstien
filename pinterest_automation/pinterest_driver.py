@@ -1016,7 +1016,7 @@ class PinterestDriver:
             if more_sel:
                 loc = page.locator(more_sel).last
                 if await loc.count() > 0 and await loc.is_visible():
-                    await loc.click()
+                    await loc.click(timeout=2000)
                     await asyncio.sleep(1)
         except Exception:
             pass

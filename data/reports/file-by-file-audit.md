@@ -1,13 +1,13 @@
 # File-by-file Project Audit
 
-Generated: 2026-10-10T03:04:38.840822+00:00
+Generated: 2026-10-10T08:28:44.447261+00:00
 Root: `C:\Users\REDX420\Desktop\Rankstein`
 
 ## Summary
 
-- Files audited: 474
+- Files audited: 476
 - OK: 401
-- Review: 66
+- Review: 68
 - Fail: 7
 
 ## Scope
@@ -96,8 +96,8 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | docs | 7 | 199 | `data/domains/recetadolce/daily_best_keywords.md` |  |
 | ok | domain-data | 36 | 1140 | `data/domains/recetadolce/domain.json` |  |
 | ok | docs | 754 | 86791 | `data/domains/recetadolce/keywords.md` |  |
-| ok | domain-data | 243 | 11474 | `data/domains/recetagenial/daily_best_keywords.json` |  |
-| ok | docs | 17 | 936 | `data/domains/recetagenial/daily_best_keywords.md` |  |
+| ok | domain-data | 12 | 410 | `data/domains/recetagenial/daily_best_keywords.json` |  |
+| ok | docs | 7 | 200 | `data/domains/recetagenial/daily_best_keywords.md` |  |
 | ok | domain-data | 40 | 1176 | `data/domains/recetagenial/domain.json` |  |
 | ok | docs | 548 | 62613 | `data/domains/recetagenial/keywords.md` |  |
 | ok | docs | 96 | 4883 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
@@ -258,6 +258,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 246 | 9752 | `pinterest_automation/circuit_breaker.py` |  |
 | ok | core | 499 | 18541 | `pinterest_automation/config.py` |  |
 | ok | core | 281 | 11121 | `pinterest_automation/health_monitor.py` |  |
+| ok | core | 109 | 3787 | `pinterest_automation/interactive_login.py` |  |
 | ok | core | 1331 | 55174 | `pinterest_automation/job_queue.py` |  |
 | ok | core | 282 | 11776 | `pinterest_automation/mcp_bridge.py` |  |
 | ok | core | 172 | 6217 | `pinterest_automation/mcp_client.py` |  |
@@ -335,6 +336,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 6 | 522 | `scripts/debug/find_recent.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 15 | 469 | `scripts/debug/find_tables.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 118 | 3841 | `scripts/debug/fix_last_pollinations.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 47 | 1632 | `scripts/debug/fix_single_calamares.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 66 | 2082 | `scripts/debug/fuzzy_check.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 195 | 13475 | `scripts/debug/generate_ensalada_pasta.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 129 | 8861 | `scripts/debug/generate_redirect_rules.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -350,6 +352,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 183 | 7483 | `scripts/debug/operator_browser_audit.js` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 49 | 2546 | `scripts/debug/operator_recovery_audit.js` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 80 | 2787 | `scripts/debug/perfect_extract_ribbons.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 167 | 5170 | `scripts/debug/post_remediation_audit.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 32 | 1942 | `scripts/debug/probe_source_ocr.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 23 | 721 | `scripts/debug/publish_test_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 117 | 5101 | `scripts/debug/repair_all_supabase_schemas.py` | python syntax error: line 115: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
@@ -385,12 +388,11 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | scripts | 89 | 3165 | `scripts/dev/check_no_root_scratch.py` |  |
 | ok | scripts | 97 | 3698 | `scripts/dev/continue_production_batch.py` |  |
 | ok | scripts | 1 | 13 | `scripts/dev/data/sessions/DD/component_crx_cache/metadata.json` |  |
+| ok | scripts | 1 | 13 | `scripts/dev/data/sessions/DD/extensions_crx_cache/metadata.json` |  |
 | ok | scripts | 21 | 994 | `scripts/dev/disable_legacy_odysseus_task.ps1` |  |
-| ok | scripts | 337 | 16736 | `scripts/dev/execute_database_remediation.py` |  |
 | ok | scripts | 162 | 5608 | `scripts/dev/live_article_quality_check.py` |  |
 | ok | scripts | 11 | 697 | `scripts/dev/live_logs.ps1` |  |
-| ok | scripts | 109 | 3846 | `scripts/dev/login_medridaelalaoui6.py` |  |
-| ok | scripts | 296 | 9256 | `scripts/dev/project_audit.py` |  |
+| ok | scripts | 307 | 9508 | `scripts/dev/project_audit.py` |  |
 | ok | scripts | 43 | 2399 | `scripts/dev/read_source_image_text.ps1` |  |
 | ok | scripts | 520 | 20784 | `scripts/dev/repair_article_quality.py` |  |
 | ok | scripts | 323 | 11493 | `scripts/dev/run_production_validation.py` |  |

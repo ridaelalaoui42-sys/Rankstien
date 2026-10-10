@@ -21,10 +21,12 @@ ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = ROOT / "data" / "reports"
 
 EXCLUDED_DIR_NAMES = {
+    ".git",
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".playwright-cli",
     "__pycache__",
     "htmlcov",
     "node_modules",
@@ -37,6 +39,15 @@ EXCLUDED_PREFIXES = (
     "data/sessions",
     "data/sessions_backup",
     "data/recetadolce_backup_final",
+    "data/salvaged_images",
+    "data/media",
+    "data/queue",
+    "data/healing_cache",
+    "data/worktrees",
+    "data/runtime",
+    "data/cache",
+    "data/capture-spool",
+    "nanobanana-extension/node_modules",
     "frontend/.next",
     "frontend/out",
     "frontend/dist",

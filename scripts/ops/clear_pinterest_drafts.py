@@ -188,7 +188,8 @@ async def clear_drafts_for_page(page, account_name: str = "account") -> int:
 
 async def aggressive_clear(account) -> dict:
     account_name = getattr(account, "name", str(account))
-    session_dir = getattr(account, "session_dir", None) or (project_root / "data" / "sessions" / account_name)
+    session_leaf = getattr(account, "session_name", None) or account_name
+    session_dir = getattr(account, "session_dir", None) or (project_root / "data" / "sessions" / session_leaf)
     browser_type = getattr(account, "browser", "chromium")
     email = getattr(account, "email", "")
     password = getattr(account, "password", "")
