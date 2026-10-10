@@ -241,6 +241,41 @@ def load_accounts():
         except Exception as exc:
             logger.error(f"Invalid PINTEREST_ACCOUNTS JSON: {exc}")
 
+    # Fallback to data/pinterest_accounts.json if available
+    try:
+        from pinterest_automation.config import DATA_DIR
+        accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
+        accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        if accounts_file.is_file():
+            data = json.loads(accounts_file.read_text(encoding="utf-8"))
+            acc_list = data.get("accounts")
+            if isinstance(acc_list, dict):
+                acc_list = list(acc_list.values())
+            if isinstance(acc_list, list) and acc_list:
+                accounts = []
+                for idx, entry in enumerate(acc_list, 1):
+                    if not isinstance(entry, dict):
+                        continue
+                    session_value = entry.get("session_dir") or entry.get("session_name") or entry.get("session") or entry.get("handle") or entry.get("name") or f"account_{idx}"
+                    name = str(entry.get("handle") or entry.get("name") or Path(str(session_value)).name or f"account_{idx}")
+                    session_name = Path(str(session_value)).name
+                    mapped_browser = DEFAULT_BROWSER_MAP.get(
+                        name, DEFAULT_BROWSER_MAP.get(session_name, default_browser)
+                    )
+                    accounts.append(
+                        PinterestAccount(
+                            name=name,
+                            session_dir=_resolve_session_dir(session_value),
+                            email=_env_or_value(entry, "email", "email_env", default_email),
+                            password=_env_or_value(entry, "password", "password_env", default_password),
+                            browser=entry.get("browser", mapped_browser),
+                        )
+                    )
+                if accounts:
+                    return _dedupe_accounts(accounts)
+    except Exception as exc:
+        logger.warning(f"Failed loading accounts from file: {exc}")
+
     accounts = []
     for idx in range(1, 21):
         prefix = f"PINTEREST_ACCOUNT_{idx}_"
@@ -1057,6 +1092,13 @@ async def turbo_create_pin(
             )
             await asyncio.sleep(5)
 
+        # Clear drafts if creator is blocked or has pending drafts
+        try:
+            from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
+            await clear_drafts_for_page(page, account_name=str(worker_id))
+        except Exception as draft_clear_exc:
+            logger.warning(f"[{worker_id}] Pre-upload draft check non-fatal error: {draft_clear_exc}")
+
         file_input = await page.wait_for_selector('input[type="file"]', timeout=45000)
         await file_input.set_input_files(str(temp_img))
         if not await wait_for_upload_ready(page, worker_id):
@@ -1250,6 +1292,14 @@ async def turbo_create_pin(
         pin_id = await extract_published_pin_id(page, worker_id)
         if pin_id:
             return pin_id
+
+        # Save diagnostic screenshot and state on timeout
+        try:
+            shot_file = LOG_DIR / f"pin_timeout_{worker_id}_{int(time.time())}.png"
+            await page.screenshot(path=str(shot_file))
+            logger.warning(f"[{worker_id}] Timeout screenshot saved to {shot_file}. Page URL: {page.url}")
+        except Exception as shot_err:
+            logger.warning(f"[{worker_id}] Could not save timeout screenshot: {shot_err}")
 
         raise PinCreationError(f"{worker_id}: publish clicked but no Pin ID found within 50s timeout")
 

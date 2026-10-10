@@ -398,19 +398,24 @@ def _validate_article_remaster_assets(
     assets = asset_metadata if isinstance(asset_metadata, list) else []
     errors: list[str] = []
 
-    if limit != _ARTICLE_REMASTER_ASSET_TARGET:
+    effective_limit = (
+        limit
+        if (2 <= limit <= _ARTICLE_REMASTER_ASSET_TARGET and limit % 2 == 0)
+        else _ARTICLE_REMASTER_ASSET_TARGET
+    )
+    expected_source_target = effective_limit // 2
+
+    if limit != effective_limit:
         errors.append(
-            f"production enqueue limit must be exactly {_ARTICLE_REMASTER_ASSET_TARGET}; received {limit}"
+            f"production enqueue limit must be an even number between 2 and {_ARTICLE_REMASTER_ASSET_TARGET}; received {limit}"
         )
-    if len(paths) != _ARTICLE_REMASTER_ASSET_TARGET:
+    if len(paths) != effective_limit:
         errors.append(
-            "production enqueue requires exactly "
-            f"{_ARTICLE_REMASTER_ASSET_TARGET} validated assets; received {len(paths)}"
+            f"production enqueue requires exactly {effective_limit} validated assets; received {len(paths)}"
         )
-    if len(assets) != _ARTICLE_REMASTER_ASSET_TARGET:
+    if len(assets) != effective_limit:
         errors.append(
-            "production enqueue requires exactly "
-            f"{_ARTICLE_REMASTER_ASSET_TARGET} asset metadata rows; received {len(assets)}"
+            f"production enqueue requires exactly {effective_limit} asset metadata rows; received {len(assets)}"
         )
 
     ordered_paths: list[Path] = []
@@ -487,10 +492,10 @@ def _validate_article_remaster_assets(
         if asset_domain and asset_domain.casefold() != domain_handle.casefold():
             errors.append(f"{pair_id} belongs to domain {asset_domain}, not requested domain {domain_handle}")
 
-    if len(pair_assets) != _ARTICLE_REMASTER_SOURCE_TARGET:
+    if len(pair_assets) != expected_source_target:
         errors.append(
             "production requires exactly "
-            f"{_ARTICLE_REMASTER_SOURCE_TARGET} Pinterest source pairs; received {len(pair_assets)}"
+            f"{expected_source_target} Pinterest source pairs; received {len(pair_assets)}"
         )
 
     source_pin_ids: set[str] = set()
@@ -509,9 +514,9 @@ def _validate_article_remaster_assets(
             errors.append(f"Pinterest source pin {source_pin_id} is duplicated across pairs")
         source_pin_ids.add(source_pin_id)
 
-    if len(source_pin_ids) != _ARTICLE_REMASTER_SOURCE_TARGET:
+    if len(source_pin_ids) != expected_source_target:
         errors.append(
-            f"production requires {_ARTICLE_REMASTER_SOURCE_TARGET} unique Pinterest source pin ids; "
+            f"production requires {expected_source_target} unique Pinterest source pin ids; "
             f"received {len(source_pin_ids)}"
         )
 
@@ -811,10 +816,12 @@ def enqueue_article_remasters(
             }
         )
 
-    if routing_errors or len(plans) != _ARTICLE_REMASTER_ASSET_TARGET:
+    if routing_errors or len(plans) != len(validated_assets):
         return _article_remaster_failure(
             "Queue blocked before mutation: "
-            + "; ".join(dict.fromkeys(routing_errors or ["failed to build all 30 queue jobs"])),
+            + "; ".join(
+                dict.fromkeys(routing_errors or [f"failed to build all {len(validated_assets)} queue jobs"])
+            ),
             slug=slug_norm,
             asset_validation={"success": True},
         )
@@ -840,11 +847,14 @@ def enqueue_article_remasters(
             asset_validation={"success": True},
         )
 
+    target_asset_count = len(validated_assets)
+    target_source_count = target_asset_count // 2
+
     return {
         "success": True,
         "slug": slug_norm,
-        "images_enqueued": _ARTICLE_REMASTER_ASSET_TARGET,
-        "jobs_enqueued": _ARTICLE_REMASTER_ASSET_TARGET,
+        "images_enqueued": target_asset_count,
+        "jobs_enqueued": target_asset_count,
         "jobs_created": enqueue_result["created"],
         "duplicates_skipped": enqueue_result["existing"],
         "accounts": account_handles,
@@ -853,8 +863,8 @@ def enqueue_article_remasters(
         "pipeline_run_id": pipeline_run_id,
         "asset_validation": {
             "success": True,
-            "asset_count": _ARTICLE_REMASTER_ASSET_TARGET,
-            "source_count": _ARTICLE_REMASTER_SOURCE_TARGET,
+            "asset_count": target_asset_count,
+            "source_count": target_source_count,
         },
         "details": enqueue_result["records"],
     }

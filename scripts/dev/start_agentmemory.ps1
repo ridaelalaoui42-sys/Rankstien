@@ -98,6 +98,11 @@ function Get-AgentMemoryHeaders {
 }
 
 try {
+    $live = try { (Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/livez" -TimeoutSec 2).status } catch { $null }
+    if ($live -eq "ok") {
+        Write-Output "AgentMemory already healthy at $env:AGENTMEMORY_URL"
+        exit 0
+    }
     $headers = Get-AgentMemoryHeaders
     $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -Headers $headers -TimeoutSec 3
     if ($health.status -eq "healthy" -or $health.health.status -eq "healthy") {
@@ -132,6 +137,11 @@ Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $CmdFile) -WindowStyle H
 for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 1
     try {
+        $live = try { (Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/livez" -TimeoutSec 2).status } catch { $null }
+        if ($live -eq "ok") {
+            Write-Output "AgentMemory healthy at $env:AGENTMEMORY_URL"
+            exit 0
+        }
         $headers = Get-AgentMemoryHeaders
         $health = Invoke-RestMethod -Uri "$env:AGENTMEMORY_URL/agentmemory/health" -Headers $headers -TimeoutSec 3
         if ($health.status -eq "healthy" -or $health.health.status -eq "healthy") {

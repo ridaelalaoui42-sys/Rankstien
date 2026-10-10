@@ -181,7 +181,7 @@ class SupervisorConfig:
                 # counts create lock convoys, page navigation races, and DLQ
                 # storms. Keep unattended concurrency safely bounded unless the
                 # operator explicitly raises PINTEREST_MAX_WORKERS.
-                max_workers = int(os.environ.get("PINTEREST_MAX_WORKERS", "3"))
+                max_workers = int(os.environ.get("PINTEREST_MAX_WORKERS", "10"))
                 self.worker_count = max(1, min(int(env_workers), max_workers))
             except ValueError:
                 pass
@@ -337,6 +337,48 @@ class AutomationConfig:
 
         self._load_indexed_accounts()
         self._load_default_account_alias()
+        self._load_accounts_file()
+
+    def _load_accounts_file(self) -> None:
+        if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("PINTEREST_ACCOUNTS_FILE"):
+            return
+        accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
+        accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        if not accounts_file.is_file():
+            return
+        try:
+            data = json.loads(accounts_file.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Failed to parse %s: %s", accounts_file, exc)
+            return
+
+        default_browser = normalize_browser_type(
+            os.environ.get("PINTEREST_DEFAULT_BROWSER") or os.environ.get("PINTEREST_BROWSER"), "chromium"
+        )
+        acc_list = data.get("accounts")
+        if isinstance(acc_list, dict):
+            acc_list = list(acc_list.values())
+        if isinstance(acc_list, list):
+            for acc in acc_list:
+                if not isinstance(acc, dict):
+                    continue
+                name = str(acc.get("handle") or acc.get("name") or "").strip()
+                if not name:
+                    continue
+                session_leaf = Path(str(acc.get("session_name") or acc.get("session") or name)).name
+                browser = normalize_browser_type(
+                    acc.get("browser")
+                    or DEFAULT_BROWSER_MAP.get(name)
+                    or DEFAULT_BROWSER_MAP.get(session_leaf)
+                    or default_browser,
+                    default_browser,
+                )
+                self.accounts[name] = PinterestCredentials(
+                    email=acc.get("email") or os.environ.get(str(acc.get("email_env", "")), ""),
+                    password=acc.get("password") or os.environ.get(str(acc.get("password_env", "")), ""),
+                    session_name=session_leaf,
+                    browser=browser,
+                )
 
     @staticmethod
     def _parse_accounts_json(raw_accounts: str):

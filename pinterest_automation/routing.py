@@ -5,11 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from pathlib import Path
 
 from .config import get_config
 
 
-def _positive_int_env(name: str, default: int = 0) -> int:
+def _positive_int_env(name: str, default: int = 5) -> int:
     try:
         return max(0, int(os.environ.get(name, str(default))))
     except (TypeError, ValueError):
@@ -21,6 +22,38 @@ def account_cohort(domain_handle: str, *, config=None) -> list[str]:
     configured = sorted(config.accounts)
     if not configured:
         return []
+
+    # Check data/pinterest_accounts.json if available (unless running in test without explicit accounts file)
+    if not (os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("PINTEREST_ACCOUNTS_FILE")):
+        try:
+            from .config import DATA_DIR
+
+            accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
+            accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+            if accounts_file.is_file():
+                data = json.loads(accounts_file.read_text(encoding="utf-8"))
+                mapping = data.get("domain_account_map")
+                if isinstance(mapping, dict) and domain_handle in mapping:
+                    requested = mapping[domain_handle]
+                    if isinstance(requested, list):
+                        cohort = [str(h) for h in requested if str(h) in config.accounts]
+                        if cohort:
+                            return list(dict.fromkeys(cohort))
+                acc_list = data.get("accounts")
+                if isinstance(acc_list, dict):
+                    acc_list = list(acc_list.values())
+                if isinstance(acc_list, list):
+                    cohort = [
+                        str(a.get("handle") or a.get("name"))
+                        for a in acc_list
+                        if isinstance(a, dict)
+                        and domain_handle in a.get("connected_domains", [])
+                        and str(a.get("handle") or a.get("name")) in config.accounts
+                    ]
+                    if cohort:
+                        return list(dict.fromkeys(cohort))
+        except Exception:
+            pass
 
     raw = os.environ.get("PINTEREST_DOMAIN_ACCOUNT_MAP", "").strip()
     if raw:

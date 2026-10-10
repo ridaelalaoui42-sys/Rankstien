@@ -330,7 +330,12 @@ class PinterestDriver:
                 session.failure_count += 1
                 return False
             self.info(f"Using email selector: {email_sel}")
-            await page.fill(email_sel, email)
+            email_el = page.locator(email_sel).first
+            is_readonly = await email_el.get_attribute("readonly") is not None
+            if not is_readonly and await email_el.is_editable():
+                await page.fill(email_sel, email)
+            else:
+                self.info("Email field is readonly/pre-filled; skipping email fill")
             await page.wait_for_timeout(1000)
 
             # Pinterest now uses a 2-step login:
@@ -419,44 +424,86 @@ class PinterestDriver:
             session.failure_count += 1
             return False
 
-    async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 2) -> int:
-        """Delete a few stale Pinterest drafts when the creator is blocked at the 50-draft limit."""
+    async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 50) -> int:
+        """Purge drafts when Pinterest creator is blocked by drafts or reaches limit.
+
+        Uses select-all bulk deletion first, falling back to individual draft cleanup.
+        """
+        try:
+            from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
+
+            deleted = await clear_drafts_for_page(page, account_name=self.account_handle or "driver")
+            if deleted > 0:
+                self.info(f"Successfully purged {deleted} draft(s) using bulk purge engine.")
+                return deleted
+        except Exception as purge_err:
+            self.warning(f"Bulk draft purge engine encountered error: {purge_err}; attempting direct DOM purge.")
+
         try:
             body_text = await page.locator("body").inner_text(timeout=3000)
         except Exception:
             body_text = ""
 
-        draft_count_match = re.search(r"Pin drafts\s*\((\d+)\)", body_text, re.I)
+        draft_count_match = re.search(r"(?:Pin drafts|Drafts|Borradores)\s*\((\d+)\)", body_text, re.I)
         draft_count = int(draft_count_match.group(1)) if draft_count_match else None
         at_draft_limit = (
-            (draft_count is not None and draft_count >= 50)
+            (draft_count is not None and draft_count > 0)
             or "50 drafts" in body_text
             or ("limit" in body_text.lower() and "draft" in body_text.lower())
         )
         if not at_draft_limit:
             return 0
 
-        self.warning("Pinterest creator is at the draft limit; deleting stale drafts to free capacity.")
+        self.warning("Pinterest creator has pending drafts; purging drafts to unlock upload.")
+
+        # Try bulk select first
+        try:
+            bulk = page.locator(
+                '[data-test-id="bulk-select-drafts-checkbox"], input[type="checkbox"][aria-label*="Select all" i], button:has-text("Select all")'
+            ).first
+            if await bulk.count() > 0 and await bulk.is_visible(timeout=1000):
+                await bulk.click(force=True)
+                await page.wait_for_timeout(1000)
+                delete_btn = page.locator(
+                    '[data-test-id="bulk-delete-drafts-button"], button:has-text("Delete"), button:has-text("Eliminar")'
+                ).first
+                if await delete_btn.count() > 0 and await delete_btn.is_visible(timeout=1500):
+                    await delete_btn.click(force=True)
+                    await page.wait_for_timeout(1000)
+                    confirm_btn = page.locator(
+                        'div[role="dialog"] button:has-text("Delete"), div[role="dialog"] button:has-text("Eliminar")'
+                    ).first
+                    if await confirm_btn.count() > 0 and await confirm_btn.is_visible(timeout=2000):
+                        await confirm_btn.click(force=True)
+                        await page.wait_for_timeout(3000)
+                        self.info("Bulk deleted all drafts via modal confirm.")
+                        return 1
+                    else:
+                        await page.keyboard.press("Enter")
+                        return 1
+        except Exception as b_err:
+            self.warning(f"Direct bulk select failed: {b_err}")
+
+        # Fallback to single actions
         deleted = 0
-        for _ in range(max_delete):
+        for _ in range(min(max_delete, 10)):
             try:
-                actions = page.locator('button[aria-label="Pin draft actions"]')
+                actions = page.locator('button[aria-label*="Pin draft actions" i], [data-test-id="draft-actions-button"]')
                 if await actions.count() == 0:
-                    self.warning("Draft limit detected but no draft action buttons were found.")
                     break
                 await actions.first.click(force=True)
                 await page.wait_for_timeout(500)
 
-                delete_action = page.locator('[data-test-id="delete-draft-action"]').first
-                await delete_action.wait_for(state="visible", timeout=5000)
+                delete_action = page.locator('[data-test-id="delete-draft-action"], button:has-text("Delete")').first
+                await delete_action.wait_for(state="visible", timeout=3000)
                 await delete_action.click(force=True)
                 await page.wait_for_timeout(500)
 
                 confirm = page.locator('button:has-text("Delete"), button:has-text("Eliminar")').last
-                await confirm.wait_for(state="visible", timeout=5000)
+                await confirm.wait_for(state="visible", timeout=3000)
                 await confirm.click(force=True)
                 deleted += 1
-                await page.wait_for_timeout(2500)
+                await page.wait_for_timeout(1500)
             except Exception as delete_err:
                 self.warning(f"Pinterest draft cleanup stopped after {deleted} deletion(s): {delete_err}")
                 break

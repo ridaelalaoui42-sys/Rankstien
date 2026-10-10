@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09T04:23:08.664523+00:00",
+  "generated_at": "2026-10-09T23:16:34.246656+00:00",
   "domains": [
     "recetadolce",
     "recetagenial"
@@ -37,60 +37,60 @@
     },
     "ga4_metrics": {
       "status": "OBSERVED",
-      "sessions_28d": 68,
-      "active_users_28d": 52,
-      "engagement_rate_pct": 45.59,
+      "sessions_28d": 99,
+      "active_users_28d": 70,
+      "engagement_rate_pct": 51.52,
       "avg_engagement_time": null,
       "traffic_sources": {
         "pinterest_social_pct": null,
         "social_pct": 0.0,
-        "google_organic_pct": 22.1,
-        "direct_and_referral_pct": 66.2
+        "google_organic_pct": 20.2,
+        "direct_and_referral_pct": 76.8
       },
       "per_domain": {
         "recetadolce": {
           "property_id": "534113197",
-          "total_sessions": 10,
-          "total_active_users": 7,
-          "total_engaged_sessions": 6,
-          "engagement_rate_pct": 60.0,
+          "total_sessions": 44,
+          "total_active_users": 32,
+          "total_engaged_sessions": 19,
+          "engagement_rate_pct": 43.18,
           "channels": {
             "Direct": {
-              "sessions": 4,
-              "users": 4
+              "sessions": 27,
+              "users": 27
             },
             "Referral": {
-              "sessions": 4,
+              "sessions": 11,
               "users": 1
             },
             "Organic Search": {
-              "sessions": 2,
-              "users": 2
+              "sessions": 3,
+              "users": 3
+            },
+            "Unassigned": {
+              "sessions": 3,
+              "users": 1
             }
           },
           "status": "OBSERVED"
         },
         "recetagenial": {
           "property_id": "534658949",
-          "total_sessions": 58,
-          "total_active_users": 45,
-          "total_engaged_sessions": 25,
-          "engagement_rate_pct": 43.1,
+          "total_sessions": 55,
+          "total_active_users": 38,
+          "total_engaged_sessions": 32,
+          "engagement_rate_pct": 58.18,
           "channels": {
             "Direct": {
               "sessions": 30,
               "users": 30
             },
             "Organic Search": {
-              "sessions": 13,
-              "users": 6
-            },
-            "Unassigned": {
-              "sessions": 8,
-              "users": 8
+              "sessions": 17,
+              "users": 7
             },
             "Referral": {
-              "sessions": 7,
+              "sessions": 8,
               "users": 1
             }
           },
@@ -105,8 +105,8 @@
         "email": "vertex-express@delta-daylight-394016.iam.gserviceaccount.com",
         "project_id": "delta-daylight-394016",
         "verified_sites": [
-          "sc-domain:recetagenial.com",
-          "https://recetadolce.com/"
+          "https://recetadolce.com/",
+          "sc-domain:recetagenial.com"
         ],
         "message": "Successfully connected! Verified access to 2 property(ies).",
         "action_needed": null
@@ -140,12 +140,12 @@
           "recetadolce": {
             "active": true,
             "session_dir": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\domains\\recetadolce\\data\\sessions",
-            "cookie_age_days": 72.3
+            "cookie_age_days": 73.1
           },
           "recetagenial": {
             "active": true,
             "session_dir": "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\domains\\recetagenial\\data\\sessions",
-            "cookie_age_days": 72.3
+            "cookie_age_days": 73.1
           }
         },
         "overall_status": "CONNECTED_BROWSER",
@@ -160,7 +160,7 @@
     "average_serp_position": 15.5,
     "average_ctr_pct": 0.56,
     "striking_distance_keywords": 79,
-    "post_more_count": 10,
+    "post_more_count": 4,
     "avoid_topics_count": 0,
     "remaster_opportunities_count": 79,
     "monitored_domains": [
@@ -175,17 +175,6 @@
   "post_more_recommendations": [
     {
       "keyword": "bizcocho de chocolate saludable",
-      "cluster": "fresas-y-nata",
-      "target_domain": "recetadolce",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
-      "keyword": "pastel de zanahoria sin horno",
       "cluster": "fresas-y-nata",
       "target_domain": "recetadolce",
       "status_type": "POST_MORE",
@@ -218,64 +207,9 @@
       "action_item": "Revalidate source evidence and delivery capacity before production."
     },
     {
-      "keyword": "pastel de zanahoria con cheesecake",
-      "cluster": "fresas-y-nata",
-      "target_domain": "recetadolce",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
       "keyword": "pastel de zanahoria navideño",
       "cluster": "fresas-y-nata",
       "target_domain": "recetadolce",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
-      "keyword": "bizcocho de chocolate matilda",
-      "cluster": "fresas-y-nata",
-      "target_domain": "recetadolce",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
-      "keyword": "ensalada de garbanzos pollo",
-      "cluster": "Carnes",
-      "target_domain": "recetagenial",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
-      "keyword": "tarta de queso de pistacho",
-      "cluster": "Postres",
-      "target_domain": "recetagenial",
-      "status_type": "POST_MORE",
-      "growth_velocity": "Not measured",
-      "demand_index": null,
-      "competition_level": "Not measured",
-      "rationale": "Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.",
-      "action_item": "Revalidate source evidence and delivery capacity before production."
-    },
-    {
-      "keyword": "paella de marisco video",
-      "cluster": "Aperitivos",
-      "target_domain": "recetagenial",
       "status_type": "POST_MORE",
       "growth_velocity": "Not measured",
       "demand_index": null,
@@ -4672,14 +4606,6 @@
       "intent": "Recipe"
     },
     {
-      "term": "pastel de zanahoria sin horno",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 20.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
       "term": "pastel de zanahoria receta facil",
       "source": "Qualified Google demand proxy",
       "velocity_pct": null,
@@ -4691,15 +4617,7 @@
       "term": "bizcocho de chocolate con dulce de leche",
       "source": "Qualified Google demand proxy",
       "velocity_pct": null,
-      "search_volume_score": 8.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "pastel de zanahoria con cheesecake",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 10.0,
+      "search_volume_score": 6.0,
       "seasonality": "Not measured",
       "intent": "Recipe"
     },
@@ -4710,38 +4628,6 @@
       "search_volume_score": 4.0,
       "seasonality": "Not measured",
       "intent": "Recipe"
-    },
-    {
-      "term": "bizcocho de chocolate matilda",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 8.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "ensalada de garbanzos pollo",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 20.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "tarta de queso de pistacho",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 20.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "paella de marisco video",
-      "source": "Qualified Google demand proxy",
-      "velocity_pct": null,
-      "search_volume_score": 6.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
     }
   ],
   "pinterest_trends_radar": [
@@ -4750,14 +4636,6 @@
       "source": "Observed Pinterest keyword",
       "velocity_pct": null,
       "search_volume_score": 75.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "pastel de zanahoria sin horno",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 73.0,
       "seasonality": "Not measured",
       "intent": "Recipe"
     },
@@ -4778,53 +4656,13 @@
       "intent": "Recipe"
     },
     {
-      "term": "pastel de zanahoria con cheesecake",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 77.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
       "term": "pastel de zanahoria navideño",
       "source": "Observed Pinterest keyword",
       "velocity_pct": null,
       "search_volume_score": 69.0,
       "seasonality": "Not measured",
       "intent": "Recipe"
-    },
-    {
-      "term": "bizcocho de chocolate matilda",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 63.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "ensalada de garbanzos pollo",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 76.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "tarta de queso de pistacho",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 75.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
-    },
-    {
-      "term": "paella de marisco video",
-      "source": "Observed Pinterest keyword",
-      "velocity_pct": null,
-      "search_volume_score": 92.0,
-      "seasonality": "Not measured",
-      "intent": "Recipe"
     }
   ],
-  "action_plan_markdown": "# SEO Feedback\n\nCollected: 2026-10-09T04:23:08.664523+00:00\n\nUnknown values mean unavailable evidence, not zero traffic.\n\n| Metric | Value |\n| --- | --- |\n| total_search_impressions | 4623 |\n| total_organic_clicks | 26 |\n| total_search_impressions_90d | 10734 |\n| total_organic_clicks_90d | 85 |\n| average_ctr_pct | 0.56 |\n| average_serp_position | 15.5 |\n\n## Recommendations\n\n- recetadolce: bizcocho de chocolate saludable. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria sin horno. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria receta facil. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: bizcocho de chocolate con dulce de leche. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria con cheesecake. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria navideño. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: bizcocho de chocolate matilda. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetagenial: ensalada de garbanzos pollo. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetagenial: tarta de queso de pistacho. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetagenial: paella de marisco video. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetagenial: pastel 3 chocolates mercadona. Observed position 3.1 with 23 impressions.\n- recetadolce: vinagre balsamico de chocolate negro. Observed position 10.0 with 8 impressions.\n- recetagenial: mercadona tarta 3 chocolates. Observed position 4.1 with 7 impressions.\n- recetagenial: croquetas para gatos. Observed position 7.3 with 7 impressions.\n- recetagenial: comida casera para gatos con problemas renales. Observed position 7.3 with 6 impressions.\n- recetagenial: croquetas para gatos. Observed position 7.2 with 5 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 6.4 with 5 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 4.8 with 4 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 6.5 with 4 impressions.\n- recetagenial: croquetas para gato. Observed position 8.0 with 4 impressions.\n- recetagenial: los gatos pueden comer pollo cocido. Observed position 10.0 with 4 impressions.\n- recetagenial: comida para gatos casera y económica. Observed position 5.0 with 3 impressions.\n- recetagenial: como cocinar pollo hervido para gatos. Observed position 8.0 with 3 impressions.\n- recetagenial: croquetas de pollo para gatos. Observed position 5.7 with 3 impressions.\n- recetagenial: croquetas de pollo para gatos. Observed position 5.0 with 3 impressions.\n- recetagenial: es bueno el pollo para los gatos. Observed position 10.0 with 3 impressions.\n- recetagenial: menudo de pollo para gatos. Observed position 8.7 with 3 impressions.\n- recetadolce: bourbon vanilla creme brulee. Observed position 8.5 with 2 impressions.\n- recetagenial: como empanizar tilapia para freír. Observed position 10.0 with 2 impressions.\n- recetagenial: filete de pescado frito crujiente. Observed position 4.0 with 2 impressions.\n- recetagenial: gato con pollo. Observed position 7.0 with 2 impressions.\n- recetagenial: los gatos pueden comer salmón cocido. Observed position 8.0 with 2 impressions.\n- recetagenial: pechuga de pollo al horno jugosa. Observed position 9.0 with 2 impressions.\n- recetagenial: pechuga de pollo para gatos. Observed position 7.0 with 2 impressions.\n- recetagenial: pescado empanizado crujiente. Observed position 8.5 with 2 impressions.\n- recetagenial: pescado frito en sartén. Observed position 9.0 with 2 impressions.\n- recetagenial: pescado marinado frito. Observed position 8.5 with 2 impressions.\n- recetadolce: arepa dominicana receta. Observed position 9.0 with 1 impressions.\n- recetadolce: bizcocho decorado con fresas. Observed position 5.0 with 1 impressions.\n- recetadolce: pastel decorado. Observed position 4.0 with 1 impressions.\n- recetadolce: pastel decorado con fresas. Observed position 7.0 with 1 impressions.\n- recetadolce: pastel decorado de fresas. Observed position 4.0 with 1 impressions.\n- recetagenial: \"preparar postres faciles\". Observed position 9.0 with 1 impressions.\n- recetagenial: boquerones en adobo estilo andaluz. Observed position 12.0 with 1 impressions.\n- recetagenial: caldo de pollo gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: caldo de pollo para gato. Observed position 6.0 with 1 impressions.\n- recetagenial: caldo de pollo para gatos. Observed position 9.0 with 1 impressions.\n- recetagenial: carne picada guisada. Observed position 12.0 with 1 impressions.\n- recetagenial: cascara de huevo en polvo para gatos. Observed position 11.0 with 1 impressions.\n- recetagenial: cascara de huevo en polvo para gatos. Observed position 11.0 with 1 impressions.\n- recetagenial: cocinar carne molida congelada. Observed position 5.0 with 1 impressions.\n- recetagenial: comida gourmet para gatos. Observed position 14.0 with 1 impressions.\n- recetagenial: comida para gatos de 2 meses casera. Observed position 5.0 with 1 impressions.\n- recetagenial: como cocinar carne molida congelada. Observed position 11.0 with 1 impressions.\n- recetagenial: como cocinar menudos de pollo para gatos. Observed position 10.0 with 1 impressions.\n- recetagenial: como guisar carne molida. Observed position 12.0 with 1 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: como hacer pollo para gatos. Observed position 6.0 with 1 impressions.\n- recetagenial: como mantener las manzanas sin oxidarse. Observed position 8.0 with 1 impressions.\n- recetagenial: corazon de pollo para gatos. Observed position 13.0 with 1 impressions.\n- recetagenial: croquetas caseras para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: croquetas caseras para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: croquetas de jamón receta de la abuela. Observed position 9.0 with 1 impressions.\n- recetagenial: croquetas de puchero de la abuela. Observed position 10.0 with 1 impressions.\n- recetagenial: croquetas de salmon para gatos. Observed position 12.0 with 1 impressions.\n- recetagenial: croquetas para gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: cuajada mercadona ingredientes. Observed position 8.0 with 1 impressions.\n- recetagenial: dorado frito. Observed position 10.0 with 1 impressions.\n- recetagenial: ensalada cesar casera. Observed position 7.0 with 1 impressions.\n- recetagenial: enséñame todas. Observed position 4.0 with 1 impressions.\n- recetagenial: gato pollo. Observed position 11.0 with 1 impressions.\n- recetagenial: ideas para aperitivos frios. Observed position 12.0 with 1 impressions.\n- recetagenial: imágenes. Observed position 4.0 with 1 impressions.\n- recetagenial: la pechuga de pollo. Observed position 11.0 with 1 impressions.\n- recetagenial: le puedo dar pollo hervido a mi gato. Observed position 11.0 with 1 impressions.\n- recetagenial: lenguado frito. Observed position 10.0 with 1 impressions.\n- recetagenial: lentejas espanolas. Observed position 11.0 with 1 impressions.\n- recetagenial: lentejas tradicionales. Observed position 11.0 with 1 impressions.\n- recetagenial: los gatos pueden comer hígado de pollo cocido. Observed position 10.0 with 1 impressions.\n- recetagenial: mejor filete de pescado para empanizar. Observed position 7.0 with 1 impressions.\n- recetagenial: paella de marisco receta casera. Observed position 11.0 with 1 impressions.\n- recetagenial: pescado al horno con verduras y patatas. Observed position 8.0 with 1 impressions.\n- recetagenial: pescado empanizado con harina. Observed position 9.0 with 1 impressions.\n- recetagenial: pescado frito chileno. Observed position 8.0 with 1 impressions.\n- recetagenial: pescado pequeño frito. Observed position 9.0 with 1 impressions.\n"
+  "action_plan_markdown": "# SEO Feedback\n\nCollected: 2026-10-09T23:16:34.246656+00:00\n\nUnknown values mean unavailable evidence, not zero traffic.\n\n| Metric | Value |\n| --- | --- |\n| total_search_impressions | 4623 |\n| total_organic_clicks | 26 |\n| total_search_impressions_90d | 10734 |\n| total_organic_clicks_90d | 85 |\n| average_ctr_pct | 0.56 |\n| average_serp_position | 15.5 |\n\n## Recommendations\n\n- recetadolce: bizcocho de chocolate saludable. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria receta facil. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: bizcocho de chocolate con dulce de leche. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetadolce: pastel de zanahoria navideño. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.\n- recetagenial: pastel 3 chocolates mercadona. Observed position 3.1 with 23 impressions.\n- recetadolce: vinagre balsamico de chocolate negro. Observed position 10.0 with 8 impressions.\n- recetagenial: mercadona tarta 3 chocolates. Observed position 4.1 with 7 impressions.\n- recetagenial: croquetas para gatos. Observed position 7.3 with 7 impressions.\n- recetagenial: comida casera para gatos con problemas renales. Observed position 7.3 with 6 impressions.\n- recetagenial: croquetas para gatos. Observed position 7.2 with 5 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 6.4 with 5 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 4.8 with 4 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 6.5 with 4 impressions.\n- recetagenial: croquetas para gato. Observed position 8.0 with 4 impressions.\n- recetagenial: los gatos pueden comer pollo cocido. Observed position 10.0 with 4 impressions.\n- recetagenial: comida para gatos casera y económica. Observed position 5.0 with 3 impressions.\n- recetagenial: como cocinar pollo hervido para gatos. Observed position 8.0 with 3 impressions.\n- recetagenial: croquetas de pollo para gatos. Observed position 5.7 with 3 impressions.\n- recetagenial: croquetas de pollo para gatos. Observed position 5.0 with 3 impressions.\n- recetagenial: es bueno el pollo para los gatos. Observed position 10.0 with 3 impressions.\n- recetagenial: menudo de pollo para gatos. Observed position 8.7 with 3 impressions.\n- recetadolce: bourbon vanilla creme brulee. Observed position 8.5 with 2 impressions.\n- recetagenial: como empanizar tilapia para freír. Observed position 10.0 with 2 impressions.\n- recetagenial: filete de pescado frito crujiente. Observed position 4.0 with 2 impressions.\n- recetagenial: gato con pollo. Observed position 7.0 with 2 impressions.\n- recetagenial: los gatos pueden comer salmón cocido. Observed position 8.0 with 2 impressions.\n- recetagenial: pechuga de pollo al horno jugosa. Observed position 9.0 with 2 impressions.\n- recetagenial: pechuga de pollo para gatos. Observed position 7.0 with 2 impressions.\n- recetagenial: pescado empanizado crujiente. Observed position 8.5 with 2 impressions.\n- recetagenial: pescado frito en sartén. Observed position 9.0 with 2 impressions.\n- recetagenial: pescado marinado frito. Observed position 8.5 with 2 impressions.\n- recetadolce: arepa dominicana receta. Observed position 9.0 with 1 impressions.\n- recetadolce: bizcocho decorado con fresas. Observed position 5.0 with 1 impressions.\n- recetadolce: pastel decorado. Observed position 4.0 with 1 impressions.\n- recetadolce: pastel decorado con fresas. Observed position 7.0 with 1 impressions.\n- recetadolce: pastel decorado de fresas. Observed position 4.0 with 1 impressions.\n- recetagenial: \"preparar postres faciles\". Observed position 9.0 with 1 impressions.\n- recetagenial: boquerones en adobo estilo andaluz. Observed position 12.0 with 1 impressions.\n- recetagenial: caldo de pollo gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: caldo de pollo para gato. Observed position 6.0 with 1 impressions.\n- recetagenial: caldo de pollo para gatos. Observed position 9.0 with 1 impressions.\n- recetagenial: carne picada guisada. Observed position 12.0 with 1 impressions.\n- recetagenial: cascara de huevo en polvo para gatos. Observed position 11.0 with 1 impressions.\n- recetagenial: cascara de huevo en polvo para gatos. Observed position 11.0 with 1 impressions.\n- recetagenial: cocinar carne molida congelada. Observed position 5.0 with 1 impressions.\n- recetagenial: comida gourmet para gatos. Observed position 14.0 with 1 impressions.\n- recetagenial: comida para gatos de 2 meses casera. Observed position 5.0 with 1 impressions.\n- recetagenial: como cocinar carne molida congelada. Observed position 11.0 with 1 impressions.\n- recetagenial: como cocinar menudos de pollo para gatos. Observed position 10.0 with 1 impressions.\n- recetagenial: como guisar carne molida. Observed position 12.0 with 1 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: como hacer croquetas para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: como hacer pollo para gatos. Observed position 6.0 with 1 impressions.\n- recetagenial: como mantener las manzanas sin oxidarse. Observed position 8.0 with 1 impressions.\n- recetagenial: corazon de pollo para gatos. Observed position 13.0 with 1 impressions.\n- recetagenial: croquetas caseras para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: croquetas caseras para gatos. Observed position 4.0 with 1 impressions.\n- recetagenial: croquetas de jamón receta de la abuela. Observed position 9.0 with 1 impressions.\n- recetagenial: croquetas de puchero de la abuela. Observed position 10.0 with 1 impressions.\n- recetagenial: croquetas de salmon para gatos. Observed position 12.0 with 1 impressions.\n- recetagenial: croquetas para gatos. Observed position 5.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: croquetas saludables para gatos. Observed position 8.0 with 1 impressions.\n- recetagenial: cuajada mercadona ingredientes. Observed position 8.0 with 1 impressions.\n- recetagenial: dorado frito. Observed position 10.0 with 1 impressions.\n- recetagenial: ensalada cesar casera. Observed position 7.0 with 1 impressions.\n- recetagenial: enséñame todas. Observed position 4.0 with 1 impressions.\n- recetagenial: gato pollo. Observed position 11.0 with 1 impressions.\n- recetagenial: ideas para aperitivos frios. Observed position 12.0 with 1 impressions.\n- recetagenial: imágenes. Observed position 4.0 with 1 impressions.\n- recetagenial: la pechuga de pollo. Observed position 11.0 with 1 impressions.\n- recetagenial: le puedo dar pollo hervido a mi gato. Observed position 11.0 with 1 impressions.\n- recetagenial: lenguado frito. Observed position 10.0 with 1 impressions.\n- recetagenial: lentejas espanolas. Observed position 11.0 with 1 impressions.\n- recetagenial: lentejas tradicionales. Observed position 11.0 with 1 impressions.\n- recetagenial: los gatos pueden comer hígado de pollo cocido. Observed position 10.0 with 1 impressions.\n- recetagenial: mejor filete de pescado para empanizar. Observed position 7.0 with 1 impressions.\n- recetagenial: paella de marisco receta casera. Observed position 11.0 with 1 impressions.\n- recetagenial: pescado al horno con verduras y patatas. Observed position 8.0 with 1 impressions.\n- recetagenial: pescado empanizado con harina. Observed position 9.0 with 1 impressions.\n- recetagenial: pescado frito chileno. Observed position 8.0 with 1 impressions.\n- recetagenial: pescado pequeño frito. Observed position 9.0 with 1 impressions.\n"
 }

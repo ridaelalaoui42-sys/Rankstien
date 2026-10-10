@@ -1,6 +1,6 @@
 # SEO Feedback
 
-Collected: 2026-10-09T04:23:08.664523+00:00
+Collected: 2026-10-09T23:16:34.246656+00:00
 
 Unknown values mean unavailable evidence, not zero traffic.
 
@@ -16,15 +16,9 @@ Unknown values mean unavailable evidence, not zero traffic.
 ## Recommendations
 
 - recetadolce: bizcocho de chocolate saludable. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetadolce: pastel de zanahoria sin horno. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
 - recetadolce: pastel de zanahoria receta facil. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
 - recetadolce: bizcocho de chocolate con dulce de leche. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetadolce: pastel de zanahoria con cheesecake. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
 - recetadolce: pastel de zanahoria navideño. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetadolce: bizcocho de chocolate matilda. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetagenial: ensalada de garbanzos pollo. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetagenial: tarta de queso de pistacho. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
-- recetagenial: paella de marisco video. Fresh qualified keyword evidence; demand is a proxy, not monthly search volume or growth.
 - recetagenial: pastel 3 chocolates mercadona. Observed position 3.1 with 23 impressions.
 - recetadolce: vinagre balsamico de chocolate negro. Observed position 10.0 with 8 impressions.
 - recetagenial: mercadona tarta 3 chocolates. Observed position 4.1 with 7 impressions.

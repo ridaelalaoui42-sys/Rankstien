@@ -103,16 +103,54 @@ function toast(message) {
     $("toast").hidden = true;
   }, 6000);
 }
-async function api(path, options = {}) {
-  const response = await fetch(path, {
+async function api(path, options = {}, isRetry = false) {
+  const method = (options.method || "GET").toUpperCase();
+  const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+  if (isMutating && !state.token) {
+    try {
+      const sess = await fetch("/api/operator/session").then((r) => r.json());
+      if (sess && sess.csrf_token) state.token = sess.csrf_token;
+    } catch {
+      /* Continue and attempt request */
+    }
+  }
+
+  const timeoutMs = options.timeout ?? 60000;
+  const signal =
+    options.signal ||
+    (typeof AbortSignal !== "undefined" && AbortSignal.timeout
+      ? AbortSignal.timeout(timeoutMs)
+      : undefined);
+
+  const fetchOptions = {
     ...options,
     headers: {
-      ...(options.method === "POST" ? { "X-RankStein-CSRF": state.token } : {}),
+      ...(isMutating ? { "X-RankStein-CSRF": state.token } : {}),
       ...options.headers,
     },
-    signal: AbortSignal.timeout(15000),
-  });
-  const data = await response.json();
+  };
+  if (signal) fetchOptions.signal = signal;
+
+  const response = await fetch(path, fetchOptions);
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = { error: `Request failed (${response.status})` };
+  }
+
+  if (response.status === 403 && !isRetry && isMutating) {
+    try {
+      const sess = await fetch("/api/operator/session").then((r) => r.json());
+      if (sess && sess.csrf_token) {
+        state.token = sess.csrf_token;
+        return await api(path, options, true);
+      }
+    } catch {
+      /* Fall through to throw below */
+    }
+  }
+
   if (!response.ok || data.ok === false)
     throw new Error(
       data.detail || data.error || `Request failed (${response.status})`,
@@ -190,9 +228,200 @@ function indexCampaigns() {
   ])
     state.campaigns.set(String(c.id), c);
 }
+function renderCampaignDag(c) {
+  const stages = c.stages || [];
+  if (!stages.length) return '<div class="muted" style="padding:12px;">No stages recorded</div>';
+
+  return `
+    <div class="dag-chain">
+      ${stages.map((s, idx) => {
+        const stateClass = s.state === 'complete' ? 'node-complete' :
+                           s.state === 'running' ? 'node-running' :
+                           s.state === 'warning' ? 'node-warning' :
+                           s.state === 'failed' ? 'node-failed' : 'node-idle';
+        const iconName = s.state === 'complete' ? 'check' :
+                         s.state === 'running' ? 'loader-2' :
+                         s.state === 'warning' ? 'alert-triangle' :
+                         s.state === 'failed' ? 'x-circle' : 'circle';
+        const durationText = s.duration_seconds != null ? `${s.duration_seconds.toFixed(1)}s` :
+                             s.state === 'running' ? 'Active' : '';
+        return `
+          <div class="dag-node-wrapper">
+            <button type="button" class="dag-node ${stateClass}" data-inspect-node="${esc(c.id)}:${esc(s.key)}" title="Stage ${idx + 1}: ${esc(s.label)} (${esc(s.state)})">
+              <div class="dag-node-badge">${idx + 1}</div>
+              <div class="dag-node-info">
+                <span class="dag-node-name">${esc(s.label)}</span>
+                <span class="dag-node-meta">${icon(iconName)} ${esc(durationText || s.state)}</span>
+              </div>
+            </button>
+            ${idx < stages.length - 1 ? `<div class="dag-arrow ${s.state === 'running' ? 'arrow-active' : s.state === 'complete' ? 'arrow-done' : ''}"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function openStepDrawer(campaignId, stageKey) {
+  const c = state.campaigns.get(String(campaignId));
+  if (!c) return;
+  const stage = (c.stages || []).find(s => s.key === stageKey);
+  const drawer = $("step-drawer");
+  if (!drawer) return;
+
+  $("step-drawer-title").textContent = stage ? `${stage.label}` : "Stage Details";
+  $("step-drawer-sub").textContent = `${c.keyword || c.title} (${c.domain_handle})`;
+
+  // Tab 1: Preview
+  let previewHtml = "";
+  if (c.recipe_preview) {
+    const rp = c.recipe_preview;
+    previewHtml = `
+      <div class="drawer-preview-card" style="display:flex; flex-direction:column; gap:8px;">
+        <h4 style="font-size:15px; margin:0;">${esc(rp.title || c.title)}</h4>
+        <p class="muted" style="margin:0; font-size:12px;">${esc(rp.description || '')}</p>
+        <div style="display:flex; gap:6px; margin:4px 0;">
+          <span class="badge">Prep: ${esc(rp.prep_time || '15m')}</span>
+          <span class="badge">Cook: ${esc(rp.cook_time || '25m')}</span>
+          <span class="badge ok">Yield: ${esc(rp.yield || '4')}</span>
+        </div>
+        <h5 style="margin:6px 0 2px; font-size:12px;">Ingredients (${(rp.ingredients || []).length}):</h5>
+        <ul style="padding-left:18px; margin:0; font-size:12px;">${(rp.ingredients || []).map(ing => `<li>${esc(ing)}</li>`).join('')}</ul>
+        <h5 style="margin:8px 0 2px; font-size:12px;">Instructions (${(rp.instructions || []).length}):</h5>
+        <ol style="padding-left:18px; margin:0; font-size:12px;">${(rp.instructions || []).map(ins => `<li>${esc(ins)}</li>`).join('')}</ol>
+      </div>
+    `;
+  } else {
+    previewHtml = `
+      <div class="drawer-json-preview">
+        <h4 style="margin:0 0 8px; font-size:13px;">Stage Payload / Proof</h4>
+        <pre class="console" style="max-height:360px; font-size:11px;"><code>${esc(JSON.stringify(stage || c.proof || {}, null, 2))}</code></pre>
+      </div>
+    `;
+  }
+  $("drawer-tab-preview").innerHTML = previewHtml;
+
+  // Tab 2: Visuals
+  let visualsHtml = "";
+  const heroUrl = c.hero_image_url || (c.proof && c.proof.hero_url);
+  if (heroUrl) {
+    visualsHtml += `
+      <div class="drawer-visual-section">
+        <h4 style="margin:0 0 8px; font-size:13px;">Hero Dish Image</h4>
+        <div class="drawer-thumb-wrap">
+          <img src="${esc(heroUrl)}" alt="Hero Image" />
+        </div>
+        <p class="muted" style="margin-top:6px; font-size:11px;">${esc(c.hero_image_prompt || 'Dish Hero Graphic')}</p>
+      </div>
+    `;
+  }
+  if (c.remaster_previews && c.remaster_previews.length) {
+    visualsHtml += `
+      <div class="drawer-visual-section" style="margin-top:16px;">
+        <h4 style="margin:0 0 8px; font-size:13px;">Paired Pins (${c.remaster_previews.length})</h4>
+        <div class="drawer-pins-grid">
+          ${c.remaster_previews.map(p => `
+            <div class="drawer-pin-card">
+              <img src="${esc(p.url || p.path)}" alt="Pin preview" />
+              <span>${esc(p.variant || 'pin')}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  if (!visualsHtml) visualsHtml = empty("No Visuals Yet", "Visual assets appear once generated.");
+  $("drawer-tab-visuals").innerHTML = visualsHtml;
+
+  // Tab 3: Destination
+  let destHtml = `
+    <div class="drawer-dest-section" style="display:flex; flex-direction:column; gap:12px;">
+      <h4 style="margin:0; font-size:14px;">Distribution & Proof</h4>
+      <div>
+        <label class="muted" style="font-size:11px; display:block;">Article URL:</label>
+        <div>${c.article_url ? external(c.article_url, c.article_url) : '<span class="muted">Not published yet</span>'}</div>
+      </div>
+      <div>
+        <label class="muted" style="font-size:11px; display:block;">Primary Pinterest Pin:</label>
+        <div>${c.pin_url ? external(c.pin_url, c.pin_id ? `Pin #${c.pin_id}` : c.pin_url) : '<span class="muted">Not uploaded yet</span>'}</div>
+      </div>
+      <div>
+        <label class="muted" style="font-size:11px; display:block;">Target Domain:</label>
+        <div><strong class="mono">${esc(c.domain_handle)}</strong></div>
+      </div>
+      <div>
+        <label class="muted" style="font-size:11px; display:block;">Target Board:</label>
+        <div><strong>${esc(c.target_board || 'Aperitivos / Chocolate')}</strong></div>
+      </div>
+    </div>
+  `;
+  $("drawer-tab-destination").innerHTML = destHtml;
+
+  // Tab 4: Logs
+  const stageLog = stage?.details?.log || c.current_detail || 'No stage-specific log recorded.';
+  $("drawer-tab-logs").innerHTML = `
+    <div>
+      <h4 style="margin:0 0 8px; font-size:13px;">Stage Log Stream</h4>
+      <pre class="console" style="max-height:400px; font-size:11px;">${esc(stageLog)}</pre>
+    </div>
+  `;
+
+  drawer.hidden = false;
+  drawer.classList.add("open");
+  icons();
+}
+
 function campaignMarkup(c) {
   const action = c.quality_hold ? "Quality hold" : c.overall_state === "active" ? "Executing" : c.overall_state === "waiting" ? "Waiting" : "Last recorded";
-  return `<article class="campaign"><div class="campaign-head"><div><h3>${esc(c.keyword || c.title)}</h3><small>${esc(c.domain_handle)} / ${esc(c.slug)}</small></div>${badge(c.quality_hold ? "Quality hold" : c.overall_state)}</div><div class="campaign-stage">${action}: ${esc(c.current_label || c.run_status)}${c.current_detail ? ` &middot; ${esc(c.current_detail)}` : ""}</div><div class="stages" aria-label="Recorded workflow stages">${(c.stages || []).map((s) => `<span class="stage ${esc(s.state)}" title="${esc(s.label + ": " + s.state)}"></span>`).join("")}</div><div class="campaign-foot"><button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>${external(c.article_url, "Article")}${external(c.pin_url, "Primary pin")}<span class="muted">${date(c.updated_at)}</span></div></article>`;
+  return `
+    <article class="campaign">
+      <div class="campaign-head">
+        <div>
+          <h3>${esc(c.keyword || c.title)}</h3>
+          <small>${esc(c.domain_handle)} / ${esc(c.slug)}</small>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${badge(c.quality_hold ? "Quality hold" : c.overall_state)}
+        </div>
+      </div>
+
+      <div class="campaign-stage">
+        <strong>${action}:</strong> ${esc(c.current_label || c.run_status)}
+        ${c.current_detail ? ` &middot; <span class="muted">${esc(c.current_detail)}</span>` : ""}
+      </div>
+
+      <!-- Intervention Control Bar -->
+      <div class="campaign-interventions">
+        <button class="button small ${c.is_paused ? 'primary' : ''}" data-campaign-pause="${esc(c.id)}" data-paused="${c.is_paused ? 'true' : 'false'}" title="${c.is_paused ? 'Resume execution' : 'Pause execution'}">
+          ${icon(c.is_paused ? 'play' : 'pause')}${c.is_paused ? 'Resume' : 'Pause'}
+        </button>
+        <button class="button small" data-campaign-rerun="${esc(c.id)}" title="Rerun current stage">
+          ${icon('rotate-ccw')}Rerun Step
+        </button>
+        <button class="button small" data-campaign-override="${esc(c.id)}" title="Override step manually">
+          ${icon('edit-3')}Override
+        </button>
+        <button class="button small primary" data-campaign-verify="${esc(c.id)}" title="Force verify & complete">
+          ${icon('check-circle')}Force Verify
+        </button>
+        <button class="button small danger" data-campaign-abort="${esc(c.id)}" title="Abort campaign">
+          ${icon('trash-2')}Abort
+        </button>
+      </div>
+
+      <!-- Graphical Step-by-Step DAG Visualizer -->
+      <div class="dag-scroll-wrap" tabindex="0" aria-label="Workflow DAG nodes">
+        ${typeof renderCampaignDag === "function" ? renderCampaignDag(c) : ""}
+      </div>
+
+      <div class="campaign-foot">
+        <button class="button" data-campaign="${esc(c.id)}">${icon("list-tree")}Inspect stages</button>
+        ${external(c.article_url, "Article")}
+        ${external(c.pin_url, "Primary pin")}
+        <span class="muted">${date(c.updated_at)}</span>
+      </div>
+    </article>
+  `;
 }
 function renderOverview() {
   const d = state.data;
@@ -408,26 +637,45 @@ function renderRuntime() {
       "panels-top-left",
     );
   $("services").innerHTML = table(
-    ["Service", "Port", "Health", "Listener"],
+    ["Service", "Port", "Health", "Listener", "Actions"],
     (r.services || []).map(
       (s) =>
-        `<tr><td>${esc(s.name.replaceAll("_", " "))}</td><td class="mono">:${esc(s.port)}</td><td>${badge(s.healthy ? "healthy" : "offline")}</td><td class="muted">${s.port_open ? "Bound" : "Not listening"}</td></tr>`,
+        `<tr>
+          <td><strong>${esc(s.name.replaceAll("_", " "))}</strong></td>
+          <td class="mono">:${esc(s.port)}</td>
+          <td>${badge(s.healthy ? "healthy" : "offline")}</td>
+          <td class="muted">${s.port_open ? "Bound" : "Not listening"}</td>
+          <td>
+            <div class="service-actions-strip">
+              <button class="button small primary" data-service-action="${esc(s.name)}:start" title="Start service">${icon("play")}Start</button>
+              <button class="button small" data-service-action="${esc(s.name)}:restart" title="Restart service">${icon("rotate-ccw")}Restart</button>
+              <button class="button small warning" data-service-action="${esc(s.name)}:stop" title="Stop service">${icon("square")}Stop</button>
+              <button class="button small danger" data-service-action="${esc(s.name)}:kill" title="Force kill">${icon("skull")}Kill</button>
+            </div>
+          </td>
+        </tr>`,
     ),
   );
+  if (state.workers) renderWorkerViewports(state.workers);
   $("account-count").textContent =
-    `${r.accounts?.length || 0} configured / authentication not probed`;
+    `${r.accounts?.length || 0} configured / multi-domain active`;
   $("accounts").innerHTML = r.accounts?.length
     ? table(
         [
           "Account",
           "Browser",
           "Credentials",
-          "Browser profile",
-          "Session evidence",
+          "Profile",
+          "Connected blogs",
+          "Actions",
         ],
         r.accounts.map(
-          (a) =>
-            `<tr><td class="mono">${esc(a.handle)}</td><td>${esc(a.browser)}</td><td>${badge(a.credentials_configured ? "configured" : "missing")}</td><td>${badge(a.profile_present ? "present" : "missing")}</td><td class="muted">${esc(a.session_state)}</td></tr>`,
+          (a) => {
+            const connectedBadges = (a.connected_domains && a.connected_domains.length)
+              ? a.connected_domains.map(d => `<span class="badge ok" style="font-size:11px; margin-right:4px;">${esc(d)}</span>`).join("")
+              : `<span class="badge muted" style="font-size:11px;">Default / All</span>`;
+            return `<tr><td class="mono"><strong>${esc(a.handle)}</strong></td><td>${esc(a.browser || "chromium")}</td><td>${badge(a.credentials_configured ? "configured" : "session-only")}</td><td>${badge(a.profile_present ? "present" : "missing")}</td><td>${connectedBadges}</td><td><div class="cell-actions" style="display:flex; gap:6px;"><button class="button small" data-account-edit="${esc(a.handle)}" title="Manage account and connected blogs">${icon("edit-2")}Manage</button><button class="button small danger" data-account-delete="${esc(a.handle)}" title="Delete account">${icon("trash-2")}</button></div></td></tr>`;
+          },
         ),
       )
     : empty("No configured Pinterest accounts");
@@ -484,6 +732,109 @@ async function refreshStatus() {
     $("refresh").disabled = false;
   }
 }
+state.queuePage = 1;
+state.queueLimit = 25;
+state.queueStatus = "all";
+state.queueSearch = "";
+
+async function loadQueueJobs() {
+  const wrap = $("queue-jobs-table-wrap");
+  if (!wrap) return;
+  try {
+    const res = await api(`/api/rankstein/queue/jobs?page=${state.queuePage}&limit=${state.queueLimit}&status=${state.queueStatus}&search=${encodeURIComponent(state.queueSearch)}`);
+    if (!res || !res.ok) {
+      wrap.innerHTML = empty("Error loading queue", res?.error || "Unknown error");
+      return;
+    }
+    const items = res.items || [];
+    if ($("queue-jobs-count")) $("queue-jobs-count").textContent = `${res.total} jobs in queue`;
+    if ($("queue-page-info")) $("queue-page-info").textContent = `Page ${res.page} of ${Math.max(1, Math.ceil(res.total / res.limit))}`;
+    if ($("btn-queue-prev")) $("btn-queue-prev").disabled = res.page <= 1;
+    if ($("btn-queue-next")) $("btn-queue-next").disabled = res.page >= Math.ceil(res.total / res.limit);
+
+    if (!items.length) {
+      wrap.innerHTML = empty("Queue empty", "No jobs match the current filter.", "inbox");
+      return;
+    }
+
+    wrap.innerHTML = table(
+      ["ID", "Status", "Account", "Board", "Title / Destination", "Attempts", "Actions"],
+      items.map(job => {
+        const p = job.payload || {};
+        const title = p.title || p.text || "-";
+        const link = p.link || p.destination_url || "-";
+        const board = p.board_name || p.board || "-";
+        const acc = p.account_handle || p.account || "-";
+        return `
+          <tr>
+            <td class="mono font-xs"><code>${esc(job.id)}</code></td>
+            <td>${badge(job.status)}</td>
+            <td class="mono">${esc(acc)}</td>
+            <td><strong>${esc(board)}</strong></td>
+            <td>
+              <div class="truncate-cell" title="${esc(title)}">${esc(title)}</div>
+              ${link !== '-' ? `<div class="subtext">${external(link, "Destination")}</div>` : ''}
+            </td>
+            <td class="mono">${job.attempt}/${job.max_attempts}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="button small" data-queue-requeue="${esc(job.id)}" title="Requeue job">${icon("rotate-ccw")}</button>
+                <button class="button small" data-queue-edit="${esc(job.id)}" title="Edit job payload">${icon("edit-2")}</button>
+                <button class="button small danger" data-queue-delete="${esc(job.id)}" title="Delete job">${icon("trash-2")}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+    );
+    icons();
+  } catch (err) {
+    wrap.innerHTML = empty("Error loading queue", err.message);
+  }
+}
+
+function renderWorkerViewports(workers) {
+  const container = $("worker-viewports");
+  const sContainer = $("services-worker-viewports");
+  if (!workers || !workers.length) return;
+  const markup = workers.map(w => `
+    <article class="worker-card">
+      <div class="worker-card-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="status-dot"></span>
+          <strong>Worker ${w.worker_id}</strong>
+        </div>
+        <span class="badge ok">${esc(w.account)}</span>
+      </div>
+      <div class="worker-viewport-img-wrap">
+        ${w.snapshot_url ? `<img src="${esc(w.snapshot_url)}" alt="Worker snapshot" class="worker-snap-img" onclick="window.open('${esc(w.snapshot_url)}', '_blank')" />` : `<div class="worker-snap-placeholder"><i data-lucide="monitor"></i><span>Headless Viewport Active</span></div>`}
+      </div>
+      <div class="worker-card-footer">
+        <div class="worker-action-text"><i data-lucide="activity"></i> ${esc(w.action)}</div>
+        <div class="worker-lease-meta"><span class="badge ${w.lease.includes('healthy') ? 'ok' : 'warn'}">Lease: ${esc(w.lease)}</span><span class="muted">${date(w.updated_at)}</span></div>
+      </div>
+    </article>
+  `).join('');
+
+  if (container) container.innerHTML = markup;
+  if (sContainer) sContainer.innerHTML = markup;
+  icons();
+}
+
+function updateTelemetryHud(t) {
+  if (!t) return;
+  if ($("hud-cpu-val")) $("hud-cpu-val").textContent = `${t.cpu_percent || 0}%`;
+  if ($("hud-cpu-bar")) $("hud-cpu-bar").style.width = `${Math.min(100, t.cpu_percent || 0)}%`;
+  if ($("hud-ram-val")) $("hud-ram-val").textContent = `${t.ram_percent || 0}%`;
+  if ($("hud-ram-bar")) $("hud-ram-bar").style.width = `${Math.min(100, t.ram_percent || 0)}%`;
+  if ($("hud-mem-val")) $("hud-mem-val").textContent = t.memory_detail || (t.memory_healthy ? "Healthy" : "Offline");
+  if ($("hud-mem-dot")) {
+    $("hud-mem-dot").className = `hud-status-indicator ${t.memory_healthy ? "ok" : "bad"}`;
+  }
+  if ($("hud-pins-val")) $("hud-pins-val").textContent = `${t.pins_today || 0} / ${t.pins_daily_cap || 500}`;
+  if ($("hud-pins-bar")) $("hud-pins-bar").style.width = `${Math.min(100, t.pins_daily_percent || 0)}%`;
+}
+
 async function loadView() {
   const view = state.view;
   if (view === "seo-radar") {
@@ -504,6 +855,8 @@ async function loadView() {
   if (view !== "logs") $(target).innerHTML = empty("Loading...", "", "loader");
   try {
     if (view === "pinterest") {
+      loadQueueJobs();
+      if (state.workers) renderWorkerViewports(state.workers);
       const params = new URLSearchParams({
         limit: "100",
         account: $("pin-account").value,
@@ -614,10 +967,26 @@ function renderKeywords() {
     `${state.keywords.length} displayed / up to 250 per domain`;
   $("keywords").innerHTML = state.keywords.length
     ? table(
-        ["Keyword", "Cluster", "Domain", "Priority", "State", "Source"],
+        ["Keyword", "Cluster", "Domain", "Priority", "Status Override", "Actions"],
         state.keywords.map(
           (k) =>
-            `<tr><td>${esc(k.keyword)}</td><td>${esc(k.cluster)}</td><td class="mono">${esc(k.domain)}</td><td>${esc(k.priority)}</td><td>${badge(k.status)}</td><td class="muted">${esc(k.source)}</td></tr>`,
+            `<tr>
+              <td><strong>${esc(k.keyword)}</strong><div class="subtext muted">${esc(k.source || '')}</div></td>
+              <td>${esc(k.cluster)}</td>
+              <td class="mono">${esc(k.domain)}</td>
+              <td><span class="badge ${k.priority === 'Urgent' ? 'bad' : k.priority === 'High' ? 'warn' : ''}">${esc(k.priority)}</span></td>
+              <td>
+                <select class="keyword-status-select" data-domain="${esc(k.domain)}" data-keyword="${esc(k.keyword)}" style="padding:4px 8px; border-radius:4px; background:var(--bg-card, #111827); color:inherit; font-size:12px; border:1px solid var(--border, #1f2937);">
+                  ${['Pending', 'Researching', 'Generating', 'Needs Verification', 'Live', 'Failed'].map(st => `<option value="${st}" ${k.status === st ? 'selected' : ''}>${st}</option>`).join('')}
+                </select>
+              </td>
+              <td>
+                <div style="display:flex; gap:6px;">
+                  <button class="button small primary" data-run-keyword="${esc(k.domain)}:${esc(k.keyword)}" title="Run Campaign Now">${icon('play')}Run</button>
+                  <button class="button small danger" data-delete-keyword="${esc(k.domain)}:${esc(k.keyword)}" title="Delete Keyword">${icon('trash-2')}</button>
+                </div>
+              </td>
+            </tr>`,
         ),
       )
     : empty("No matching keywords");
@@ -755,6 +1124,7 @@ function openCommand(command) {
   $("command-submit").innerHTML =
     icon(command.startsWith("stop") ? "square" : "play") + esc(config[2]);
   $("batch-fields").hidden = command !== "production";
+  if ($("supervisor-fields")) $("supervisor-fields").hidden = command !== "supervisor";
   $("batch-domain").value = domainScope();
   $("command-error").hidden = true;
   if (command === "trends" && !domainScope())
@@ -778,6 +1148,11 @@ async function runCommand(event) {
         domain: $("batch-domain").value,
       });
       path = "/api/rankstein/control/start/rankstein/production?" + params;
+    } else if (c === "supervisor") {
+      const params = new URLSearchParams({
+        workers: $("supervisor-workers") ? $("supervisor-workers").value : "2",
+      });
+      path = "/api/rankstein/control/start/rankstein/supervisor?" + params;
     } else if (c === "requeue") path = "/api/rankstein/control/requeue-dlq";
     else if (c === "stop-supervisor")
       path = "/api/rankstein/control/stop/supervisor";
@@ -1399,6 +1774,178 @@ document.addEventListener("click", (event) => {
         .catch(() => prompt("Title formula:", formula));
     }
   }
+
+  // DAG Inspection Drawer
+  const inspectNode = event.target.closest("[data-inspect-node]");
+  if (inspectNode) {
+    const [cId, sKey] = inspectNode.dataset.inspectNode.split(":");
+    openStepDrawer(cId, sKey);
+  }
+
+  // Drawer Tabs
+  const drawerTab = event.target.closest(".step-drawer-tab");
+  if (drawerTab) {
+    const target = drawerTab.dataset.tab;
+    document.querySelectorAll(".step-drawer-tab").forEach(t => t.classList.remove("active"));
+    drawerTab.classList.add("active");
+    ["preview", "visuals", "destination", "logs"].forEach(tabName => {
+      const el = $(`drawer-tab-${tabName}`);
+      if (el) el.hidden = (tabName !== target);
+    });
+  }
+
+  // Close Drawer
+  const closeDrawer = event.target.closest("#btn-close-step-drawer");
+  if (closeDrawer) {
+    const drawer = $("step-drawer");
+    if (drawer) {
+      drawer.classList.remove("open");
+      drawer.hidden = true;
+    }
+  }
+
+  // Campaign Interventions
+  const campPause = event.target.closest("[data-campaign-pause]");
+  if (campPause) {
+    const id = campPause.dataset.campaignPause;
+    const isPaused = campPause.dataset.paused === "true";
+    api(`/api/rankstein/campaigns/${encodeURIComponent(id)}/${isPaused ? 'resume' : 'pause'}`, { method: "POST" })
+      .then(res => {
+        toast(res.message || (isPaused ? "Resumed campaign" : "Paused campaign"));
+        refreshStatus();
+      })
+      .catch(err => toast("Pause/Resume failed: " + err.message));
+  }
+
+  const campRerun = event.target.closest("[data-campaign-rerun]");
+  if (campRerun) {
+    const id = campRerun.dataset.campaignRerun;
+    api(`/api/rankstein/campaigns/${encodeURIComponent(id)}/rerun-step`, { method: "POST" })
+      .then(res => { toast(res.message || "Rerunning step"); refreshStatus(); })
+      .catch(err => toast("Rerun failed: " + err.message));
+  }
+
+  const campOverride = event.target.closest("[data-campaign-override]");
+  if (campOverride) {
+    const id = campOverride.dataset.campaignOverride;
+    $("override-campaign-id").value = id;
+    $("override-step-dialog").showModal();
+  }
+
+  const campVerify = event.target.closest("[data-campaign-verify]");
+  if (campVerify) {
+    const id = campVerify.dataset.campaignVerify;
+    if (confirm("Force verify and complete this campaign immediately?")) {
+      api(`/api/rankstein/campaigns/${encodeURIComponent(id)}/force-verify`, { method: "POST" })
+        .then(res => { toast(res.message || "Force verified campaign"); refreshStatus(); })
+        .catch(err => toast("Force verify failed: " + err.message));
+    }
+  }
+
+  const campAbort = event.target.closest("[data-campaign-abort]");
+  if (campAbort) {
+    const id = campAbort.dataset.campaignAbort;
+    if (confirm("Abort and delete this campaign? This will stop background workers and purge scratch assets.")) {
+      api(`/api/rankstein/campaigns/${encodeURIComponent(id)}`, { method: "DELETE" })
+        .then(res => { toast(res.message || "Campaign aborted"); refreshStatus(); })
+        .catch(err => toast("Abort failed: " + err.message));
+    }
+  }
+
+  // Service Management Actions
+  const svcBtn = event.target.closest("[data-service-action]");
+  if (svcBtn) {
+    const [svc, act] = svcBtn.dataset.serviceAction.split(":");
+    api(`/api/rankstein/services/${encodeURIComponent(svc)}/action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: act }),
+    })
+      .then(res => { toast(res.message || `${act} ${svc} initiated`); refreshStatus(); })
+      .catch(err => toast(`Service ${act} failed: ` + err.message));
+  }
+
+  // Pinterest Account Actions
+  const accEdit = event.target.closest("[data-account-edit]");
+  if (accEdit) {
+    const handle = accEdit.dataset.accountEdit;
+    openAccountDialog(handle);
+  }
+
+  const accDel = event.target.closest("[data-account-delete]");
+  if (accDel) {
+    const handle = accDel.dataset.accountDelete;
+    if (confirm(`Are you sure you want to delete Pinterest account '${handle}'? This removes its mapping to connected blogs.`)) {
+      api("/api/rankstein/control/accounts/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle }),
+      })
+        .then(res => {
+          toast(res.message || `Deleted account '${handle}'`);
+          refreshStatus();
+        })
+        .catch(err => toast("Delete account failed: " + err.message));
+    }
+  }
+
+  // Queue Row Actions
+  const qRequeue = event.target.closest("[data-queue-requeue]");
+  if (qRequeue) {
+    const id = qRequeue.dataset.queueRequeue;
+    api(`/api/rankstein/queue/jobs/${encodeURIComponent(id)}/requeue`, { method: "POST" })
+      .then(res => { toast(res.message || "Job requeued"); loadQueueJobs(); })
+      .catch(err => toast("Requeue failed: " + err.message));
+  }
+
+  const qEdit = event.target.closest("[data-queue-edit]");
+  if (qEdit) {
+    const id = qEdit.dataset.queueEdit;
+    api(`/api/rankstein/queue/jobs?search=${encodeURIComponent(id)}&limit=1`)
+      .then(res => {
+        const job = (res.items || []).find(j => j.id === id);
+        if (job) {
+          $("edit-job-id").value = job.id;
+          $("edit-job-board-input").value = job.payload?.board_name || job.payload?.board || "";
+          $("edit-job-title-input").value = job.payload?.title || job.payload?.text || "";
+          $("edit-job-link-input").value = job.payload?.link || job.payload?.destination_url || "";
+          $("edit-job-account-input").value = job.payload?.account_handle || job.payload?.account || "";
+          $("edit-job-dialog").showModal();
+        } else {
+          toast("Job not found in active queue");
+        }
+      })
+      .catch(err => toast("Fetch job failed: " + err.message));
+  }
+
+  const qDel = event.target.closest("[data-queue-delete]");
+  if (qDel) {
+    const id = qDel.dataset.queueDelete;
+    if (confirm(`Delete job ${id}?`)) {
+      api(`/api/rankstein/queue/jobs/${encodeURIComponent(id)}`, { method: "DELETE" })
+        .then(res => { toast(res.message || "Job deleted"); loadQueueJobs(); })
+        .catch(err => toast("Delete failed: " + err.message));
+    }
+  }
+
+  // Keyword Actions
+  const kwRun = event.target.closest("[data-run-keyword]");
+  if (kwRun) {
+    const [dm, kw] = kwRun.dataset.runKeyword.split(":");
+    api(`/api/rankstein/keywords/${encodeURIComponent(dm)}/${encodeURIComponent(kw)}/run`, { method: "POST" })
+      .then(res => { toast(res.message || `Campaign launched for ${kw}`); refreshStatus(); })
+      .catch(err => toast("Launch failed: " + err.message));
+  }
+
+  const kwDel = event.target.closest("[data-delete-keyword]");
+  if (kwDel) {
+    const [dm, kw] = kwDel.dataset.deleteKeyword.split(":");
+    if (confirm(`Delete keyword '${kw}' from domain '${dm}'?`)) {
+      api(`/api/rankstein/keywords/${encodeURIComponent(dm)}/${encodeURIComponent(kw)}`, { method: "DELETE" })
+        .then(res => { toast(res.message || `Deleted keyword ${kw}`); loadView(); })
+        .catch(err => toast("Delete keyword failed: " + err.message));
+    }
+  }
 });
 
 // SEO Feedback Exploitation Toolbar Listeners
@@ -1407,7 +1954,10 @@ $("btn-refresh-seo-feedback")?.addEventListener("click", async () => {
   btn.disabled = true;
   try {
     toast("Auditing fresh search & trend signals...");
-    const res = await api("/api/rankstein/control/seo-feedback/refresh", { method: "POST" });
+    const res = await api("/api/rankstein/control/seo-feedback/refresh", {
+      method: "POST",
+      timeout: 120000,
+    });
     state.seoFeedback = res.report || null;
     renderSeoRadar();
     toast(res.message || "SEO audit refreshed!");
@@ -1567,6 +2117,449 @@ setInterval(() => {
     if (state.view === "logs") loadView();
   }
 }, 6000);
+// ====================================================================
+// Mission Control Dialogs & Event Handlers
+// ====================================================================
+
+// Launch Campaign Modal
+$("btn-open-launch-campaign")?.addEventListener("click", () => {
+  const select = $("campaign-domain-select");
+  if (select && state.data?.domains) {
+    select.innerHTML = state.data.domains.map(d => `<option value="${esc(d.handle)}">${esc(d.handle)} (${esc(d.domain)})</option>`).join("");
+    if (domainScope()) select.value = domainScope();
+  }
+  $("launch-campaign-dialog").showModal();
+});
+
+$("launch-campaign-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("btn-submit-launch-campaign");
+  btn.disabled = true;
+  $("launch-campaign-error").hidden = true;
+  try {
+    const payload = {
+      domain: $("campaign-domain-select").value,
+      keyword: $("campaign-keyword-input").value.trim(),
+      auto_pick: $("campaign-autopick-check").checked,
+      pins_target: parseInt($("campaign-pins-count").value, 10) || 30,
+      workers: parseInt($("campaign-workers-count").value, 10) || 2,
+    };
+    const res = await api("/api/rankstein/campaigns/launch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    $("launch-campaign-dialog").close();
+    toast(res.message || "Campaign launched successfully!");
+    await refreshStatus();
+  } catch (err) {
+    $("launch-campaign-error").textContent = err.message;
+    $("launch-campaign-error").hidden = false;
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+// Add Keyword Modal
+$("btn-open-add-keyword")?.addEventListener("click", () => {
+  const select = $("add-keyword-domain");
+  if (select && state.data?.domains) {
+    select.innerHTML = state.data.domains.map(d => `<option value="${esc(d.handle)}">${esc(d.handle)}</option>`).join("");
+    if (domainScope()) select.value = domainScope();
+  }
+  $("add-keyword-dialog").showModal();
+});
+
+$("add-keyword-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const payload = {
+      domain: $("add-keyword-domain").value,
+      keyword: $("add-keyword-name").value.trim(),
+      cluster: $("add-keyword-cluster").value.trim() || "General",
+      priority: $("add-keyword-priority").value,
+    };
+    const res = await api("/api/rankstein/keywords", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    $("add-keyword-dialog").close();
+    toast(res.message || "Keyword added successfully!");
+    await loadView();
+  } catch (err) {
+    toast("Add keyword failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+// Edit Job Modal
+$("edit-job-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const jobId = $("edit-job-id").value;
+    const payload = {
+      board_name: $("edit-job-board-input").value.trim(),
+      title: $("edit-job-title-input").value.trim(),
+      destination_url: $("edit-job-link-input").value.trim(),
+      account_handle: $("edit-job-account-input").value.trim(),
+    };
+    const res = await api(`/api/rankstein/queue/jobs/${encodeURIComponent(jobId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    $("edit-job-dialog").close();
+    toast(res.message || "Job payload updated!");
+    await loadQueueJobs();
+  } catch (err) {
+    toast("Update job failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+// Override Step Modal
+$("override-step-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const campaignId = $("override-campaign-id").value;
+    const payload = {
+      step_name: $("override-step-select").value,
+      override_type: $("override-step-select").value,
+      override_data: $("override-data-input").value.trim(),
+    };
+    const res = await api(`/api/rankstein/campaigns/${encodeURIComponent(campaignId)}/override-step`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    $("override-step-dialog").close();
+    toast(res.message || "Step override applied!");
+    await refreshStatus();
+  } catch (err) {
+    toast("Override failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+// System Infrastructure Buttons
+$("btn-purge-locks")?.addEventListener("click", async () => {
+  if (!confirm("Purge all stale browser locks, lease files, and stuck PID locks?")) return;
+  try {
+    const res = await api("/api/rankstein/control/purge-locks", { method: "POST" });
+    toast(res.message || "Locks purged successfully!");
+    refreshStatus();
+  } catch (err) {
+    toast("Purge locks failed: " + err.message);
+  }
+});
+
+$("btn-clear-drafts")?.addEventListener("click", async (e) => {
+  if (!confirm("Trigger Pinterest draft cleaner script to eliminate the 50-draft barrier across all accounts?")) return;
+  const btn = e.currentTarget;
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i>Clearing Drafts...';
+  icons();
+  try {
+    const res = await api("/api/rankstein/control/clear-drafts", { method: "POST", timeout: 180000 });
+    toast(res.message || "Draft cleaner executed!");
+    refreshStatus();
+  } catch (err) {
+    toast("Clear drafts failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+    icons();
+  }
+});
+
+// Queue Actions
+$("btn-purge-dlq")?.addEventListener("click", async () => {
+  if (!confirm("Purge all dead-letter queue records? This cannot be undone.")) return;
+  try {
+    const res = await api("/api/rankstein/queue/purge-dlq", { method: "POST" });
+    toast(res.message || "DLQ purged!");
+    loadQueueJobs();
+    refreshStatus();
+  } catch (err) {
+    toast("Purge DLQ failed: " + err.message);
+  }
+});
+
+$("btn-retry-all-dlq")?.addEventListener("click", async () => {
+  try {
+    const res = await api("/api/rankstein/queue/retry-all-dlq", { method: "POST" });
+    toast(res.message || "All DLQ jobs requeued!");
+    loadQueueJobs();
+    refreshStatus();
+  } catch (err) {
+    toast("Retry DLQ failed: " + err.message);
+  }
+});
+
+$("btn-normalize-queue-boards")?.addEventListener("click", async () => {
+  try {
+    const res = await api("/api/rankstein/queue/normalize-boards", { method: "POST" });
+    toast(res.message || "Queue boards normalized!");
+    loadQueueJobs();
+  } catch (err) {
+    toast("Normalize boards failed: " + err.message);
+  }
+});
+
+$("btn-toggle-queue-pause")?.addEventListener("click", async () => {
+  try {
+    const res = await api("/api/rankstein/queue/pause-processing", { method: "POST" });
+    toast(res.message || "Queue processing state toggled!");
+    refreshStatus();
+  } catch (err) {
+    toast("Toggle pause failed: " + err.message);
+  }
+});
+
+// Supervisor Concurrency Scaler
+$("btn-scale-supervisor")?.addEventListener("click", async () => {
+  const workers = parseInt($("queue-supervisor-workers")?.value || "2", 10);
+  const btn = $("btn-scale-supervisor");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/rankstein/services/supervisor/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restart", workers }),
+    });
+    toast(res.message || `Supervisor restarted with ${workers} workers.`);
+    await refreshStatus();
+  } catch (err) {
+    toast("Scale supervisor failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// Pinterest Account Management
+async function openAccountDialog(accountHandle = null) {
+  $("account-form-error").hidden = true;
+  const dialog = $("account-dialog");
+  if (!dialog) return;
+
+  let existingAccount = null;
+  let cohorts = null;
+  try {
+    cohorts = await api("/api/rankstein/accounts/cohorts");
+  } catch (e) {
+    console.debug("Could not fetch accounts cohorts:", e);
+  }
+
+  const allDomains = cohorts?.domains || state.data?.domains || [];
+
+  if (accountHandle && cohorts?.accounts) {
+    existingAccount = cohorts.accounts.find(
+      a => (a.handle || "").toLowerCase() === accountHandle.toLowerCase()
+    );
+  }
+  if (!existingAccount && accountHandle && state.data?.runtime?.accounts) {
+    existingAccount = state.data.runtime.accounts.find(
+      a => (a.handle || "").toLowerCase() === accountHandle.toLowerCase()
+    );
+  }
+
+  const titleEl = $("account-dialog-title");
+  const handleInput = $("account-handle-input");
+  const emailInput = $("account-email-input");
+  const passwordInput = $("account-password-input");
+  const browserSelect = $("account-browser-select");
+  const sessionStatusSelect = $("account-session-status-select");
+  const sessionPathInput = $("account-session-path-input");
+  const domainsContainer = $("account-domains-checkboxes");
+
+  if (existingAccount) {
+    titleEl.textContent = `Manage Pinterest Account: ${existingAccount.handle}`;
+    handleInput.value = existingAccount.handle;
+    handleInput.readOnly = true;
+    emailInput.value = existingAccount.email && !existingAccount.email.includes("***") ? existingAccount.email : (existingAccount.email || "");
+    passwordInput.value = "";
+    passwordInput.placeholder = existingAccount.has_password ? "Password configured (leave blank to keep)" : "Enter password";
+    browserSelect.value = existingAccount.browser || "chromium";
+    sessionStatusSelect.value = existingAccount.profile_present ? "active" : "configured";
+    sessionPathInput.value = existingAccount.session_name || existingAccount.handle;
+  } else {
+    titleEl.textContent = "Connect Pinterest Account";
+    handleInput.value = "";
+    handleInput.readOnly = false;
+    emailInput.value = "";
+    passwordInput.value = "";
+    passwordInput.placeholder = "Leave blank if using session/cookies";
+    browserSelect.value = "chromium";
+    sessionStatusSelect.value = "configured";
+    sessionPathInput.value = "";
+  }
+
+  const connectedSet = new Set(existingAccount?.connected_domains || []);
+  if (domainsContainer) {
+    if (!allDomains.length) {
+      domainsContainer.innerHTML = `<span class="muted" style="font-size:12px;">No blogs registered in registry.</span>`;
+    } else {
+      domainsContainer.innerHTML = allDomains.map(d => {
+        const checked = (!existingAccount || connectedSet.has(d.handle)) ? "checked" : "";
+        return `
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" name="account-domain" value="${esc(d.handle)}" ${checked} />
+            <strong>${esc(d.display_name || d.handle)}</strong>
+            <span class="muted mono" style="font-size:11px;">(${esc(d.domain || d.handle)})</span>
+          </label>
+        `;
+      }).join("");
+    }
+  }
+
+  icons();
+  dialog.showModal();
+}
+
+$("btn-open-add-account")?.addEventListener("click", () => {
+  openAccountDialog(null);
+});
+
+$("account-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("btn-save-account");
+  btn.disabled = true;
+  $("account-form-error").hidden = true;
+  try {
+    const checkedDomains = Array.from(
+      document.querySelectorAll('input[name="account-domain"]:checked')
+    ).map(cb => cb.value);
+
+    const payload = {
+      handle: $("account-handle-input").value.trim(),
+      email: $("account-email-input").value.trim(),
+      password: $("account-password-input").value.trim(),
+      browser: $("account-browser-select").value,
+      session_name: $("account-session-path-input").value.trim(),
+      connected_domains: checkedDomains,
+    };
+
+    const res = await api("/api/rankstein/control/accounts/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    $("account-dialog").close();
+    toast(res.message || "Pinterest account saved successfully!");
+    await refreshStatus();
+  } catch (err) {
+    $("account-form-error").textContent = err.message;
+    $("account-form-error").hidden = false;
+  } finally {
+    btn.disabled = false;
+    icons();
+  }
+});
+
+// Keyword Inline Status Change
+document.addEventListener("change", async (e) => {
+  if (e.target.classList.contains("keyword-status-select")) {
+    const select = e.target;
+    const dm = select.dataset.domain;
+    const kw = select.dataset.keyword;
+    const newStatus = select.value;
+    try {
+      const res = await api(`/api/rankstein/keywords/${encodeURIComponent(dm)}/${encodeURIComponent(kw)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      toast(res.message || `Updated ${kw} status to ${newStatus}`);
+    } catch (err) {
+      toast("Status update failed: " + err.message);
+      loadView();
+    }
+  }
+});
+
+// Queue Filtering & Pagination
+$("queue-job-search")?.addEventListener("input", debounce(() => {
+  state.queueSearch = $("queue-job-search").value;
+  state.queuePage = 1;
+  loadQueueJobs();
+}));
+
+$("queue-job-status")?.addEventListener("change", () => {
+  state.queueStatus = $("queue-job-status").value;
+  state.queuePage = 1;
+  loadQueueJobs();
+});
+
+$("btn-queue-prev")?.addEventListener("click", () => {
+  if (state.queuePage > 1) {
+    state.queuePage--;
+    loadQueueJobs();
+  }
+});
+
+$("btn-queue-next")?.addEventListener("click", () => {
+  state.queuePage++;
+  loadQueueJobs();
+});
+
+// Real-Time Event Stream (SSE)
+function initEventStream() {
+  if (window.EventSource) {
+    try {
+      const es = new EventSource("/api/rankstein/stream/events");
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.telemetry) updateTelemetryHud(data.telemetry);
+          if (data.workers) {
+            state.workers = data.workers;
+            if (state.view === "pinterest" || state.view === "services") {
+              renderWorkerViewports(data.workers);
+            }
+          }
+        } catch (err) {
+          console.debug("SSE parse error", err);
+        }
+      };
+      es.onerror = () => {
+        // Auto-reconnects quietly
+      };
+    } catch (err) {
+      console.debug("SSE connect error", err);
+    }
+  }
+}
+
+// Global Keyboard Shortcuts
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    $("btn-open-launch-campaign")?.click();
+  } else if (e.key === " " && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+    const pauseBtn = document.querySelector("[data-campaign-pause]");
+    if (pauseBtn) {
+      e.preventDefault();
+      pauseBtn.click();
+    }
+  }
+});
+
 async function refreshPinTotal() {
   if (state.pinPolling) return;
   state.pinPolling = true;
@@ -1593,5 +2586,9 @@ async function init() {
   await refreshStatus();
   await refreshPinTotal();
   await loadView();
+  initEventStream();
+  api("/api/rankstein/telemetry/gauges").then(res => { if (res && res.ok) updateTelemetryHud(res.telemetry); }).catch(() => {});
+  api("/api/rankstein/workers/snapshots").then(res => { if (res && res.ok) { state.workers = res.workers; renderWorkerViewports(res.workers); } }).catch(() => {});
 }
 init();
+

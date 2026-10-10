@@ -3722,6 +3722,56 @@ def publish_article_to_supabase(
     if not key:
         return {"success": False, "error": f"Supabase key not set for domain {domain.handle}"}
 
+    # ── Content Normalization & Pre-Publish Security Gates ──
+    if r"\n\n" in content:
+        content = content.replace(r"\n\n", "\n\n")
+
+    # Resolve or remove dangling template tags
+    if "[PINTEREST_IFRAME]" in content:
+        if pinterest_pin_id:
+            iframe_html = (
+                f'<blockquote class="pinterest-pin" data-pin-id="{pinterest_pin_id}">'
+                f'<a href="https://www.pinterest.com/pin/{pinterest_pin_id}/"></a></blockquote>'
+                f'<script async defer src="//assets.pinterest.com/js/pinit.js"></script>'
+            )
+            content = content.replace("[PINTEREST_IFRAME]", iframe_html)
+        else:
+            content = content.replace("[PINTEREST_IFRAME]", "").strip()
+
+    for ph in ["[HERO_IMAGE]", "[PINTEREST_PIN]", "[IMAGE]"]:
+        if ph in content:
+            content = content.replace(ph, "").strip()
+
+    # Reject fatal placeholders
+    fatal_placeholders = [
+        "ingrediente principal",
+        "cocina la base",
+        "base cremosa o caldo",
+        "toque aromático",
+        "toque aromatico",
+        "integra el ingrediente principal",
+        "ingrediente de calidad",
+    ]
+    combined_check_text = f"{title} {content} {recipe_schema}".lower()
+    matched_fatal = [m for m in fatal_placeholders if m in combined_check_text]
+    if matched_fatal:
+        return {
+            "success": False,
+            "error": f"Pre-publish validation blocked article: generic placeholder text detected ({matched_fatal})",
+        }
+
+    # Cross-brand storage bucket isolation
+    if domain.handle == "recetadolce" and "hokcljsrrnjxzgdhjice" in (featured_image_url or ""):
+        return {
+            "success": False,
+            "error": "Cross-brand storage violation: RecetaDolce article cannot reference RecetaGenial storage bucket",
+        }
+    if domain.handle == "recetagenial" and "xjvmnmfczvwkjiasirsl" in (featured_image_url or ""):
+        return {
+            "success": False,
+            "error": "Cross-brand storage violation: RecetaGenial article cannot reference RecetaDolce storage bucket",
+        }
+
     try:
         kw_list = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else [slug]
 

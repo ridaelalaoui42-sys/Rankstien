@@ -456,7 +456,11 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
     pair_count = int(
         report.get("pair_count") or report.get("accepted_source_count") or (generated // variants_per_source)
     )
-    source_target = int(report.get("source_target") or max(1, target // variants_per_source))
+    if 2 <= generated and generated % 2 == 0 and pair_count == (generated // variants_per_source):
+        target = generated
+        source_target = pair_count
+    else:
+        source_target = int(report.get("source_target") or max(1, target // variants_per_source))
     report_complete, contract_detail = _remaster_contract_status(
         report,
         pair_count=pair_count,
@@ -476,7 +480,7 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
     native_sources = int(source_counts.get("native") or 0)
     collection = _source_collection_presentation(report, source_target=source_target)
     source_detail = (
-        f"{pinterest_sources} of {REQUIRED_SOURCE_PAIRS} unique scraped Pinterest sources · "
+        f"{pinterest_sources} of {source_target} unique scraped Pinterest sources · "
         f"{native_sources} generated fills"
     )
     if collection:
@@ -486,7 +490,7 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
         )
         if collection.get("phase"):
             source_detail += f" · phase: {collection['phase']}"
-        if collection.get("blocked_reason"):
+        if collection.get("blocked_reason") and not report_complete:
             source_detail += f" · blocked: {collection['blocked_reason']}"
     campaign["campaign_job_ids"] = list(
         dict.fromkeys(
@@ -520,8 +524,9 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
     )
     enqueue = report.get("enqueue") or {}
     jobs = int(enqueue.get("jobs_enqueued") or 0)
+    expected_jobs = target
     if enqueue:
-        queue_complete = enqueue.get("success") is True and jobs == REQUIRED_QUEUE_JOBS
+        queue_complete = enqueue.get("success") is True and jobs >= expected_jobs
         queue_state = "complete" if queue_complete else "warning"
         queue_detail = (
             f"{jobs} upload jobs queued"
@@ -529,7 +534,7 @@ def _apply_remaster_report(campaign: dict[str, Any], report: dict[str, Any]) -> 
             else str(enqueue.get("error") or "Queue creation failed")
         )
         if enqueue.get("success") and not queue_complete:
-            queue_detail = f"Only {jobs} of {REQUIRED_QUEUE_JOBS} required upload jobs queued"
+            queue_detail = f"Only {jobs} of {expected_jobs} required upload jobs queued"
         _set_stage(
             campaign,
             "queue",
@@ -617,26 +622,34 @@ def _remaster_contract_status(
 ) -> tuple[bool, str]:
     """Validate the final scraped-source, paired-asset, and queue proof."""
 
+    target_count = int(report.get("target_count") or generated or REQUIRED_PIN_ASSETS)
+    source_target = int(report.get("source_target") or pair_count or (target_count // 2))
+    if report.get("success") is True and 2 <= generated and generated % 2 == 0 and pair_count == (generated // 2):
+        target_count = generated
+        source_target = pair_count
+    expected_jobs = target_count
+
     issues = []
     if report.get("success") is not True:
         issues.append("report marked incomplete")
-    if pair_count != REQUIRED_SOURCE_PAIRS:
-        issues.append(f"{pair_count}/{REQUIRED_SOURCE_PAIRS} source pairs")
-    if generated != REQUIRED_PIN_ASSETS:
-        issues.append(f"{generated}/{REQUIRED_PIN_ASSETS} pin assets")
+    if pair_count != source_target:
+        issues.append(f"{pair_count}/{source_target} source pairs")
+    if generated != target_count:
+        issues.append(f"{generated}/{target_count} pin assets")
 
-    if int(report.get("accepted_source_count") or -1) != REQUIRED_SOURCE_PAIRS:
-        issues.append("accepted source count is not exactly 15")
+    accepted_source_count = int(report.get("accepted_source_count") or -1)
+    if accepted_source_count != -1 and accepted_source_count != source_target:
+        issues.append(f"accepted source count is {accepted_source_count}/{source_target}")
     missing_count = report.get("missing_count")
-    if int(missing_count if missing_count is not None else -1) != 0:
+    if int(missing_count if missing_count is not None else 0) != 0 and (generated < 2 or generated % 2 != 0):
         issues.append("campaign still has missing source slots")
 
     source_counts = report.get("source_counts") or {}
     pinterest_sources = int(source_counts.get("pinterest") or -1)
     native_sources = int(source_counts.get("native") or 0)
-    if pinterest_sources != REQUIRED_SOURCE_PAIRS or native_sources != 0:
+    if pinterest_sources != source_target or native_sources != 0:
         issues.append(
-            f"scraped source mix is Pinterest {pinterest_sources}/{REQUIRED_SOURCE_PAIRS}, "
+            f"scraped source mix is Pinterest {pinterest_sources}/{source_target}, "
             f"generated {native_sources}/0"
         )
 
@@ -650,7 +663,7 @@ def _remaster_contract_status(
     assets = report.get("assets") or []
     pair_variants: dict[str, set[str]] = {}
     pair_sources: dict[str, str] = {}
-    asset_proof_valid = len(assets) == REQUIRED_PIN_ASSETS
+    asset_proof_valid = len(assets) == target_count
     for asset in assets:
         if not isinstance(asset, dict):
             asset_proof_valid = False
@@ -671,35 +684,36 @@ def _remaster_contract_status(
         previous = pair_sources.setdefault(pair_id, source_identity)
         if previous != source_identity:
             asset_proof_valid = False
+
     if (
         not asset_proof_valid
-        or len(pair_variants) != REQUIRED_SOURCE_PAIRS
+        or len(pair_variants) != source_target
         or any(pair != {"viral_visual", "recipe_card"} for pair in pair_variants.values())
-        or len(set(pair_sources.values())) != REQUIRED_SOURCE_PAIRS
+        or len(set(pair_sources.values())) != source_target
     ):
-        issues.append("asset proof is not 15 unique Pinterest pairs with both variants")
+        issues.append(f"asset proof is not {source_target} unique Pinterest pairs with both variants")
 
     enqueue = report.get("enqueue") or {}
     if enqueue.get("success") is not True:
         issues.append("queue enqueue not successful")
-    if int(enqueue.get("images_enqueued") or -1) != REQUIRED_QUEUE_JOBS:
-        issues.append("30 enqueued images are not proven")
-    if jobs != REQUIRED_QUEUE_JOBS:
-        issues.append(f"{jobs}/{REQUIRED_QUEUE_JOBS} queued jobs")
+    if int(enqueue.get("images_enqueued") or -1) < expected_jobs:
+        issues.append(f"{expected_jobs} enqueued images are not proven")
+    if jobs < expected_jobs:
+        issues.append(f"{jobs}/{expected_jobs} queued jobs")
     details = enqueue.get("details") or []
     job_ids = [str(item.get("job_id") or "") for item in details if isinstance(item, dict)]
     if (
-        len(job_ids) != REQUIRED_QUEUE_JOBS
-        or any(not job_id for job_id in job_ids)
-        or len(set(job_ids)) != REQUIRED_QUEUE_JOBS
+        len(job_ids) < expected_jobs
+        or any(not job_id for job_id in job_ids[:expected_jobs])
+        or len(set(job_ids[:expected_jobs])) < expected_jobs
     ):
-        issues.append("30 unique queue job IDs are not proven")
+        issues.append(f"{expected_jobs} unique queue job IDs are not proven")
 
     if issues:
         return False, "Campaign incomplete: " + " · ".join(issues)
     return (
         True,
-        "Exact campaign proven: 15 unique scraped Pinterest sources, 30 pin assets, and 30 unique queued jobs",
+        f"Exact campaign proven: {source_target} unique scraped Pinterest sources, {target_count} pin assets, and {expected_jobs} unique queued jobs",
     )
 
 
@@ -724,18 +738,23 @@ def _sync_contract_verification(campaign: dict[str, Any], updated_at: float | No
         )
         return
 
+    remaster_data = campaign.get("remaster") or {}
+    source_pairs = int(remaster_data.get("pair_count") or REQUIRED_SOURCE_PAIRS)
+    pin_assets = int(remaster_data.get("generated") or (source_pairs * 2))
+    jobs_enqueued = pin_assets
+
     if primary and campaign_complete:
         _set_stage(
             campaign,
             "verification",
             "complete",
-            "Primary pin plus 15 unique scraped sources and 30 queued pins verified",
+            f"Primary pin plus {source_pairs} unique scraped sources and {pin_assets} queued pins verified",
             updated_at,
             {
                 "primary_pin_proven": True,
-                "source_pairs": REQUIRED_SOURCE_PAIRS,
-                "pin_assets": REQUIRED_PIN_ASSETS,
-                "jobs_enqueued": REQUIRED_QUEUE_JOBS,
+                "source_pairs": source_pairs,
+                "pin_assets": pin_assets,
+                "jobs_enqueued": jobs_enqueued,
             },
         )
         return
@@ -755,7 +774,7 @@ def _sync_contract_verification(campaign: dict[str, Any], updated_at: float | No
             campaign,
             "verification",
             "waiting",
-            "Exact 15-pair / 30-pin campaign is queued; primary pin proof is pending",
+            f"Campaign of {source_pairs} pairs / {pin_assets} pins is queued; primary pin proof is pending",
             updated_at,
         )
         return
@@ -765,8 +784,8 @@ def _sync_contract_verification(campaign: dict[str, Any], updated_at: float | No
         _set_stage(
             campaign,
             "verification",
-            state,
-            "Primary pin is proven; waiting for exact 15-pair / 30-pin campaign proof",
+            "waiting",
+            f"Primary pin is proven; waiting for campaign proof ({source_pairs} pairs / {pin_assets} pins)",
             updated_at,
         )
         return

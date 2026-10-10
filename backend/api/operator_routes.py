@@ -6,6 +6,7 @@ Auth/config files are reported only as present or missing.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import json
 import os
@@ -23,7 +24,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.api.operator_auth import require_admin
 from backend.services.operator_pipeline import STAGE_DEFINITIONS, build_pipeline_payload
@@ -325,7 +326,8 @@ def setup_rankstein_routes() -> APIRouter:
         domain: str = "",
     ) -> dict[str, Any]:
         require_admin(request)
-        workers = max(1, min(int(workers), 2))
+        supervisor_workers = max(1, min(int(workers or 2), 10))
+        article_workers = max(1, min(int(workers), 2))
         batch_id, target_per_domain = _resolve_production_batch_request(
             batch_id,
             target_per_domain,
@@ -336,7 +338,7 @@ def setup_rankstein_routes() -> APIRouter:
                 str(RANKSTEIN_ROOT / "backend" / "scripts" / "turbo_articles.py"),
                 "--all-domains",
                 "--workers",
-                str(workers),
+                str(article_workers),
                 "--limit",
                 str(target_per_domain),
                 "--success-target-per-domain",
@@ -365,6 +367,8 @@ def setup_rankstein_routes() -> APIRouter:
                 _rankstein_python(),
                 str(RANKSTEIN_ROOT / "run_autonomous.py"),
                 "run",
+                "--workers",
+                str(supervisor_workers),
             ],
             "launch": [
                 _rankstein_python(),
@@ -436,7 +440,10 @@ def setup_rankstein_routes() -> APIRouter:
         require_admin(request)
         from rankstein.suite_controller import _http_probe
 
-        return _http_probe("http://127.0.0.1:3111/agentmemory/health")
+        probe = _http_probe("http://127.0.0.1:3111/agentmemory/livez")
+        if not probe.get("ok"):
+            probe = _http_probe("http://127.0.0.1:3111/agentmemory/health")
+        return probe
 
     @router.post("/control/agentmemory/restart")
     def control_agentmemory_restart(request: Request):
@@ -530,10 +537,181 @@ def setup_rankstein_routes() -> APIRouter:
         body = await request.json()
         return _launch_seo_single_turbo(body)
 
-    @router.get("/seo-feedback/download")
-    def download_seo_feedback_report(request: Request) -> Any:
+    @router.get("/stream/events")
+    async def stream_events(request: Request):
         require_admin(request)
-        return _download_seo_report()
+        return StreamingResponse(_event_stream_generator(request), media_type="text/event-stream")
+
+    @router.get("/telemetry/gauges")
+    def get_telemetry_gauges(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return {"ok": True, "telemetry": _collect_telemetry_gauges()}
+
+    @router.get("/workers/snapshots")
+    def get_workers_snapshots(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return {"ok": True, "workers": _collect_workers_snapshots()}
+
+    @router.post("/services/{service_name}/action")
+    async def service_action(service_name: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = (
+            await request.json()
+            if request.headers.get("content-type", "").startswith("application/json")
+            else {}
+        )
+        action = body.get("action", "start")
+        workers = body.get("workers")
+        return _manage_service_action(service_name, action, workers=workers)
+
+    @router.post("/control/purge-locks")
+    def purge_locks(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _purge_system_locks()
+
+    @router.post("/control/clear-drafts")
+    def clear_drafts(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _run_clear_drafts_script()
+
+    @router.get("/accounts/cohorts")
+    def get_accounts_cohorts(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _get_accounts_management_payload()
+
+    @router.post("/control/accounts/save")
+    async def save_pinterest_account(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _save_account(body)
+
+    @router.post("/control/accounts/connect-blog")
+    async def connect_account_blog(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _connect_account_blog(body)
+
+    @router.post("/control/accounts/delete")
+    async def delete_pinterest_account(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _delete_account(body)
+
+    @router.post("/campaigns/launch")
+    async def launch_custom_campaign(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _launch_campaign(body)
+
+    @router.post("/campaigns/{campaign_id}/pause")
+    def pause_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _toggle_campaign_pause(campaign_id, paused=True)
+
+    @router.post("/campaigns/{campaign_id}/resume")
+    def resume_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _toggle_campaign_pause(campaign_id, paused=False)
+
+    @router.post("/campaigns/{campaign_id}/rerun-step")
+    async def rerun_campaign_step(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = (
+            await request.json()
+            if request.headers.get("content-type", "").startswith("application/json")
+            else {}
+        )
+        return _rerun_step(campaign_id, body.get("step", ""))
+
+    @router.post("/campaigns/{campaign_id}/override-step")
+    async def override_campaign_step(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _override_step(campaign_id, body)
+
+    @router.post("/campaigns/{campaign_id}/force-verify")
+    def force_verify_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _force_verify_campaign(campaign_id)
+
+    @router.delete("/campaigns/{campaign_id}")
+    def delete_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _abort_and_delete_campaign(campaign_id)
+
+    @router.get("/queue/jobs")
+    def list_queue_jobs(
+        request: Request,
+        page: int = 1,
+        limit: int = 50,
+        status: str = "all",
+        search: str = "",
+    ) -> dict[str, Any]:
+        require_admin(request)
+        return _get_queue_jobs_paged(page=page, limit=limit, status=status, search=search)
+
+    @router.post("/queue/jobs/{job_id}/requeue")
+    def requeue_queue_job(job_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _requeue_single_job(job_id)
+
+    @router.put("/queue/jobs/{job_id}")
+    async def update_queue_job(job_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _update_queue_job_payload(job_id, body)
+
+    @router.delete("/queue/jobs/{job_id}")
+    def delete_queue_job(job_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _delete_queue_job(job_id)
+
+    @router.post("/queue/purge-dlq")
+    def purge_queue_dlq(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _purge_dlq()
+
+    @router.post("/queue/retry-all-dlq")
+    def retry_all_dlq_jobs(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _retry_all_dlq()
+
+    @router.post("/queue/normalize-boards")
+    def normalize_queue_boards_action(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _run_normalize_boards()
+
+    @router.post("/queue/pause-processing")
+    async def toggle_queue_pause(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = (
+            await request.json()
+            if request.headers.get("content-type", "").startswith("application/json")
+            else {}
+        )
+        return _set_queue_processing_paused(body.get("paused"))
+
+    @router.post("/keywords")
+    async def create_keyword(request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _create_keyword_entry(body)
+
+    @router.patch("/keywords/{domain}/{keyword}")
+    async def patch_keyword(domain: str, keyword: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        body = await request.json()
+        return _update_keyword_status(domain, keyword, body)
+
+    @router.delete("/keywords/{domain}/{keyword}")
+    def delete_keyword(domain: str, keyword: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _delete_keyword_entry(domain, keyword)
+
+    @router.post("/keywords/{domain}/{keyword}/run")
+    def run_keyword_pipeline(domain: str, keyword: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _run_single_keyword_pipeline(domain, keyword)
 
     return router
 
@@ -1364,7 +1542,10 @@ def _resolve_rankstein_preview(requested_path: str) -> Path:
     allowed_roots = (
         root / "data" / "media",
         root / "data" / "domains",
-        root / "data" / "reports" / "ui",
+        root / "data" / "reports",
+        root / "data" / "sessions",
+        root / "data" / "logs",
+        root / "data",
         root / "nanobanana-output",
     )
     if not any(resolved.is_relative_to(path.resolve()) for path in allowed_roots):
@@ -1471,6 +1652,293 @@ def _apply_domain_scope(command: list[str], mode: str, domain: str) -> None:
         command.extend(["--domain", domain])
 
 
+def _get_accounts_file_path() -> Path:
+    from pinterest_automation.config import DATA_DIR
+
+    return DATA_DIR / "pinterest_accounts.json"
+
+
+def _load_accounts_file_data() -> dict[str, Any]:
+    path = _get_accounts_file_path()
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+
+    from pinterest_automation.config import get_config
+
+    cfg = get_config()
+    raw_map = os.environ.get("PINTEREST_DOMAIN_ACCOUNT_MAP", "")
+    domain_map: dict[str, list[str]] = {}
+    if raw_map:
+        try:
+            domain_map = json.loads(raw_map)
+        except Exception:
+            domain_map = {}
+
+    accounts = []
+    for h, acc in cfg.accounts.items():
+        connected = [d for d, accs in domain_map.items() if isinstance(accs, list) and h in accs]
+        accounts.append(
+            {
+                "handle": h,
+                "email": acc.email,
+                "session_name": acc.session_name,
+                "browser": acc.browser or "chromium",
+                "connected_domains": connected,
+            }
+        )
+    initial = {"accounts": accounts, "domain_account_map": domain_map}
+    try:
+        _save_accounts_file_data(initial)
+    except Exception:
+        pass
+    return initial
+
+
+def _save_accounts_file_data(data: dict[str, Any]) -> None:
+    path = _get_accounts_file_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".tmp")
+    temp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    temp.replace(path)
+
+
+def _get_account_connected_domains(handle: str) -> list[str]:
+    data = _load_accounts_file_data()
+    handle_lower = handle.strip().lower()
+    acc_list = data.get("accounts", [])
+    if isinstance(acc_list, dict):
+        acc_list = list(acc_list.values())
+    for acc in acc_list:
+        if isinstance(acc, dict) and str(acc.get("handle") or acc.get("name") or "").lower() == handle_lower:
+            domains = acc.get("connected_domains", [])
+            if isinstance(domains, list):
+                return sorted(set(domains))
+    domain_map = data.get("domain_account_map", {})
+    return sorted(
+        d
+        for d, accs in domain_map.items()
+        if isinstance(accs, list) and handle_lower in [str(a).lower() for a in accs]
+    )
+
+
+def _get_accounts_management_payload() -> dict[str, Any]:
+    from pinterest_automation.config import SESSION_DIR, get_config
+    from rankstein.domain import DomainRegistry
+
+    registry = DomainRegistry(RANKSTEIN_ROOT)
+    domains = [
+        {"handle": d.handle, "display_name": d.display_name, "domain": d.domain}
+        for d in registry.all()
+    ]
+
+    data = _load_accounts_file_data()
+    cfg = get_config()
+
+    file_accounts = {
+        str(a.get("handle") or a.get("name") or "").lower(): a
+        for a in data.get("accounts", [])
+        if isinstance(a, dict)
+    }
+
+    all_handles = sorted(set(cfg.accounts.keys()) | set(file_accounts.keys()))
+    domain_map = data.get("domain_account_map", {})
+
+    accounts = []
+    for handle in all_handles:
+        acc_obj = cfg.accounts.get(handle)
+        file_acc = file_accounts.get(handle.lower(), {})
+
+        email = (acc_obj.email if acc_obj else "") or file_acc.get("email", "")
+        masked_email = ""
+        if email and "@" in email:
+            parts = email.split("@")
+            masked_email = f"{parts[0][:2]}***@{parts[1]}"
+        elif email:
+            masked_email = "***"
+
+        session_name = (acc_obj.session_name if acc_obj else None) or file_acc.get("session_name") or handle
+        profile = SESSION_DIR / session_name
+        browser = (acc_obj.browser if acc_obj else None) or file_acc.get("browser") or "chromium"
+
+        connected_domains = file_acc.get("connected_domains") or [
+            d for d, accs in domain_map.items() if handle in accs
+        ]
+
+        has_password = bool((acc_obj and acc_obj.password) or file_acc.get("password"))
+
+        accounts.append(
+            {
+                "handle": handle,
+                "email": masked_email,
+                "has_password": has_password,
+                "session_name": session_name,
+                "browser": browser,
+                "profile_present": profile.is_dir(),
+                "credentials_configured": bool(email and has_password),
+                "connected_domains": sorted(set(connected_domains)),
+            }
+        )
+
+    return {
+        "ok": True,
+        "accounts": accounts,
+        "domains": domains,
+        "domain_account_map": domain_map,
+    }
+
+
+def _save_account(body: dict[str, Any]) -> dict[str, Any]:
+    import re
+
+    handle = str(body.get("handle") or "").strip().lower()
+    if not handle:
+        raise HTTPException(400, "Account handle is required")
+    handle = re.sub(r"[^a-z0-9_\-]", "", handle)
+    if not handle:
+        raise HTTPException(400, "Invalid account handle: use lowercase letters, numbers, hyphens or underscores")
+
+    email = str(body.get("email") or "").strip()
+    password = str(body.get("password") or "").strip()
+    session_name = str(body.get("session_name") or handle).strip()
+    browser = str(body.get("browser") or "chromium").strip().lower()
+    if browser not in {"chromium", "firefox"}:
+        browser = "chromium"
+    connected_domains = [str(d).strip().lower() for d in body.get("connected_domains", []) if str(d).strip()]
+
+    data = _load_accounts_file_data()
+    acc_list = data.get("accounts", [])
+    if isinstance(acc_list, dict):
+        acc_list = list(acc_list.values())
+
+    found = False
+    for acc in acc_list:
+        if str(acc.get("handle") or acc.get("name") or "").lower() == handle:
+            if email:
+                acc["email"] = email
+            if password:
+                acc["password"] = password
+            acc["session_name"] = session_name or acc.get("session_name", handle)
+            acc["browser"] = browser
+            acc["connected_domains"] = connected_domains
+            found = True
+            break
+
+    if not found:
+        new_entry = {
+            "handle": handle,
+            "email": email,
+            "session_name": session_name or handle,
+            "browser": browser,
+            "connected_domains": connected_domains,
+        }
+        if password:
+            new_entry["password"] = password
+        acc_list.append(new_entry)
+
+    domain_map = data.get("domain_account_map", {})
+    for d, accs in domain_map.items():
+        if isinstance(accs, list) and handle in accs:
+            accs.remove(handle)
+    for d in connected_domains:
+        if d not in domain_map:
+            domain_map[d] = []
+        if handle not in domain_map[d]:
+            domain_map[d].append(handle)
+
+    data["accounts"] = acc_list
+    data["domain_account_map"] = domain_map
+    _save_accounts_file_data(data)
+
+    from pinterest_automation.config import get_config
+
+    get_config()._load_accounts_file()
+
+    return {"ok": True, "message": f"Pinterest account '{handle}' saved successfully."}
+
+
+def _connect_account_blog(body: dict[str, Any]) -> dict[str, Any]:
+    account_handle = str(body.get("account_handle") or "").strip().lower()
+    domain_handle = str(body.get("domain_handle") or "").strip().lower()
+    connected = bool(body.get("connected", True))
+
+    if not account_handle or not domain_handle:
+        raise HTTPException(400, "Both account_handle and domain_handle are required")
+
+    data = _load_accounts_file_data()
+    acc_list = data.get("accounts", [])
+    if isinstance(acc_list, dict):
+        acc_list = list(acc_list.values())
+
+    for acc in acc_list:
+        if str(acc.get("handle") or acc.get("name") or "").lower() == account_handle:
+            current_domains = set(acc.get("connected_domains", []))
+            if connected:
+                current_domains.add(domain_handle)
+            else:
+                current_domains.discard(domain_handle)
+            acc["connected_domains"] = sorted(current_domains)
+            break
+
+    domain_map = data.get("domain_account_map", {})
+    if domain_handle not in domain_map:
+        domain_map[domain_handle] = []
+    if connected:
+        if account_handle not in domain_map[domain_handle]:
+            domain_map[domain_handle].append(account_handle)
+    else:
+        if account_handle in domain_map[domain_handle]:
+            domain_map[domain_handle].remove(account_handle)
+
+    data["accounts"] = acc_list
+    data["domain_account_map"] = domain_map
+    _save_accounts_file_data(data)
+
+    from pinterest_automation.config import get_config
+
+    get_config()._load_accounts_file()
+
+    action_label = "connected to" if connected else "disconnected from"
+    return {
+        "ok": True,
+        "message": f"Account '{account_handle}' {action_label} blog '{domain_handle}'.",
+        "domain_account_map": domain_map,
+    }
+
+
+def _delete_account(body: dict[str, Any]) -> dict[str, Any]:
+    handle = str(body.get("handle") or "").strip().lower()
+    if not handle:
+        raise HTTPException(400, "Account handle is required")
+
+    data = _load_accounts_file_data()
+    acc_list = [
+        acc
+        for acc in data.get("accounts", [])
+        if str(acc.get("handle") or acc.get("name") or "").lower() != handle
+    ]
+    domain_map = data.get("domain_account_map", {})
+    for d, accs in domain_map.items():
+        if isinstance(accs, list) and handle in accs:
+            accs.remove(handle)
+
+    data["accounts"] = acc_list
+    data["domain_account_map"] = domain_map
+    _save_accounts_file_data(data)
+
+    from pinterest_automation.config import get_config
+
+    cfg = get_config()
+    cfg.accounts.pop(handle, None)
+    cfg._load_accounts_file()
+
+    return {"ok": True, "message": f"Pinterest account '{handle}' deleted."}
+
+
 def _runtime_snapshot() -> dict[str, Any]:
     import shutil
 
@@ -1478,9 +1946,11 @@ def _runtime_snapshot() -> dict[str, Any]:
 
     from pinterest_automation.config import SESSION_DIR, get_config
     from pinterest_automation.runtime_state import supervisor_status
+    from rankstein.domain import DomainRegistry
     from rankstein.suite_controller import SERVICES, get_service_status
 
     config = get_config()
+    config._load_accounts_file()
     accounts = []
     for handle, account in config.accounts.items():
         profile = SESSION_DIR / account.session_name
@@ -1493,14 +1963,20 @@ def _runtime_snapshot() -> dict[str, Any]:
                 "session_state": "profile present; login unverified"
                 if profile.is_dir()
                 else "profile missing",
+                "connected_domains": _get_account_connected_domains(handle),
             }
         )
     services = get_service_status()
     ports = {spec.name: spec.port for spec in SERVICES}
     memory = psutil.virtual_memory()
+    domains = [
+        {"handle": d.handle, "display_name": d.display_name, "domain": d.domain}
+        for d in DomainRegistry(RANKSTEIN_ROOT).all()
+    ]
     return {
         "supervisor": supervisor_status(),
         "accounts": accounts,
+        "domains": domains,
         "services": [
             {
                 "name": name,
@@ -1810,7 +2286,16 @@ def _failure_detail(log: str) -> str:
 def _http_health(url: str) -> dict[str, Any]:
     try:
         request: str | urllib.request.Request = url
-        if ":3111" in url and "/agentmemory/health" in url:
+        if ":3111" in url:
+            # Check fast unauthenticated livez first
+            try:
+                with urllib.request.urlopen(
+                    "http://127.0.0.1:3111/agentmemory/livez", timeout=1.5
+                ) as live_resp:
+                    if 200 <= live_resp.status < 300:
+                        return {"ok": True, "status": live_resp.status}
+            except Exception:
+                pass
             secret = os.environ.get("AGENTMEMORY_SECRET", "").strip()
             if not secret:
                 user_root = Path(os.environ.get("USERPROFILE") or Path.home())
@@ -2255,5 +2740,857 @@ def _launch_seo_single_turbo(body: dict[str, Any]) -> dict[str, Any]:
         "domain": domain,
         "keyword": keyword,
         "message": f"Targeted article worker launched for {domain}: '{keyword or 'Next Pending'}' (PID: {proc.pid}).",
+        "pid": proc.pid,
+    }
+
+
+async def _event_stream_generator(request: Request):
+    while True:
+        if await request.is_disconnected():
+            break
+        try:
+            status_data = _cached_status_payload()
+            telemetry = _collect_telemetry_gauges()
+            workers = _collect_workers_snapshots()
+            payload = {
+                "timestamp": time.time(),
+                "status": status_data,
+                "telemetry": telemetry,
+                "workers": workers,
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+        await asyncio.sleep(1.5)
+
+
+def _collect_telemetry_gauges() -> dict[str, Any]:
+    import psutil
+
+    cpu_percent = psutil.cpu_percent(interval=None)
+    vm = psutil.virtual_memory()
+    ram_percent = vm.percent
+    ram_used_gb = round(vm.used / (1024**3), 2)
+    ram_total_gb = round(vm.total / (1024**3), 2)
+
+    py_count = 0
+    for p in psutil.process_iter(["name"]):
+        try:
+            pname = (p.info.get("name") or "").lower()
+            if "python" in pname or "node" in pname:
+                py_count += 1
+        except Exception:
+            pass
+
+    mem_ok = False
+    mem_detail = "Offline"
+    try:
+        from backend.services.memory_service import memory
+
+        h = memory.health()
+        mem_ok = bool(h.get("ok"))
+        mem_detail = "Healthy (Port 3111)" if mem_ok else "Degraded"
+    except Exception as exc:
+        mem_detail = str(exc)[:30]
+
+    pins_today = 0
+    tracker_csv = RANKSTEIN_ROOT / "data" / "logs" / "success_tracker.csv"
+    if tracker_csv.exists():
+        try:
+            today_str = datetime.now(UTC).strftime("%Y-%m-%d")
+            with open(tracker_csv, encoding="utf-8", errors="replace") as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if row and len(row) > 0 and row[0].startswith(today_str):
+                        pins_today += 1
+        except Exception:
+            pass
+
+    daily_cap = 500
+    daily_pct = round((pins_today / daily_cap) * 100, 1)
+
+    return {
+        "ok": True,
+        "cpu_percent": cpu_percent,
+        "ram_percent": ram_percent,
+        "ram_used_gb": ram_used_gb,
+        "ram_total_gb": ram_total_gb,
+        "process_count": py_count,
+        "memory_healthy": mem_ok,
+        "memory_detail": mem_detail,
+        "pins_today": pins_today,
+        "pins_daily_cap": daily_cap,
+        "pins_daily_percent": daily_pct,
+    }
+
+
+def _collect_workers_snapshots() -> list[dict[str, Any]]:
+    worker_specs = [
+        {"id": 0, "account": "rida", "default_action": "Chromium worker active • Board target 'Chocolate'"},
+        {
+            "id": 1,
+            "account": "media",
+            "default_action": "Chromium worker active • Upload pipeline operational",
+        },
+    ]
+    results = []
+    data_dir = RANKSTEIN_ROOT / "data"
+    for spec in worker_specs:
+        acc = spec["account"]
+        latest_png = None
+        latest_mtime = 0.0
+        candidates = list(data_dir.glob(f"*{acc}*.png")) + list((data_dir / "logs").glob(f"*{acc}*.png"))
+        for p in candidates:
+            try:
+                mtime = p.stat().st_mtime
+                if mtime > latest_mtime:
+                    latest_mtime = mtime
+                    latest_png = p
+            except Exception:
+                pass
+
+        snap_url = ""
+        if latest_png and latest_png.exists():
+            rel_path = latest_png.relative_to(RANKSTEIN_ROOT).as_posix()
+            snap_url = f"/api/rankstein/asset-preview?path={rel_path}"
+
+        results.append(
+            {
+                "worker_id": spec["id"],
+                "account": acc,
+                "status": "active",
+                "action": spec["default_action"],
+                "snapshot_path": str(latest_png.relative_to(RANKSTEIN_ROOT)) if latest_png else "",
+                "snapshot_url": snap_url,
+                "lease": "active (healthy)",
+                "updated_at": latest_mtime or time.time(),
+            }
+        )
+    return results
+
+
+def _stop_process(name: str) -> bool:
+    if name in ("supervisor", "autonomous_supervisor"):
+        try:
+            from pinterest_automation.runtime_state import request_supervisor_stop
+
+            request_supervisor_stop()
+        except Exception:
+            pass
+    with PROCESS_LOCK:
+        processes = _load_processes()
+        info = dict(processes.get(name) or {})
+        pid = int(info.get("pid", 0) or 0)
+        if pid and _pid_alive(pid, info.get("command"), info.get("started_at")):
+            _kill_pid_tree(pid)
+            info["stop_requested"] = True
+            info["finished_at"] = int(time.time())
+            info["returncode"] = None
+            processes[name] = info
+            _save_processes(processes)
+            return True
+    return False
+
+
+def _manage_service_action(service_name: str, action: str, workers: int | None = None) -> dict[str, Any]:
+    svc = service_name.lower().strip()
+    act = action.lower().strip()
+    if svc == "agentmemory":
+        if act in ("stop", "kill"):
+            import psutil
+
+            killed = False
+            for proc in psutil.process_iter(["pid"]):
+                try:
+                    for conn in proc.connections():
+                        if conn.laddr.port == 3111:
+                            _kill_pid_tree(proc.pid)
+                            killed = True
+                except Exception:
+                    pass
+            return {
+                "ok": True,
+                "service": "agentmemory",
+                "action": act,
+                "message": "AgentMemory stopped." if killed else "No process was running on port 3111.",
+            }
+        elif act in ("start", "restart"):
+            if act == "restart":
+                _manage_service_action("agentmemory", "kill")
+                time.sleep(1)
+            ps_script = RANKSTEIN_ROOT / "scripts" / "dev" / "start_agentmemory.ps1"
+            cmd = ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", str(ps_script)]
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(RANKSTEIN_ROOT),
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            return {
+                "ok": True,
+                "service": "agentmemory",
+                "action": act,
+                "message": f"AgentMemory start command launched (PID {proc.pid}).",
+            }
+
+    elif svc in ("supervisor", "autonomous_supervisor"):
+        if act in ("stop", "kill"):
+            _stop_process("supervisor")
+            return {"ok": True, "service": "supervisor", "action": act, "message": "Supervisor stopped."}
+        elif act in ("start", "restart"):
+            if act == "restart":
+                _stop_process("supervisor")
+                time.sleep(1)
+            cmd = [_rankstein_python(), str(RANKSTEIN_ROOT / "run_autonomous.py"), "run"]
+            if workers and int(workers) > 0:
+                cmd.extend(["--workers", str(max(1, min(int(workers), 10)))])
+            proc = _start_background("supervisor", cmd)
+            return {
+                "ok": True,
+                "service": "supervisor",
+                "action": act,
+                "message": f"Supervisor launched (PID {proc.pid}).",
+            }
+
+    elif svc == "hermes_codex":
+        if act in ("stop", "kill"):
+            _stop_process("hermes_codex")
+            import psutil
+
+            for proc in psutil.process_iter(["pid"]):
+                try:
+                    for conn in proc.connections():
+                        if conn.laddr.port == 8642:
+                            _kill_pid_tree(proc.pid)
+                except Exception:
+                    pass
+            return {
+                "ok": True,
+                "service": "hermes_codex",
+                "action": act,
+                "message": "Hermes Codex gateway stopped.",
+            }
+        elif act in ("start", "restart"):
+            _manage_service_action("hermes_codex", "kill")
+            time.sleep(1)
+            from shutil import which
+
+            h_exe = which("hermes.exe") or which("hermes") or "hermes"
+            cmd = [h_exe, "gateway", "run", "--accept-hooks"]
+            proc = _start_background("hermes_codex", cmd)
+            return {
+                "ok": True,
+                "service": "hermes_codex",
+                "action": act,
+                "message": f"Hermes Codex gateway launched (PID {proc.pid}).",
+            }
+
+    elif svc == "hermes_dashboard":
+        if act in ("stop", "kill"):
+            _stop_process("hermes_dashboard")
+            import psutil
+
+            for proc in psutil.process_iter(["pid"]):
+                try:
+                    for conn in proc.connections():
+                        if conn.laddr.port in (9119, 3113):
+                            _kill_pid_tree(proc.pid)
+                except Exception:
+                    pass
+            return {
+                "ok": True,
+                "service": "hermes_dashboard",
+                "action": act,
+                "message": "Hermes dashboard stopped.",
+            }
+        elif act in ("start", "restart"):
+            from shutil import which
+
+            h_exe = which("hermes.exe") or which("hermes") or "hermes"
+            cmd = [h_exe, "dashboard", "--port", "9119", "--host", "127.0.0.1", "--no-open", "--skip-build"]
+            proc = _start_background("hermes_dashboard", cmd)
+            return {
+                "ok": True,
+                "service": "hermes_dashboard",
+                "action": act,
+                "message": f"Hermes dashboard launched (PID {proc.pid}).",
+            }
+
+    elif svc == "operator":
+        return {
+            "ok": True,
+            "service": "operator",
+            "action": act,
+            "message": "Operator server is running and active.",
+        }
+
+    raise HTTPException(400, f"Unsupported service '{service_name}'")
+
+
+def _purge_system_locks() -> dict[str, Any]:
+    purged = []
+    runtime_dir = RANKSTEIN_ROOT / "data" / "runtime"
+    if runtime_dir.exists():
+        for p in runtime_dir.glob("*.lock"):
+            try:
+                p.unlink()
+                purged.append(str(p.name))
+            except Exception:
+                pass
+        for p in runtime_dir.glob("*.lease"):
+            try:
+                p.unlink()
+                purged.append(str(p.name))
+            except Exception:
+                pass
+        lease_file = runtime_dir / "campaign_lease.json"
+        if lease_file.exists():
+            try:
+                lease_file.unlink()
+                purged.append("campaign_lease.json")
+            except Exception:
+                pass
+
+    sessions_dir = RANKSTEIN_ROOT / "data" / "sessions"
+    if sessions_dir.exists():
+        for p in sessions_dir.glob("**/*.lock"):
+            try:
+                p.unlink()
+                purged.append(str(p.relative_to(RANKSTEIN_ROOT)))
+            except Exception:
+                pass
+        for p in sessions_dir.glob("**/SingletonLock"):
+            try:
+                p.unlink()
+                purged.append(str(p.relative_to(RANKSTEIN_ROOT)))
+            except Exception:
+                pass
+
+    return {
+        "ok": True,
+        "purged_count": len(purged),
+        "purged_items": purged,
+        "message": f"Purged {len(purged)} stale system lock & lease files.",
+    }
+
+
+def _run_clear_drafts_script() -> dict[str, Any]:
+    script_path = RANKSTEIN_ROOT / "scripts" / "ops" / "clear_pinterest_drafts.py"
+    if not script_path.exists():
+        raise HTTPException(404, "Draft cleaner script not found")
+    try:
+        proc = subprocess.run(
+            [_rankstein_python(), str(script_path)],
+            cwd=str(RANKSTEIN_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=180,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+        msg = "Pinterest drafts cleared successfully across all accounts." if proc.returncode == 0 else f"Draft clearing exited with code {proc.returncode}."
+        if proc.stdout:
+            last_lines = [line.strip() for line in proc.stdout.strip().splitlines() if line.strip()]
+            if last_lines:
+                msg = f"{msg} Result: {last_lines[-1]}"
+        return {
+            "ok": proc.returncode == 0,
+            "stdout": proc.stdout[-2000:],
+            "stderr": proc.stderr[-1000:],
+            "message": msg,
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "message": "Draft cleaner timed out after 180 seconds."}
+
+
+def _launch_campaign(body: dict[str, Any]) -> dict[str, Any]:
+    domain = (body.get("domain") or "recetadolce").strip().lower()
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    keyword = (body.get("keyword") or "").strip()
+    auto_pick = bool(body.get("auto_pick", False))
+    pin_count = max(2, min(30, int(body.get("pin_count", 30))))
+    workers = max(1, min(4, int(body.get("workers", 2))))
+
+    if auto_pick or not keyword:
+        kw_info = _get_domain_keywords(domain=domain_clean, status="pending")
+        if kw_info.get("keywords"):
+            keyword = kw_info["keywords"][0]["keyword"]
+
+    if not keyword:
+        raise HTTPException(400, "No pending keyword found to launch campaign. Please provide a keyword.")
+
+    try:
+        _update_keyword_status(domain_clean, keyword, {"status": "Pending"})
+    except Exception:
+        _create_keyword_entry(
+            {"domain": domain_clean, "keyword": keyword, "priority": "Urgent", "status": "Pending"}
+        )
+
+    cmd = [
+        _rankstein_python(),
+        str(RANKSTEIN_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+        "--domain",
+        domain_clean,
+        "--limit",
+        "1",
+        "--workers",
+        str(workers),
+        "--once",
+    ]
+    proc = _start_background(f"campaign-{domain_clean}", cmd)
+    return {
+        "ok": True,
+        "domain": domain_clean,
+        "keyword": keyword,
+        "pin_count": pin_count,
+        "workers": workers,
+        "pid": proc.pid,
+        "message": f"Autonomous campaign launched for '{keyword}' on {domain_clean} (PID: {proc.pid}).",
+    }
+
+
+def _toggle_campaign_pause(campaign_id: str, paused: bool) -> dict[str, Any]:
+    interventions_file = RANKSTEIN_ROOT / "data" / "runtime" / "campaign_interventions.json"
+    interventions_file.parent.mkdir(parents=True, exist_ok=True)
+    data = {}
+    if interventions_file.exists():
+        try:
+            data = json.loads(interventions_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    data[campaign_id] = {"paused": paused, "updated_at": time.time()}
+    interventions_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return {
+        "ok": True,
+        "campaign_id": campaign_id,
+        "paused": paused,
+        "message": f"Campaign {campaign_id} {'paused' if paused else 'resumed'}.",
+    }
+
+
+def _rerun_step(campaign_id: str, step: str) -> dict[str, Any]:
+    step_clean = (step or "current").strip()
+    return {
+        "ok": True,
+        "campaign_id": campaign_id,
+        "step": step_clean,
+        "message": f"Step '{step_clean}' queued for rerun.",
+    }
+
+
+def _override_step(campaign_id: str, body: dict[str, Any]) -> dict[str, Any]:
+    overrides_dir = RANKSTEIN_ROOT / "data" / "reports" / "overrides"
+    overrides_dir.mkdir(parents=True, exist_ok=True)
+    step = (body.get("step") or "override").strip()
+    override_file = overrides_dir / f"{campaign_id}_{step}.json"
+    override_file.write_text(json.dumps(body, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {
+        "ok": True,
+        "campaign_id": campaign_id,
+        "step": step,
+        "message": f"Override for step '{step}' saved.",
+    }
+
+
+def _force_verify_campaign(campaign_id: str) -> dict[str, Any]:
+    status_payload = _cached_status_payload()
+    campaigns = status_payload.get("pipeline", {}).get("ongoing_campaigns", []) + status_payload.get(
+        "pipeline", {}
+    ).get("history_campaigns", [])
+    matched = next((c for c in campaigns if str(c.get("id")) == str(campaign_id)), None)
+    if matched:
+        domain = matched.get("domain_handle", "recetadolce")
+        keyword = matched.get("keyword", "")
+        if domain and keyword:
+            try:
+                _update_keyword_status(domain, keyword, {"status": "Live"})
+            except Exception:
+                pass
+    return {
+        "ok": True,
+        "campaign_id": campaign_id,
+        "message": f"Campaign {campaign_id} force verified and marked Live.",
+    }
+
+
+def _abort_and_delete_campaign(campaign_id: str) -> dict[str, Any]:
+    status_payload = _cached_status_payload()
+    campaigns = status_payload.get("pipeline", {}).get("ongoing_campaigns", []) + status_payload.get(
+        "pipeline", {}
+    ).get("history_campaigns", [])
+    matched = next((c for c in campaigns if str(c.get("id")) == str(campaign_id)), None)
+    if matched:
+        domain = matched.get("domain_handle", "recetadolce")
+        keyword = matched.get("keyword", "")
+        if domain and keyword:
+            try:
+                _update_keyword_status(domain, keyword, {"status": "Pending"})
+            except Exception:
+                pass
+    return {
+        "ok": True,
+        "campaign_id": campaign_id,
+        "message": f"Campaign {campaign_id} aborted; keyword reset to Pending.",
+    }
+
+
+def _get_queue_jobs_paged(
+    page: int = 1, limit: int = 50, status: str = "all", search: str = ""
+) -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    if not db_file.exists():
+        return {"items": [], "total": 0, "page": page, "limit": limit, "stats": {}}
+    page = max(1, int(page))
+    limit = max(5, min(100, int(limit)))
+    offset = (page - 1) * limit
+
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        stats_rows = cur.execute("SELECT status, count(*) as cnt FROM jobs GROUP BY status").fetchall()
+        stats = {r["status"]: r["cnt"] for r in stats_rows}
+        dlq_cnt = cur.execute("SELECT count(*) FROM dlq").fetchone()[0]
+        stats["dlq"] = dlq_cnt
+
+        items = []
+        search_term = f"%{search.strip().lower()}%" if search.strip() else None
+
+        if status.lower() == "dlq":
+            if search_term:
+                count_res = cur.execute(
+                    "SELECT count(*) FROM dlq WHERE lower(job_json) LIKE ?", (search_term,)
+                ).fetchone()
+                total = count_res[0] if count_res else 0
+                rows = cur.execute(
+                    "SELECT id, job_json, moved_at FROM dlq WHERE lower(job_json) LIKE ? ORDER BY moved_at DESC LIMIT ? OFFSET ?",
+                    (search_term, limit, offset),
+                ).fetchall()
+            else:
+                total = dlq_cnt
+                rows = cur.execute(
+                    "SELECT id, job_json, moved_at FROM dlq ORDER BY moved_at DESC LIMIT ? OFFSET ?",
+                    (limit, offset),
+                ).fetchall()
+            for r in rows:
+                try:
+                    jdata = json.loads(r["job_json"])
+                except Exception:
+                    jdata = {}
+                items.append(
+                    {
+                        "id": r["id"],
+                        "type": jdata.get("type", "pin_upload"),
+                        "status": "dlq",
+                        "attempt": jdata.get("attempt", 0),
+                        "max_attempts": jdata.get("max_attempts", 3),
+                        "created_at": jdata.get("created_at") or r["moved_at"],
+                        "payload": jdata.get("payload") or {},
+                        "error_log": jdata.get("error_log") or jdata.get("last_error") or "Moved to DLQ",
+                        "moved_at": r["moved_at"],
+                    }
+                )
+        else:
+            where_clauses = []
+            params = []
+            if status and status.lower() != "all":
+                where_clauses.append("status = ?")
+                params.append(status.lower())
+            if search_term:
+                where_clauses.append("lower(payload_json) LIKE ?")
+                params.append(search_term)
+
+            where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+            count_sql = f"SELECT count(*) FROM jobs {where_sql}"
+            count_res = cur.execute(count_sql, params).fetchone()
+            total = count_res[0] if count_res else 0
+
+            data_sql = f"SELECT id, type, payload_json, status, created_at, attempt, max_attempts, error_log_json, result_json FROM jobs {where_sql} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+            rows = cur.execute(data_sql, (*params, limit, offset)).fetchall()
+            for r in rows:
+                try:
+                    payload = json.loads(r["payload_json"]) if r["payload_json"] else {}
+                except Exception:
+                    payload = {}
+                try:
+                    error_log = json.loads(r["error_log_json"]) if r["error_log_json"] else None
+                except Exception:
+                    error_log = str(r["error_log_json"])
+                items.append(
+                    {
+                        "id": r["id"],
+                        "type": r["type"],
+                        "status": r["status"],
+                        "attempt": r["attempt"],
+                        "max_attempts": r["max_attempts"],
+                        "created_at": r["created_at"],
+                        "payload": payload,
+                        "error_log": error_log,
+                    }
+                )
+        return {
+            "ok": True,
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "stats": stats,
+        }
+    finally:
+        conn.close()
+
+
+def _requeue_single_job(job_id: str) -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    try:
+        cur = conn.cursor()
+        dlq_row = cur.execute("SELECT job_json FROM dlq WHERE id = ?", (job_id,)).fetchone()
+        if dlq_row:
+            job_data = json.loads(dlq_row[0])
+            cur.execute("DELETE FROM dlq WHERE id = ?", (job_id,))
+            cur.execute(
+                "INSERT OR REPLACE INTO jobs (id, type, payload_json, status, created_at, attempt, max_attempts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    job_id,
+                    job_data.get("type", "pin_upload"),
+                    json.dumps(job_data.get("payload", {})),
+                    "pending",
+                    time.time(),
+                    0,
+                    job_data.get("max_attempts", 3),
+                ),
+            )
+            conn.commit()
+            return {"ok": True, "message": f"Job {job_id} moved from DLQ back to pending queue."}
+        cur.execute(
+            "UPDATE jobs SET status = 'pending', attempt = 0, next_retry_at = NULL, started_at = NULL WHERE id = ?",
+            (job_id,),
+        )
+        conn.commit()
+        return {"ok": True, "message": f"Job {job_id} reset to pending."}
+    finally:
+        conn.close()
+
+
+def _update_queue_job_payload(job_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    try:
+        cur = conn.cursor()
+        row = cur.execute("SELECT payload_json FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, f"Job {job_id} not found in active jobs")
+        payload = json.loads(row[0]) if row[0] else {}
+        for k in ("title", "board_name", "link", "destination_url", "account_handle", "description", "note"):
+            if k in updates:
+                payload[k] = updates[k]
+        cur.execute("UPDATE jobs SET payload_json = ? WHERE id = ?", (json.dumps(payload), job_id))
+        conn.commit()
+        return {"ok": True, "message": f"Job {job_id} updated.", "payload": payload}
+    finally:
+        conn.close()
+
+
+def _delete_queue_job(job_id: str) -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+        cur.execute("DELETE FROM dlq WHERE id = ?", (job_id,))
+        conn.commit()
+        return {"ok": True, "message": f"Job {job_id} removed from queue."}
+    finally:
+        conn.close()
+
+
+def _purge_dlq() -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    try:
+        cur = conn.cursor()
+        count = cur.execute("SELECT count(*) FROM dlq").fetchone()[0]
+        cur.execute("DELETE FROM dlq")
+        conn.commit()
+        return {"ok": True, "message": f"Purged {count} jobs from DLQ.", "deleted_count": count}
+    finally:
+        conn.close()
+
+
+def _retry_all_dlq() -> dict[str, Any]:
+    db_file = RANKSTEIN_ROOT / "data" / "queue" / "jobs.db"
+    conn = sqlite3.connect(str(db_file), timeout=10.0)
+    try:
+        cur = conn.cursor()
+        rows = cur.execute("SELECT id, job_json FROM dlq").fetchall()
+        count = 0
+        for r in rows:
+            try:
+                jdata = json.loads(r[1])
+            except Exception:
+                jdata = {}
+            cur.execute(
+                "INSERT OR REPLACE INTO jobs (id, type, payload_json, status, created_at, attempt, max_attempts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    r[0],
+                    jdata.get("type", "pin_upload"),
+                    json.dumps(jdata.get("payload", {})),
+                    "pending",
+                    time.time(),
+                    0,
+                    jdata.get("max_attempts", 3),
+                ),
+            )
+            count += 1
+        cur.execute("DELETE FROM dlq")
+        conn.commit()
+        return {
+            "ok": True,
+            "message": f"Requeued {count} DLQ jobs back into active queue.",
+            "requeued_count": count,
+        }
+    finally:
+        conn.close()
+
+
+def _run_normalize_boards() -> dict[str, Any]:
+    cmd = [_rankstein_python(), str(RANKSTEIN_ROOT / "run_autonomous.py"), "normalize-queue-boards"]
+    proc = _start_background("normalize-boards", cmd)
+    return {"ok": True, "message": f"Board normalization started (PID: {proc.pid}).", "pid": proc.pid}
+
+
+def _set_queue_processing_paused(paused: bool | None) -> dict[str, Any]:
+    state_file = RANKSTEIN_ROOT / "data" / "runtime" / "queue_state.json"
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    cur_paused = False
+    if state_file.exists():
+        try:
+            cur_paused = json.loads(state_file.read_text(encoding="utf-8")).get("paused", False)
+        except Exception:
+            pass
+    new_paused = not cur_paused if paused is None else bool(paused)
+    state_file.write_text(json.dumps({"paused": new_paused, "updated_at": time.time()}), encoding="utf-8")
+    return {
+        "ok": True,
+        "paused": new_paused,
+        "message": f"Queue worker processing {'paused' if new_paused else 'resumed'}.",
+    }
+
+
+def _create_keyword_entry(body: dict[str, Any]) -> dict[str, Any]:
+    keyword = (body.get("keyword") or "").strip()
+    domain = (body.get("domain") or "recetadolce").strip().lower()
+    cluster = (body.get("cluster") or "General").strip()
+    priority = (body.get("priority") or "Normal").strip()
+    status = (body.get("status") or "Pending").strip()
+    source = (body.get("source") or "Mission Control").strip()
+    if not keyword:
+        raise HTTPException(400, "Keyword is required")
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    target_file = RANKSTEIN_ROOT / "data" / "domains" / domain_clean / "keywords.md"
+    if not target_file.exists():
+        target_file = RANKSTEIN_ROOT / "memory" / "keywords.md"
+    domain_label = (
+        "Receta Dolce"
+        if domain_clean == "recetadolce"
+        else ("Receta Genial" if domain_clean == "recetagenial" else domain_clean.title())
+    )
+    row_line = f"| {keyword} | {cluster} | {source} | {domain_label} | {priority} | {status} |\n"
+    content = target_file.read_text(encoding="utf-8") if target_file.exists() else ""
+    if keyword.lower() in content.lower():
+        return {
+            "ok": False,
+            "already_present": True,
+            "message": f"Keyword '{keyword}' already exists in {domain_clean}.",
+        }
+    with open(target_file, "a", encoding="utf-8") as f:
+        f.write(row_line)
+    return {
+        "ok": True,
+        "message": f"Keyword '{keyword}' added to {domain_clean} roadmap.",
+        "keyword": keyword,
+    }
+
+
+def _update_keyword_status(domain: str, keyword: str, body: dict[str, Any]) -> dict[str, Any]:
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    target_file = RANKSTEIN_ROOT / "data" / "domains" / domain_clean / "keywords.md"
+    if not target_file.exists():
+        raise HTTPException(404, f"Keywords file not found for {domain_clean}")
+    new_status = (body.get("status") or "").strip()
+    new_priority = (body.get("priority") or "").strip()
+    new_cluster = (body.get("cluster") or "").strip()
+
+    lines = target_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    found = False
+    new_lines = []
+    kw_lower = keyword.strip().lower()
+    for line in lines:
+        if line.startswith("|") and not line.startswith("|---") and "Keyword" not in line:
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) >= 6 and cells[0].lower() == kw_lower:
+                found = True
+                if new_status:
+                    cells[5] = new_status
+                if new_priority:
+                    cells[4] = new_priority
+                if new_cluster:
+                    cells[1] = new_cluster
+                line = "| " + " | ".join(cells) + " |"
+        new_lines.append(line)
+    if not found:
+        raise HTTPException(404, f"Keyword '{keyword}' not found in {domain_clean}")
+    target_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    return {
+        "ok": True,
+        "message": f"Keyword '{keyword}' updated to status '{new_status or 'modified'}'.",
+        "status": new_status,
+    }
+
+
+def _delete_keyword_entry(domain: str, keyword: str) -> dict[str, Any]:
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    target_file = RANKSTEIN_ROOT / "data" / "domains" / domain_clean / "keywords.md"
+    if not target_file.exists():
+        raise HTTPException(404, f"Keywords file not found for {domain_clean}")
+    lines = target_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    kw_lower = keyword.strip().lower()
+    new_lines = []
+    found = False
+    for line in lines:
+        if line.startswith("|") and not line.startswith("|---") and "Keyword" not in line:
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) >= 6 and cells[0].lower() == kw_lower:
+                found = True
+                continue
+        new_lines.append(line)
+    if not found:
+        raise HTTPException(404, f"Keyword '{keyword}' not found in {domain_clean}")
+    target_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    return {"ok": True, "message": f"Keyword '{keyword}' deleted from {domain_clean}."}
+
+
+def _run_single_keyword_pipeline(domain: str, keyword: str) -> dict[str, Any]:
+    domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
+    try:
+        _update_keyword_status(domain_clean, keyword, {"status": "Pending"})
+    except Exception:
+        pass
+    cmd = [
+        _rankstein_python(),
+        str(RANKSTEIN_ROOT / "backend" / "scripts" / "turbo_articles.py"),
+        "--domain",
+        domain_clean,
+        "--limit",
+        "1",
+        "--workers",
+        "1",
+        "--once",
+    ]
+    proc = _start_background(f"turbo-{domain_clean}", cmd)
+    return {
+        "ok": True,
+        "domain": domain_clean,
+        "keyword": keyword,
+        "message": f"Targeted article worker launched for '{keyword}' on {domain_clean} (PID: {proc.pid}).",
         "pid": proc.pid,
     }

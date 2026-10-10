@@ -70,6 +70,16 @@ class MemoryService:
     def health(self) -> dict[str, Any]:
         """Return AgentMemory health information, or a structured error."""
         try:
+            resp = self.session.get(self._url("livez"), timeout=3)
+            if resp.status_code == 200:
+                body = resp.json() if resp.content else {}
+                body.setdefault("ok", True)
+                body.setdefault("status_code", 200)
+                body.setdefault("status", "healthy")
+                return body
+        except Exception:
+            pass
+        try:
             resp = self.session.get(self._url("health"), headers=self._headers(), timeout=self.timeout)
             body = resp.json() if resp.content else {}
             body.setdefault("ok", resp.status_code == 200)

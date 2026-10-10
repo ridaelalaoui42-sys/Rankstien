@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-10-09T16:16:27.893592+00:00",
+  "generated_at": "2026-10-10T03:04:38.840822+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 471,
+  "files_audited": 474,
   "status_counts": {
-    "ok": 398,
-    "review": 73,
-    "fail": 0
+    "ok": 401,
+    "review": 66,
+    "fail": 7
   },
   "kind_counts": {
     "agent-config": 1,
@@ -15,7 +15,7 @@
     "domain-data": 4,
     "frontend": 130,
     "project": 8,
-    "scripts": 113,
+    "scripts": 116,
     "tests": 68
   },
   "files": [
@@ -191,8 +191,8 @@
       "path": "backend/api/operator_routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 84098,
-      "lines": 2260,
+      "bytes": 134388,
+      "lines": 3597,
       "findings": []
     },
     {
@@ -391,8 +391,8 @@
       "path": "backend/scripts/pinterest_batch_core.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 63458,
-      "lines": 1615,
+      "bytes": 66362,
+      "lines": 1665,
       "findings": []
     },
     {
@@ -415,8 +415,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 188838,
-      "lines": 4700,
+      "bytes": 196440,
+      "lines": 4882,
       "findings": []
     },
     {
@@ -455,16 +455,16 @@
       "path": "backend/services/memory_service.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 6911,
-      "lines": 177,
+      "bytes": 7320,
+      "lines": 187,
       "findings": []
     },
     {
       "path": "backend/services/news_scraper.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 29914,
-      "lines": 781,
+      "bytes": 31759,
+      "lines": 804,
       "findings": []
     },
     {
@@ -479,16 +479,16 @@
       "path": "backend/services/operator_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 59496,
-      "lines": 1527,
+      "bytes": 60552,
+      "lines": 1546,
       "findings": []
     },
     {
       "path": "backend/services/remasterer.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 113081,
-      "lines": 2712,
+      "bytes": 113891,
+      "lines": 2741,
       "findings": []
     },
     {
@@ -527,8 +527,8 @@
       "path": "backend/static/operator/index.html",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22831,
-      "lines": 557,
+      "bytes": 42268,
+      "lines": 923,
       "findings": []
     },
     {
@@ -543,16 +543,16 @@
       "path": "backend/static/operator/operator.css",
       "kind": "backend",
       "status": "ok",
-      "bytes": 22614,
-      "lines": 1291,
+      "bytes": 31590,
+      "lines": 1702,
       "findings": []
     },
     {
       "path": "backend/static/operator/operator.js",
       "kind": "backend",
       "status": "ok",
-      "bytes": 65760,
-      "lines": 1583,
+      "bytes": 106112,
+      "lines": 2595,
       "findings": []
     },
     {
@@ -607,16 +607,16 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 2696,
-      "lines": 86,
+      "bytes": 409,
+      "lines": 12,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 278,
-      "lines": 8,
+      "bytes": 199,
+      "lines": 7,
       "findings": []
     },
     {
@@ -631,24 +631,24 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 84332,
-      "lines": 737,
+      "bytes": 86791,
+      "lines": 754,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 2702,
-      "lines": 86,
+      "bytes": 11474,
+      "lines": 243,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 806,
-      "lines": 15,
+      "bytes": 936,
+      "lines": 17,
       "findings": []
     },
     {
@@ -663,8 +663,8 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 57716,
-      "lines": 513,
+      "bytes": 62613,
+      "lines": 548,
       "findings": []
     },
     {
@@ -1903,8 +1903,8 @@
       "path": "pinterest_automation/campaign.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 31328,
-      "lines": 861,
+      "bytes": 31517,
+      "lines": 871,
       "findings": []
     },
     {
@@ -1919,8 +1919,8 @@
       "path": "pinterest_automation/config.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 16502,
-      "lines": 457,
+      "bytes": 18541,
+      "lines": 499,
       "findings": []
     },
     {
@@ -1967,8 +1967,8 @@
       "path": "pinterest_automation/pinterest_driver.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 58562,
-      "lines": 1317,
+      "bytes": 61087,
+      "lines": 1364,
       "findings": []
     },
     {
@@ -1983,8 +1983,8 @@
       "path": "pinterest_automation/routing.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 1742,
-      "lines": 53,
+      "bytes": 3468,
+      "lines": 86,
       "findings": []
     },
     {
@@ -2015,8 +2015,8 @@
       "path": "pinterest_automation/supervisor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 38348,
-      "lines": 818,
+      "bytes": 40946,
+      "lines": 849,
       "findings": []
     },
     {
@@ -2303,16 +2303,16 @@
       "path": "rankstein/suite_controller.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 24179,
-      "lines": 636,
+      "bytes": 24116,
+      "lines": 634,
       "findings": []
     },
     {
       "path": "rankstein/trend_intelligence.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 62916,
-      "lines": 1836,
+      "bytes": 62988,
+      "lines": 1839,
       "findings": []
     },
     {
@@ -2327,8 +2327,8 @@
       "path": "rankstein_mcp_server.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 230426,
-      "lines": 5471,
+      "bytes": 232589,
+      "lines": 5521,
       "findings": []
     },
     {
@@ -2352,10 +2352,11 @@
     {
       "path": "scripts/debug/audit_and_clean_database.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 5388,
-      "lines": 136,
+      "status": "fail",
+      "bytes": 5535,
+      "lines": 137,
       "findings": [
+        "python syntax error: line 135: invalid syntax. Perhaps you forgot a comma?",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2382,10 +2383,11 @@
     {
       "path": "scripts/debug/audit_schemas.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 1772,
-      "lines": 43,
+      "status": "fail",
+      "bytes": 1826,
+      "lines": 44,
       "findings": [
+        "python syntax error: line 42: invalid syntax. Perhaps you forgot a comma?",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2562,10 +2564,11 @@
     {
       "path": "scripts/debug/find_near_duplicates.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 2546,
-      "lines": 57,
+      "status": "fail",
+      "bytes": 2614,
+      "lines": 58,
       "findings": [
+        "python syntax error: line 25: invalid syntax. Perhaps you forgot a comma?",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2642,20 +2645,22 @@
     {
       "path": "scripts/debug/inspect_and_fix_remaining_schemas.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 12116,
-      "lines": 258,
+      "status": "fail",
+      "bytes": 12385,
+      "lines": 259,
       "findings": [
+        "python syntax error: line 7: invalid syntax",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
     {
       "path": "scripts/debug/inspect_issue_posts.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 1924,
-      "lines": 45,
+      "status": "fail",
+      "bytes": 1980,
+      "lines": 46,
       "findings": [
+        "python syntax error: line 34: invalid syntax. Perhaps you forgot a comma?",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2682,10 +2687,11 @@
     {
       "path": "scripts/debug/inspect_schema_issues.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 2033,
-      "lines": 53,
+      "status": "fail",
+      "bytes": 2097,
+      "lines": 54,
       "findings": [
+        "python syntax error: line 14: invalid syntax",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -2772,10 +2778,11 @@
     {
       "path": "scripts/debug/repair_all_supabase_schemas.py",
       "kind": "scripts",
-      "status": "review",
-      "bytes": 4974,
-      "lines": 116,
+      "status": "fail",
+      "bytes": 5101,
+      "lines": 117,
       "findings": [
+        "python syntax error: line 115: invalid syntax. Perhaps you forgot a comma?",
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
     },
@@ -3086,11 +3093,27 @@
       "findings": []
     },
     {
+      "path": "scripts/dev/data/sessions/DD/component_crx_cache/metadata.json",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 13,
+      "lines": 1,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/disable_legacy_odysseus_task.ps1",
       "kind": "scripts",
       "status": "ok",
       "bytes": 994,
       "lines": 21,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/execute_database_remediation.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 16736,
+      "lines": 337,
       "findings": []
     },
     {
@@ -3107,6 +3130,14 @@
       "status": "ok",
       "bytes": 697,
       "lines": 11,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/login_medridaelalaoui6.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 3846,
+      "lines": 109,
       "findings": []
     },
     {
@@ -3145,8 +3176,8 @@
       "path": "scripts/dev/runtime_backup.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 6311,
-      "lines": 138,
+      "bytes": 6522,
+      "lines": 163,
       "findings": []
     },
     {
@@ -3169,8 +3200,8 @@
       "path": "scripts/dev/start_agentmemory.ps1",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 5519,
-      "lines": 146,
+      "bytes": 6021,
+      "lines": 156,
       "findings": []
     },
     {
@@ -3225,24 +3256,24 @@
       "path": "scripts/ops/clean_all_duplicates.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 6894,
-      "lines": 123,
+      "bytes": 7342,
+      "lines": 164,
       "findings": []
     },
     {
       "path": "scripts/ops/clean_duplicate_posts.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 6685,
-      "lines": 77,
+      "bytes": 8039,
+      "lines": 232,
       "findings": []
     },
     {
       "path": "scripts/ops/clear_pinterest_drafts.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 3613,
-      "lines": 94,
+      "bytes": 13687,
+      "lines": 298,
       "findings": []
     },
     {
@@ -3281,8 +3312,8 @@
       "path": "scripts/ops/organize_remaster_final.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 2133,
-      "lines": 62,
+      "bytes": 2147,
+      "lines": 64,
       "findings": []
     },
     {
@@ -3329,23 +3360,23 @@
       "path": "scripts/ops/update_both_redirects.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 1781,
-      "lines": 53,
+      "bytes": 1723,
+      "lines": 57,
       "findings": []
     },
     {
       "path": "scripts/ops/update_codebase_redirects.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 5380,
-      "lines": 101,
+      "bytes": 5441,
+      "lines": 110,
       "findings": []
     },
     {
       "path": "scripts/ops/upload_replacement_images.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 3081,
+      "bytes": 3156,
       "lines": 75,
       "findings": []
     },
@@ -3649,8 +3680,8 @@
       "path": "tests/unit/test_operator.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 7489,
-      "lines": 162,
+      "bytes": 10701,
+      "lines": 259,
       "findings": []
     },
     {

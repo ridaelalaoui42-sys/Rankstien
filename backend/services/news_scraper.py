@@ -637,31 +637,45 @@ def validate_article(data: dict) -> dict:
         issues.append(f"Excerpt too long: {len(excerpt)} chars (max 155)")
         score -= 5
 
-    # 6. Category
-    cat = data.get("category", "")
-    valid = {
-        # RecetaGenial canonical
-        "Aperitivos",
-        "Arroces",
-        "Carnes",
-        "Pescados",
-        "Ensaladas",
-        "Postres",
-        # RecetaDolce canonical
-        "fresas-y-nata",
-        "tartas-y-pasteles",
-        "chocolates",
-        "dulces-saludables",
-        # Common aliases & subsets
-        "Pasteles",
-        "Galletas",
-        "Chocolates",
-        "Repostería",
-        "Helados",
+    # 6. Category with domain enforcement
+    cat = str(data.get("category", "")).strip()
+    domain_handle = (data.get("domain_handle") or data.get("domain") or "").strip().lower()
+
+    dolce_categories = {
+        "fresas-y-nata", "tartas-y-pasteles", "chocolates", "dulces-saludables",
+        "Fresas y Nata", "Tartas y Pasteles", "Chocolates", "Dulces Saludables",
+        "pasteles", "galletas", "chocolates", "repostería", "helados",
     }
-    if cat and cat not in valid:
-        issues.append(f"Invalid category '{cat}'. Must be one of {sorted(valid)}")
-        score -= 10
+    genial_categories = {
+        "Aperitivos", "Arroces", "Carnes", "Pescados", "Ensaladas", "Postres",
+        "aperitivos", "arroces", "carnes", "pescados", "ensaladas", "postres",
+    }
+
+    if domain_handle in ("recetadolce", "dolce"):
+        valid = dolce_categories
+        if cat and cat not in valid:
+            issues.append(f"Invalid category '{cat}' for RecetaDolce. Must be one of {sorted(dolce_categories)}")
+            score -= 30
+    elif domain_handle in ("recetagenial", "genial"):
+        valid = genial_categories
+        if cat and cat not in valid:
+            issues.append(f"Invalid category '{cat}' for RecetaGenial. Must be one of {sorted(genial_categories)}")
+            score -= 30
+    else:
+        valid = dolce_categories | genial_categories
+        if cat and cat not in valid:
+            issues.append(f"Invalid category '{cat}'. Must be one of {sorted(valid)}")
+            score -= 10
+
+    # Cross-brand leak guards
+    if domain_handle in ("recetadolce", "dolce"):
+        if "recetagenial" in low or "receta genial" in low or "hokcljsrrnjxzgdhjice" in content:
+            issues.append("Cross-brand contamination: RecetaGenial text or storage bucket found on RecetaDolce")
+            score -= 40
+    elif domain_handle in ("recetagenial", "genial"):
+        if "recetadolce" in low or "receta dolce" in low or "xjvmnmfczvwkjiasirsl" in content:
+            issues.append("Cross-brand contamination: RecetaDolce text or storage bucket found on RecetaGenial")
+            score -= 40
 
     # 7. Recipe schema. Google recipe rich-result eligibility depends on a
     # complete Recipe object, not just any JSON blob with @type=Recipe.
@@ -720,10 +734,11 @@ def validate_article(data: dict) -> dict:
             "toque aromatico",
             "cocina la base",
             "integra el ingrediente principal",
+            "ingrediente de calidad",
         )
         if any(marker in generic_schema_text for marker in generic_markers):
-            issues.append("Recipe schema contains generic placeholder ingredients or steps")
-            score -= 20
+            issues.append("FATAL: Recipe schema contains generic placeholder ingredients or steps")
+            score = 0
 
     # 8. FAQ schema
     faq = data.get("faq_schema", [])
@@ -736,11 +751,17 @@ def validate_article(data: dict) -> dict:
         issues.append("Add at least 3 FAQ items for rich snippets")
         score -= 5
 
-    # 9. Unreplaced placeholders and duplicate/content-quality hazards
-    for ph in ["[TODO]", "[INSERT"]:
+    # 9. Unreplaced placeholders, template leaks, and content-quality hazards
+    for ph in ["[TODO]", "[INSERT", "[PINTEREST_IFRAME]", "[HERO_IMAGE]", "[PINTEREST_PIN]", "[IMAGE]"]:
         if ph in content:
-            issues.append(f"Unreplaced placeholder found: {ph}")
-            score -= 10
+            issues.append(f"Unreplaced template placeholder found: {ph}")
+            score -= 20
+    if r"\n\n" in content:
+        issues.append("Unescaped literal \\n\\n detected in content markdown")
+        score -= 20
+    if re.search(r"\bprompt:\s*", content, re.IGNORECASE):
+        issues.append("Internal workflow leak: 'prompt:' marker found in content")
+        score -= 25
     if re.search(r"<blockquote(?![^>]*(?:pinterest-pin|data-pin-id))", content, flags=re.I):
         issues.append(
             "Article contains a non-Pinterest blockquote; summarize sources instead of copying text"
@@ -754,11 +775,13 @@ def validate_article(data: dict) -> dict:
         "ingrediente principal",
         "base cremosa o caldo",
         "toque aromático",
+        "cocina la base",
+        "integra el ingrediente principal",
     )
     for marker in boilerplate_markers:
         if marker in low:
             issues.append(f"Article contains internal/generic boilerplate: {marker}")
-            score -= 10
+            score -= 30
             break
     sentences = [
         re.sub(r"\s+", " ", part.strip().casefold())

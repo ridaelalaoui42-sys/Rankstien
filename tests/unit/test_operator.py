@@ -159,3 +159,100 @@ def test_stop_rejects_unknown_modes(client):
     token = client.get("/api/operator/session").json()["csrf_token"]
     response = client.post("/api/rankstein/control/stop/unknown", headers={"X-RankStein-CSRF": token})
     assert response.status_code == 404
+
+
+def test_accounts_cohorts_endpoint(client):
+    response = client.get("/api/rankstein/accounts/cohorts")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is True
+    assert isinstance(data["accounts"], list)
+    assert isinstance(data["domains"], list)
+
+
+def test_save_and_connect_pinterest_account(client, tmp_path, monkeypatch):
+    test_file = tmp_path / "pinterest_accounts.json"
+    monkeypatch.setattr(routes, "_get_accounts_file_path", lambda: test_file)
+
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    save_resp = client.post(
+        "/api/rankstein/control/accounts/save",
+        headers={"X-RankStein-CSRF": token},
+        json={
+            "handle": "unit_acc_1",
+            "email": "test1@domain.com",
+            "browser": "chromium",
+            "connected_domains": ["recetadolce"],
+        },
+    )
+    assert save_resp.status_code == 200
+    assert save_resp.json()["ok"] is True
+
+    # Connect to another blog
+    conn_resp = client.post(
+        "/api/rankstein/control/accounts/connect-blog",
+        headers={"X-RankStein-CSRF": token},
+        json={
+            "account_handle": "unit_acc_1",
+            "domain_handle": "recetagenial",
+            "connected": True,
+        },
+    )
+    assert conn_resp.status_code == 200
+    assert "unit_acc_1" in conn_resp.json()["domain_account_map"]["recetagenial"]
+
+    # Delete account
+    del_resp = client.post(
+        "/api/rankstein/control/accounts/delete",
+        headers={"X-RankStein-CSRF": token},
+        json={"handle": "unit_acc_1"},
+    )
+    assert del_resp.status_code == 200
+    assert del_resp.json()["ok"] is True
+
+
+def test_service_action_supervisor_scaling(client, monkeypatch):
+    captured_cmd = []
+
+    class DummyProc:
+        pid = 7788
+
+    monkeypatch.setattr(routes, "_stop_process", lambda svc: None)
+    monkeypatch.setattr(routes, "_start_background", lambda svc, cmd: (captured_cmd.extend(cmd), DummyProc())[1])
+
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    resp = client.post(
+        "/api/rankstein/services/supervisor/action",
+        headers={"X-RankStein-CSRF": token},
+        json={"action": "restart", "workers": 6},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert "--workers" in captured_cmd
+    assert "6" in captured_cmd
+
+
+def test_clear_drafts_endpoint(client, monkeypatch):
+    called = []
+
+    def fake_run(cmd, **kwargs):
+        called.append(cmd)
+        from subprocess import CompletedProcess
+        return CompletedProcess(cmd, 0, stdout="Finished clearing drafts for 2 accounts: [{'account': 'rida', 'deleted': 5}]", stderr="")
+
+    import subprocess
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    token = client.get("/api/operator/session").json()["csrf_token"]
+    resp = client.post(
+        "/api/rankstein/control/clear-drafts",
+        headers={"X-RankStein-CSRF": token},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert "Pinterest drafts cleared successfully" in data["message"]
+    assert len(called) == 1
+    assert "clear_pinterest_drafts.py" in str(called[0][1])
+
+

@@ -2,7 +2,7 @@
 
 | Keyword | Cluster | Source | Target Blog | Priority | Status |
 |---|---|---|---|---|---|
-| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | 5 Aperitivos Sencillos Rapidos Fiestas | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos De Navidad Originales Y Faciles Para Triunfar | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos Fiestas Faciles Economicos V2 | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
@@ -495,7 +495,7 @@
 | Ensaladas saludables faciles | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Ensaladas de manzana | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | salmón al horno recetas faciles | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
-| salmón al horno con patatas | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| salmón al horno con patatas | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | arroz con leche en vaso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Ensaladas de lentejas | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | Ensaladas de mango | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
@@ -523,7 +523,7 @@
 | salmón al horno con miel y mostaza | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
 | arroz con leche de coco | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | tarta de queso fría | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
-| salmón al horno como cocinar | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| salmón al horno como cocinar | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | pollo al horno con ensalada | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | tortilla española al horno | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | pollo al horno navideño | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
@@ -534,5 +534,14 @@
 | paella de marisco con langosta | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | tortilla española video | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
 | ensalada de garbanzos mediterranea | Ensaladas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Live |
-| salmón al horno con salsa teriyaki | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
-| paella de marisco española | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| salmón al horno con salsa teriyaki | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| paella de marisco española | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| croquetas de jamon caseras | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con pollo facil | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| ensalada de pasta con atun | Pescados | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tortilla de patatas esponjosa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| pollo al horno con patatas y limon | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| tarta de queso philadelphia al horno | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| ensalada de pasta con atun y huevo | Pescados | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| croquetas de jamon caseras cremosas | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |
+| arroz con pollo facil y rapido | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Pending |

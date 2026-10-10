@@ -904,7 +904,10 @@ async def _fetch_pinterest_niche_trending_terms_async(
                     batch.extend(_qualified_pinterest_collector_terms(domain, search_terms))
                 query_batches.append(_dedupe_terms(batch)[:per_query_cap])
         finally:
-            await browser.close()
+            try:
+                await browser.close()
+            except Exception:
+                pass
 
     return _round_robin_pinterest_batches(query_batches, limit=limit)
 

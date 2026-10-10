@@ -534,7 +534,11 @@ async def run_supervisor(args):
 
     # ── Step 3: Start Pinterest supervisor ────────────────────────────────────
     try:
-        supervisor = AutonomousSupervisor()
+        workers = getattr(args, "workers", None)
+        if workers is not None and int(workers) > 0:
+            os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
+            os.environ["PINTEREST_MAX_WORKERS"] = str(max(10, int(workers)))
+        supervisor = AutonomousSupervisor(worker_count=workers)
         await supervisor.run()
     except Exception as e:
         agent_memory.log_event("failure", f"Supervisor crashed: {str(e)}", {"error": str(e)})
@@ -547,10 +551,22 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Run with no arguments to start the autonomous supervisor (default).",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of concurrent supervisor queue workers (e.g. 2, 4, 6, 8)",
+    )
     sub = parser.add_subparsers(dest="command")
 
     # run
-    sub.add_parser("run", help="Start the autonomous supervisor (enqueues backlog first)")
+    run_parser = sub.add_parser("run", help="Start the autonomous supervisor (enqueues backlog first)")
+    run_parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of concurrent supervisor queue workers (e.g. 2, 4, 6, 8)",
+    )
 
     # enqueue-pin
     enq_p = sub.add_parser("enqueue-pin", help="Enqueue a single pin upload")

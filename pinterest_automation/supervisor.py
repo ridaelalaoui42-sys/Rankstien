@@ -53,7 +53,7 @@ class AutonomousSupervisor:
     - Reports status
     """
 
-    def __init__(self):
+    def __init__(self, worker_count: int | None = None):
         config_obj = get_config()
         self.config = config_obj.supervisor
         # Handle dict if loaded from JSON without proper deserialization
@@ -61,6 +61,9 @@ class AutonomousSupervisor:
             from .config import SupervisorConfig
 
             self.config = SupervisorConfig(**self.config)
+
+        if worker_count is not None and int(worker_count) > 0:
+            self.config.worker_count = int(worker_count)
 
         self.health = get_health_monitor()
         self.queue = get_job_queue()
@@ -505,6 +508,25 @@ class AutonomousSupervisor:
                                             ),
                                         )
                                     else:
+                                        # Self-healing: if draft limit / upload editor unlock failed, trigger draft purge
+                                        if any(m in error.lower() for m in ("draft", "limit", "unlock within timeout", "50 drafts", "creator")):
+                                            logger.warning(
+                                                f"Worker {worker_id}: Draft/upload limit detected ({error}). Triggering self-healing draft purge for account '{account_handle}'..."
+                                            )
+                                            try:
+                                                from scripts.ops.clear_pinterest_drafts import aggressive_clear
+                                                from types import SimpleNamespace
+                                                acc_session = get_config().accounts.get(account_handle)
+                                                if acc_session:
+                                                    acc_obj = SimpleNamespace(
+                                                        name=account_handle,
+                                                        session_dir=get_config().session_dir_for(account_handle) if hasattr(get_config(), "session_dir_for") else (Path("data/sessions") / (acc_session.session_name or account_handle)),
+                                                        browser=acc_session.browser or "chromium",
+                                                    )
+                                                    await aggressive_clear(acc_obj)
+                                            except Exception as heal_exc:
+                                                logger.warning(f"Worker {worker_id}: Self-healing draft purge failed: {heal_exc}")
+
                                         await driver.close(healthy=False)
                                         driver = PinterestDriver()
                                         await self.queue.retry_or_fail_async(job.id, error)
@@ -760,6 +782,15 @@ class AutonomousSupervisor:
             snap = self.health.heartbeat()
             if not snap.all_ok:
                 logger.warning("Initial health check found issues, starting anyway...")
+
+            # Startup Draft Maintenance: monitor and clear drafts on all accounts to prevent blockers
+            logger.info("Running pre-session draft purge across configured Pinterest accounts...")
+            try:
+                from scripts.ops.clear_pinterest_drafts import clear_all_accounts_drafts
+                purge_results = await clear_all_accounts_drafts()
+                logger.info(f"Startup draft purge completed for {len(purge_results)} account(s): {purge_results}")
+            except Exception as draft_exc:
+                logger.warning(f"Startup draft purge non-fatal error: {draft_exc}")
 
             tasks = [
                 asyncio.create_task(self._control_loop()),

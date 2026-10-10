@@ -114,12 +114,33 @@
           </div>
           <div class="heading-actions">
             <span id="freshness" role="status">Connecting...</span
+            ><button class="button primary" id="btn-open-launch-campaign">
+              <i data-lucide="rocket"></i>Launch Campaign
+            </button
             ><button class="button danger" id="stop-batch" data-command="stop-production" disabled>
               <i data-lucide="square"></i>Stop batch
             </button
-            ><button class="button primary" id="new-batch">
+            ><button class="button" id="new-batch">
               <i data-lucide="plus"></i>New batch
             </button>
+          </div>
+        </div>
+        <div class="telemetry-hud" id="telemetry-hud" aria-label="System telemetry">
+          <div class="hud-item">
+            <div class="hud-label"><span>CPU</span><strong id="hud-cpu-val">--%</strong></div>
+            <div class="hud-bar"><div class="hud-fill hud-fill-cyan" id="hud-cpu-bar" style="width:0%"></div></div>
+          </div>
+          <div class="hud-item">
+            <div class="hud-label"><span>RAM</span><strong id="hud-ram-val">--%</strong></div>
+            <div class="hud-bar"><div class="hud-fill hud-fill-violet" id="hud-ram-bar" style="width:0%"></div></div>
+          </div>
+          <div class="hud-item hud-mem">
+            <div class="hud-label"><span>AGENTMEMORY</span><strong id="hud-mem-val">Connecting</strong></div>
+            <div class="hud-status-indicator" id="hud-mem-dot"></div>
+          </div>
+          <div class="hud-item hud-quota">
+            <div class="hud-label"><span>PINTEREST DAILY CAP</span><strong id="hud-pins-val">-- / 500</strong></div>
+            <div class="hud-bar"><div class="hud-fill hud-fill-mint" id="hud-pins-bar" style="width:0%"></div></div>
           </div>
         </div>
         <div class="alert" id="connection-alert" role="alert" hidden></div>
@@ -202,6 +223,73 @@
         </section>
         <section id="view-pinterest" class="view" hidden>
           <div id="queue-metrics" class="metrics"></div>
+
+          <!-- Live Worker Viewports -->
+          <div class="section-heading">
+            <h2>Live Worker Viewports</h2>
+            <span class="muted">Real-time Chromium headless state & session health</span>
+          </div>
+          <div id="worker-viewports" class="worker-viewports-grid"></div>
+
+          <!-- Granular Queue Inspector -->
+          <div class="section-heading" style="margin-top:24px;">
+            <h2>Granular Queue Inspector</h2>
+            <span class="muted" id="queue-jobs-count"></span>
+          </div>
+          <div class="toolbar queue-toolbar" style="flex-wrap:wrap; gap:8px;">
+            <label class="search-box">
+              <i data-lucide="search"></i>
+              <input id="queue-job-search" placeholder="Search queue jobs..." aria-label="Search queued jobs" />
+            </label>
+            <label class="sr-only" for="queue-job-status">Queue Status</label>
+            <select id="queue-job-status">
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="retry">Retry</option>
+              <option value="dlq">DLQ (Dead letter)</option>
+              <option value="completed">Completed</option>
+              <option value="held">Held</option>
+            </select>
+            <button class="button danger" id="btn-purge-dlq">
+              <i data-lucide="trash-2"></i>Purge DLQ
+            </button>
+            <button class="button primary" id="btn-retry-all-dlq">
+              <i data-lucide="rotate-ccw"></i>Retry All DLQ
+            </button>
+            <button class="button" id="btn-normalize-queue-boards">
+              <i data-lucide="tag"></i>Normalize Boards
+            </button>
+            <button class="button" id="btn-toggle-queue-pause">
+              <i data-lucide="pause"></i>Pause Processing
+            </button>
+            <div class="concurrency-control" style="display:inline-flex; align-items:center; gap:6px; margin-left:auto;">
+              <label for="queue-supervisor-workers" class="muted" style="font-size:12px; white-space:nowrap;"><i data-lucide="cpu" style="width:14px; height:14px; vertical-align:middle;"></i> Workers:</label>
+              <select id="queue-supervisor-workers" style="min-width:110px; font-size:12px; padding:4px 8px;">
+                <option value="1">1 worker</option>
+                <option value="2" selected>2 workers (Standard)</option>
+                <option value="4">4 workers (Fast)</option>
+                <option value="6">6 workers (High)</option>
+                <option value="8">8 workers (Max)</option>
+                <option value="10">10 workers (Turbo)</option>
+              </select>
+              <button class="button primary" id="btn-scale-supervisor" style="font-size:12px; padding:4px 10px;" title="Scale and apply supervisor workers">
+                <i data-lucide="zap"></i>Apply Scale
+              </button>
+            </div>
+          </div>
+          <div id="queue-jobs-table-wrap" class="table-wrap">Loading queue jobs...</div>
+          <div class="pagination-bar" id="queue-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <button class="button" id="btn-queue-prev" disabled><i data-lucide="chevron-left"></i>Prev</button>
+            <span id="queue-page-info" class="muted" style="font-size:12px;">Page 1</span>
+            <button class="button" id="btn-queue-next" disabled>Next<i data-lucide="chevron-right"></i></button>
+          </div>
+
+          <!-- Verified Pins Feed -->
+          <div class="section-heading" style="margin-top:28px;">
+            <h2>Verified pin feed</h2>
+            <span id="pin-count" class="muted"></span>
+          </div>
           <div class="toolbar">
             <label class="search-box"
               ><i data-lucide="search"></i
@@ -217,10 +305,6 @@
             ><button class="button danger" data-command="stop-supervisor">
               <i data-lucide="square"></i>Stop supervisor
             </button>
-          </div>
-          <div class="section-heading">
-            <h2>Verified pin feed</h2>
-            <span id="pin-count" class="muted"></span>
           </div>
           <div id="pins"></div>
         </section>
@@ -241,6 +325,9 @@
               <option>Live</option>
               <option>Needs Verification</option>
               <option>Failed</option></select
+            ><button class="button primary" id="btn-open-add-keyword">
+              <i data-lucide="plus"></i>Add Keyword
+            </button
             ><button class="button" data-command="trends">
               <i data-lucide="trending-up"></i>Refresh trends
             </button>
@@ -439,15 +526,28 @@
           </div>
         </section>
         <section id="view-services" class="view" hidden>
+          <div class="toolbar" style="margin-bottom:16px; gap:8px;">
+            <button class="button danger" id="btn-purge-locks">
+              <i data-lucide="unlock"></i>Purge System Locks & Leases
+            </button>
+            <button class="button warning" id="btn-clear-drafts">
+              <i data-lucide="broom"></i>Clear Pinterest Drafts (50-Limit)
+            </button>
+          </div>
           <div id="resources" class="metrics"></div>
           <div class="section-heading">
-            <h2>Service health</h2>
-            <span class="muted">Loopback only</span>
+            <h2>Service health & Interactive Controls</h2>
+            <span class="muted">Loopback service management and process control</span>
           </div>
           <div id="services"></div>
           <div class="section-heading">
             <h2>Pinterest accounts</h2>
-            <span id="account-count" class="muted"></span>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span id="account-count" class="muted"></span>
+              <button class="button primary" id="btn-open-add-account" style="font-size:12px; padding:4px 10px;">
+                <i data-lucide="plus"></i>Connect Account
+              </button>
+            </div>
           </div>
           <div id="accounts"></div>
         </section>
@@ -523,6 +623,23 @@
             </div>
           </div>
         </div>
+        <div id="supervisor-fields" hidden>
+          <div class="form-grid">
+            <div>
+              <label for="supervisor-workers">Supervisor Concurrency (Workers)</label>
+              <select id="supervisor-workers">
+                <option value="2">2 workers (Standard unattended)</option>
+                <option value="4">4 workers (Accelerated queue drain)</option>
+                <option value="6">6 workers (High throughput / Multi-account)</option>
+                <option value="8">8 workers (Maximum parallel concurrency)</option>
+                <option value="1">1 worker (Single process / Debug)</option>
+              </select>
+            </div>
+          </div>
+          <p class="muted" style="font-size:12px; margin-top:8px;">
+            Parallel workers process jobs across configured Pinterest accounts simultaneously without lock convoys.
+          </p>
+        </div>
         <div class="dialog-footer">
           <button class="button" type="button" data-close="command-dialog">
             Cancel</button
@@ -551,6 +668,255 @@
       </div>
       <div id="detail"></div>
     </dialog>
+    <dialog id="launch-campaign-dialog" aria-labelledby="launch-campaign-title">
+      <form id="launch-campaign-form">
+        <div class="dialog-header">
+          <h2 id="launch-campaign-title">Launch Autonomous Campaign</h2>
+          <button class="icon-button" type="button" data-close="launch-campaign-dialog" title="Close dialog">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p class="muted" style="margin-bottom:12px;">Start an end-to-end multi-step campaign with Hermes Codex, hero generation, Supabase publishing, and paired pin remastering.</p>
+        <div class="form-fields">
+          <label for="campaign-domain-select">Domain Target</label>
+          <select id="campaign-domain-select" required>
+            <option value="recetadolce">Receta Dolce (recetadolce.com)</option>
+            <option value="recetagenial">Receta Genial (recetagenial.com)</option>
+          </select>
+          <div style="margin-top:12px;">
+            <label for="campaign-keyword-input">Keyword / Topic</label>
+            <input id="campaign-keyword-input" type="text" placeholder="e.g. tarta de queso al horno" />
+          </div>
+          <div style="margin-top:8px;">
+            <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; font-size:12px;">
+              <input type="checkbox" id="campaign-autopick-check" checked />
+              <span>Auto-pick highest priority Pending keyword from roadmap if empty</span>
+            </label>
+          </div>
+          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label for="campaign-pins-count">Target Pin Count (2-30)</label>
+              <input id="campaign-pins-count" type="number" min="2" max="30" value="30" required />
+            </div>
+            <div>
+              <label for="campaign-workers-count">Worker Threads (1-4)</label>
+              <select id="campaign-workers-count">
+                <option value="1">1 Worker</option>
+                <option value="2" selected>2 Workers</option>
+                <option value="3">3 Workers</option>
+                <option value="4">4 Workers</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+          <button class="button" type="button" data-close="launch-campaign-dialog">Cancel</button>
+          <button class="button primary" type="submit" id="btn-submit-launch-campaign">
+            <i data-lucide="rocket"></i>Launch Campaign
+          </button>
+        </div>
+        <p id="launch-campaign-error" class="error" role="alert" hidden></p>
+      </form>
+    </dialog>
+
+    <dialog id="edit-job-dialog" aria-labelledby="edit-job-title">
+      <form id="edit-job-form">
+        <div class="dialog-header">
+          <h2 id="edit-job-title">Edit Queue Job Payload</h2>
+          <button class="icon-button" type="button" data-close="edit-job-dialog" title="Close dialog">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input type="hidden" id="edit-job-id" />
+        <div class="form-fields">
+          <div>
+            <label for="edit-job-title-input">Pin Title</label>
+            <input id="edit-job-title-input" type="text" required />
+          </div>
+          <div style="margin-top:12px;">
+            <label for="edit-job-board-input">Board Name</label>
+            <input id="edit-job-board-input" type="text" required />
+          </div>
+          <div style="margin-top:12px;">
+            <label for="edit-job-link-input">Destination URL / Link</label>
+            <input id="edit-job-link-input" type="url" required />
+          </div>
+          <div style="margin-top:12px;">
+            <label for="edit-job-account-input">Account Handle</label>
+            <input id="edit-job-account-input" type="text" required />
+          </div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+          <button class="button" type="button" data-close="edit-job-dialog">Cancel</button>
+          <button class="button primary" type="submit">
+            <i data-lucide="check"></i>Save Payload
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="add-keyword-dialog" aria-labelledby="add-keyword-title">
+      <form id="add-keyword-form">
+        <div class="dialog-header">
+          <h2 id="add-keyword-title">Add Roadmap Keyword</h2>
+          <button class="icon-button" type="button" data-close="add-keyword-dialog" title="Close dialog">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="form-fields">
+          <label for="add-keyword-domain">Domain</label>
+          <select id="add-keyword-domain" required>
+            <option value="recetadolce">Receta Dolce</option>
+            <option value="recetagenial">Receta Genial</option>
+          </select>
+          <div style="margin-top:12px;">
+            <label for="add-keyword-name">Keyword</label>
+            <input id="add-keyword-name" type="text" placeholder="e.g. bizcocho de limon esponjoso" required />
+          </div>
+          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label for="add-keyword-cluster">Cluster</label>
+              <input id="add-keyword-cluster" type="text" placeholder="e.g. Postres" value="General" required />
+            </div>
+            <div>
+              <label for="add-keyword-priority">Priority</label>
+              <select id="add-keyword-priority">
+                <option value="Urgent">Urgent</option>
+                <option value="High" selected>High</option>
+                <option value="Normal">Normal</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+          <button class="button" type="button" data-close="add-keyword-dialog">Cancel</button>
+          <button class="button primary" type="submit">
+            <i data-lucide="plus"></i>Add Keyword
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="override-step-dialog" aria-labelledby="override-step-title">
+      <form id="override-step-form">
+        <div class="dialog-header">
+          <h2 id="override-step-title">Manual Step Override</h2>
+          <button class="icon-button" type="button" data-close="override-step-dialog" title="Close dialog">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input type="hidden" id="override-campaign-id" />
+        <div class="form-fields">
+          <label for="override-step-select">Step to Override</label>
+          <select id="override-step-select">
+            <option value="hero_image">Hero Image (Manual Image URL/Path)</option>
+            <option value="article_write">Article Markdown / Text</option>
+            <option value="quality_check">Recipe Schema JSON</option>
+          </select>
+          <div style="margin-top:12px;">
+            <label for="override-data-input">Override Value / JSON / Text</label>
+            <textarea id="override-data-input" rows="8" placeholder="Enter file path, URL, Markdown or Schema JSON" style="width:100%; box-sizing:border-box; background:var(--bg-inset, #0e1422); border:1px solid var(--border, #1f2937); border-radius:6px; color:inherit; padding:8px; font-family:monospace; font-size:12px;" required></textarea>
+          </div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+          <button class="button" type="button" data-close="override-step-dialog">Cancel</button>
+          <button class="button primary" type="submit">
+            <i data-lucide="check"></i>Apply Override
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="account-dialog" aria-labelledby="account-dialog-title">
+      <form id="account-form">
+        <div class="dialog-header">
+          <h2 id="account-dialog-title">Connect Pinterest Account</h2>
+          <button class="icon-button" type="button" data-close="account-dialog" title="Close dialog">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p class="muted" style="margin-bottom:12px; font-size:12px;">
+          Configure a Pinterest account profile and connect it to specific blogs. The supervisor distributes pin batches across connected accounts automatically.
+        </p>
+        <div class="form-fields">
+          <div>
+            <label for="account-handle-input">Account Handle / Identifier *</label>
+            <input id="account-handle-input" type="text" placeholder="e.g. rida, media, sweet_pins" required />
+          </div>
+          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label for="account-email-input">Email (Optional)</label>
+              <input id="account-email-input" type="email" placeholder="account@example.com" />
+            </div>
+            <div>
+              <label for="account-password-input">Password (Optional)</label>
+              <input id="account-password-input" type="password" placeholder="Leave blank if using session/cookies" />
+            </div>
+          </div>
+          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label for="account-browser-select">Browser Engine</label>
+              <select id="account-browser-select">
+                <option value="chromium" selected>Chromium (Recommended unattended)</option>
+                <option value="firefox">Firefox</option>
+              </select>
+            </div>
+            <div>
+              <label for="account-session-status-select">Session Status</label>
+              <select id="account-session-status-select">
+                <option value="configured" selected>Configured</option>
+                <option value="needs_login">Needs Login</option>
+                <option value="active">Active</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label for="account-session-path-input">Session / Profile Folder Name (Optional)</label>
+            <input id="account-session-path-input" type="text" placeholder="e.g. data/sessions/pinterest_rida" />
+          </div>
+          <div style="margin-top:14px;">
+            <label style="margin-bottom:6px; display:block; font-weight:600;">Connect to Blogs / Domains:</label>
+            <div id="account-domains-checkboxes" style="display:flex; flex-direction:column; gap:8px; background:var(--bg-inset, #0e1422); padding:12px; border-radius:6px; border:1px solid var(--border, #1f2937);">
+              <span class="muted" style="font-size:12px;">Loading available domains...</span>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer" style="margin-top:16px;">
+          <button class="button" type="button" data-close="account-dialog">Cancel</button>
+          <button class="button primary" type="submit" id="btn-save-account">
+            <i data-lucide="check"></i>Save Account
+          </button>
+        </div>
+        <p id="account-form-error" class="error" role="alert" hidden></p>
+      </form>
+    </dialog>
+
+    <!-- Slide-over Step Inspection Drawer -->
+    <aside id="step-drawer" class="step-drawer" hidden>
+      <div class="step-drawer-header">
+        <div>
+          <h3 id="step-drawer-title">Stage Inspection</h3>
+          <p id="step-drawer-sub" class="muted"></p>
+        </div>
+        <button class="icon-button" id="btn-close-step-drawer" title="Close inspector">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="step-drawer-tabs">
+        <button class="step-drawer-tab active" data-tab="preview">Preview</button>
+        <button class="step-drawer-tab" data-tab="visuals">Visuals</button>
+        <button class="step-drawer-tab" data-tab="destination">Destination</button>
+        <button class="step-drawer-tab" data-tab="logs">Logs</button>
+      </div>
+      <div class="step-drawer-body">
+        <div id="drawer-tab-preview" class="drawer-tab-content"></div>
+        <div id="drawer-tab-visuals" class="drawer-tab-content" hidden></div>
+        <div id="drawer-tab-destination" class="drawer-tab-content" hidden></div>
+        <div id="drawer-tab-logs" class="drawer-tab-content" hidden></div>
+      </div>
+    </aside>
+
     <div id="toast" class="toast" role="status" hidden></div>
   </body>
 </html>

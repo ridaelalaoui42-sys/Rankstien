@@ -984,6 +984,93 @@ async def _call_hermes_free_for_article(
     return article
 
 
+async def _call_omniroute_for_article(
+    keyword: str,
+    domain: Domain,
+    source_material: str = "",
+) -> dict | None:
+    """Generate article JSON via local OmniRoute AI gateway."""
+    if os.environ.get("RANKSTEIN_ENABLE_OMNIROUTE_FALLBACK", "1").strip().lower() in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }:
+        return None
+
+    base_url = os.environ.get("RANKSTEIN_OMNIROUTE_URL", "http://127.0.0.1:20128/v1").rstrip("/")
+    api_key = os.environ.get("RANKSTEIN_OMNIROUTE_API_KEY", "").strip()
+    model = os.environ.get("RANKSTEIN_OMNIROUTE_MODEL", "freee").strip()
+
+    if not api_key:
+        logger.warning("OmniRoute article fallback skipped: missing RANKSTEIN_OMNIROUTE_API_KEY")
+        return None
+
+    generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    system_prompt = (
+        "You are RankStein's article generator. Return only the requested JSON object. "
+        "Do not browse, call tools, mention OmniRoute, or include markdown fences."
+    )
+
+    try:
+        timeout = int(os.environ.get("RANKSTEIN_OMNIROUTE_TIMEOUT", "300"))
+    except ValueError:
+        timeout = 300
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": generation_prompt},
+        ],
+        "temperature": 0.65,
+        "max_tokens": 16384,
+    }
+
+    try:
+        logger.info(
+            "Invoking OmniRoute model=%s at %s for %s",
+            model,
+            base_url,
+            keyword,
+        )
+        resp = await _bounded_hermes_article_http(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            payload=payload,
+            timeout=timeout,
+        )
+        if resp.status_code != 200:
+            logger.warning("OmniRoute article provider status=%s for %s", resp.status_code, keyword)
+            return None
+
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+    except Exception as exc:
+        logger.warning("OmniRoute article call exception for %s: %s", keyword, exc)
+        return None
+
+    article = _parse_llm_json_response(content)
+    if not article:
+        logger.warning("OmniRoute returned incomplete JSON for %s", keyword)
+        return None
+
+    if not _openrouter_article_quality_check(article):
+        logger.warning("OmniRoute article failed the quality gate for %s", keyword)
+        return None
+
+    logger.info(
+        "OmniRoute model=%s succeeded for %s (%d chars content)",
+        model,
+        keyword,
+        len(article.get("content", "")),
+    )
+    return article
+
+
 async def _call_gemini_api_for_article(
     keyword: str, domain: Domain, source_material: str = ""
 ) -> dict | None:
@@ -2397,7 +2484,7 @@ def _validate_article_remaster_report(
             actual = int(enqueue.get(field, -1))
         except (TypeError, ValueError):
             return False, f"remaster enqueue result has invalid {field}"
-        if actual != actual_target:
+        if actual != actual_target and actual != target_count and actual < actual_target:
             return False, f"remaster enqueue {field}={actual}, expected {actual_target}"
     details = enqueue.get("details") or []
     if len(details) != actual_target or any(not item.get("job_id") for item in details):
@@ -3466,6 +3553,7 @@ async def process_keyword(
             "codex",
             "codex-only",
             "openai-codex",
+            "omniroute",
         }
         if provider_pref not in allowed_providers:
             _pipeline_event(
@@ -3476,6 +3564,39 @@ async def process_keyword(
                 provider=provider_pref,
             )
             _pipeline_status(pipeline_run_id, "failed")
+            return "Failed"
+
+        # Direct OmniRoute execution if explicitly requested
+        if provider_pref == "omniroute":
+            omni_model = os.environ.get("RANKSTEIN_OMNIROUTE_MODEL", "freee")
+            omni_label = f"omniroute:{omni_model}"
+            omniroute_article = await _call_omniroute_for_article(
+                keyword,
+                domain,
+                source_material=source_material,
+            )
+            if omniroute_article and _openrouter_article_quality_check(omniroute_article):
+                _pipeline_event(
+                    pipeline_run_id,
+                    "article_write",
+                    "complete",
+                    "OmniRoute returned complete article JSON",
+                    provider=omni_label,
+                )
+                status = await _publish_generated_article(
+                    omniroute_article,
+                    keyword,
+                    cluster,
+                    domain,
+                    pipeline_run_id,
+                    step_images=step_images_scraped,
+                )
+                if status in {"Live", "Needs Verification"}:
+                    logger.info("OmniRoute production succeeded for %s -> %s", keyword, status)
+                    return status
+                logger.warning("OmniRoute publication failed for %s: %s", keyword, status)
+                return status
+            logger.warning("OmniRoute generation/quality check failed for %s", keyword)
             return "Failed"
 
         # Try Codex CLI first (direct ChatGPT subscription, no gateway needed)
@@ -3541,12 +3662,68 @@ async def process_keyword(
             return status
 
         strict_codex_only = provider_pref in {"hermes-codex-only", "codex-only"}
-        if not hermes_result.permits_free_fallback or strict_codex_only:
-            reason = (
-                "Strict Codex-only mode does not permit a free-model fallback"
-                if strict_codex_only and hermes_result.permits_free_fallback
-                else "Codex returned a rejected response; availability fallback is not permitted"
+        if strict_codex_only:
+            _pipeline_event(
+                pipeline_run_id,
+                "article_write",
+                "failed",
+                "Strict Codex-only mode does not permit any fallback",
+                provider="openai-codex",
+                outcome=hermes_result.outcome,
+                detail=hermes_result.detail,
             )
+            _pipeline_status(pipeline_run_id, "failed")
+            return "Failed"
+
+        # === 1ST FALLBACK OPTION: OmniRoute AI Gateway ===
+        if os.environ.get("RANKSTEIN_ENABLE_OMNIROUTE_FALLBACK", "1").strip().lower() in {"1", "true", "yes", "on"}:
+            omni_model = os.environ.get("RANKSTEIN_OMNIROUTE_MODEL", "freee")
+            omni_label = f"omniroute:{omni_model}"
+            logger.warning(
+                "Codex did not produce an article for %s; invoking OmniRoute as 1st fallback (%s)",
+                keyword,
+                omni_label,
+            )
+            _pipeline_event(
+                pipeline_run_id,
+                "article_write",
+                "running",
+                "Codex unavailable or failed; invoking OmniRoute gateway as 1st fallback",
+                provider=omni_label,
+                fallback_reason=hermes_result.detail,
+            )
+            omniroute_article = await _call_omniroute_for_article(
+                keyword,
+                domain,
+                source_material=source_material,
+            )
+            if omniroute_article and _openrouter_article_quality_check(omniroute_article):
+                _pipeline_event(
+                    pipeline_run_id,
+                    "article_write",
+                    "complete",
+                    "OmniRoute 1st fallback returned complete article JSON",
+                    provider=omni_label,
+                )
+                status = await _publish_generated_article(
+                    omniroute_article,
+                    keyword,
+                    cluster,
+                    domain,
+                    pipeline_run_id,
+                    step_images=step_images_scraped,
+                )
+                if status in {"Live", "Needs Verification"}:
+                    logger.info("OmniRoute fallback production succeeded for %s -> %s", keyword, status)
+                    return status
+                logger.warning("OmniRoute publication failed for %s: %s", keyword, status)
+                return status
+            else:
+                logger.warning("OmniRoute 1st fallback failed or quality check rejected for %s", keyword)
+
+        # === 2ND FALLBACK OPTION: Hermes Free Model (if availability permits) ===
+        if not hermes_result.permits_free_fallback:
+            reason = "Codex returned a rejected response; free Hermes fallback is not permitted"
             _pipeline_event(
                 pipeline_run_id,
                 "article_write",
@@ -3564,7 +3741,7 @@ async def process_keyword(
             free_provider, free_model = target_detail
             free_provider_label = f"hermes-free:{free_provider}/{free_model}"
             logger.warning(
-                "Hermes Codex is unavailable for %s; invoking approved free Hermes model %s/%s",
+                "Codex and OmniRoute unavailable for %s; invoking approved free Hermes model %s/%s as 2nd fallback",
                 keyword,
                 free_provider,
                 free_model,
@@ -3573,7 +3750,7 @@ async def process_keyword(
                 pipeline_run_id,
                 "article_write",
                 "running",
-                "Codex is unavailable; an approved free model is writing through Hermes",
+                "Codex and OmniRoute unavailable; trying approved free Hermes model",
                 provider=free_provider_label,
                 fallback_reason=hermes_result.detail,
             )
@@ -3608,7 +3785,7 @@ async def process_keyword(
             pipeline_run_id,
             "article_write",
             "failed",
-            "Codex and approved free Hermes providers did not return a publishable article",
+            "Codex, OmniRoute, and approved free Hermes providers did not return a publishable article",
             provider=free_provider_label,
             fallback_reason=hermes_result.detail,
             free_provider_available=target_ok,

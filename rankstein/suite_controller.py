@@ -94,10 +94,10 @@ SERVICES: list[ServiceSpec] = [
             str(PROJECT_ROOT / "scripts" / "dev" / "start_agentmemory.ps1"),
         ],
         cwd=PROJECT_ROOT,
-        health_url="http://127.0.0.1:3111/agentmemory/health",
+        health_url="http://127.0.0.1:3111/agentmemory/livez",
         depends_on=[],
-        stdout_name="agentmemory.worker.log",
-        stderr_name="agentmemory.worker.err.log",
+        stdout_name="agentmemory.ps1.log",
+        stderr_name="agentmemory.ps1.err.log",
     ),
     ServiceSpec(
         name="hermes_codex",
@@ -290,9 +290,7 @@ def _start_background(spec: ServiceSpec) -> subprocess.Popen:
 
     flags = 0
     if os.name == "nt":
-        flags = (
-            subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        )
+        flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
     return subprocess.Popen(
         spec.cmd, cwd=str(spec.cwd), stdout=out, stderr=err, creationflags=flags, env=os.environ.copy()
