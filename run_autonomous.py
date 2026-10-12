@@ -538,6 +538,7 @@ async def run_supervisor(args):
         if workers is not None and int(workers) > 0:
             os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
             os.environ["PINTEREST_MAX_WORKERS"] = str(max(10, int(workers)))
+            os.environ["PINTEREST_MAX_SESSIONS"] = str(max(10, int(workers)))
         supervisor = AutonomousSupervisor(worker_count=workers)
         await supervisor.run()
     except Exception as e:

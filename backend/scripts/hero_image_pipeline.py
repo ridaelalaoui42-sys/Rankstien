@@ -11,6 +11,7 @@ Fails closed if all providers fail; programmatic placeholders are never returned
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import random
@@ -284,19 +285,58 @@ def _looks_foodish(url: str, candidate_text: str) -> bool:
     return any(token in joined for token in _FOOD_WORDS)
 
 
-def _is_allowed_scrape_domain(url: str) -> bool:
+def _is_allowed_scrape_domain(url: str, allow_researched: bool = False) -> bool:
     parsed = urllib.parse.urlparse(url)
     host = parsed.netloc.lower().replace("www.", "")
     if host in NEVER_SCRAPE_DOMAINS:
         return False
     if host in SCRAPE_DOMAIN_ALLOWLIST:
         return True
-    return False
+    return bool(allow_researched)
 
 
-def scrape_hero_from_news(keyword: str, slug: str) -> dict:
-    """Scrape images from trusted recipe/cooking article sources only."""
+def scrape_hero_from_news(keyword: str, slug: str, candidate_urls: list | None = None) -> dict:
+    """Scrape images from researched article candidates and trusted recipe/cooking sources."""
     try:
+        # 1. First, try any candidate URLs collected during the keyword research phase!
+        if candidate_urls:
+            logger.info(
+                "Layer 1: checking %d candidate URL(s) from research for hero image of '%s'",
+                len(candidate_urls),
+                keyword,
+            )
+            for cand in candidate_urls:
+                if not cand or not isinstance(cand, str):
+                    continue
+                cand = cand.strip()
+                if not cand.startswith("http"):
+                    continue
+
+                lower = cand.lower()
+                is_direct_img = any(
+                    lower.endswith(ext) or (ext + "?" in lower) for ext in [".jpg", ".jpeg", ".png", ".webp"]
+                )
+                if is_direct_img:
+                    try:
+                        res = _download_image(cand, slug)
+                        if res.get("success"):
+                            logger.info(
+                                "Layer 1: hero image downloaded directly from research candidate: %s", cand
+                            )
+                            return res
+                    except Exception as e:
+                        logger.debug("Failed downloading candidate image %s: %s", cand, e)
+
+                # Webpage URL: extract hero image from page
+                try:
+                    res = _extract_image_from_article(cand, slug, keyword=keyword, allow_researched=True)
+                    if res.get("success"):
+                        logger.info("Layer 1: hero image extracted from research article: %s", cand)
+                        return res
+                except Exception as e:
+                    logger.debug("Failed extracting image from research candidate article %s: %s", cand, e)
+
+        # 2. Search recipe news sources for fresh culinary articles
         from rankstein_mcp_server import scrape_news_sources
 
         sources = scrape_news_sources(keyword, language="es", count=8)
@@ -339,18 +379,19 @@ def scrape_hero_from_news(keyword: str, slug: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
-def _extract_image_from_article(article_url: str, slug: str, keyword: str = "") -> dict:
+def _extract_image_from_article(
+    article_url: str,
+    slug: str,
+    keyword: str = "",
+    allow_researched: bool = False,
+) -> dict:
     """Visit an article URL and extract the best trusted food/recipe hero image.
 
     Priority:
-      1. og:image from a trusted food page context
-      2. twitter:image from a trusted food page context
-      3. first large image from <article>/<main> that matches food heuristic
-
-    Operational update 2026-06-05: allowlisted domains are now trusted
-    to carry real food photography even when image URLs themselves are generic
-    CDN paths. Food heuristic is applied only as a tie-breaker alongside page
-    context, not as a hard reject on image URL alone.
+      1. JSON-LD Recipe image schema (highest precision food photography)
+      2. og:image from a trusted food page context
+      3. twitter:image from a trusted food page context
+      4. first large image from <article>/<main> that matches food heuristic
     """
     try:
         resp = _SESSION.get(
@@ -362,18 +403,54 @@ def _extract_image_from_article(article_url: str, slug: str, keyword: str = "") 
 
         soup = BeautifulSoup(resp.text, "lxml")
 
-        domain_ok = _is_allowed_scrape_domain(article_url)
+        domain_ok = _is_allowed_scrape_domain(article_url, allow_researched=allow_researched)
 
         def foodish(text: str) -> bool:
             return _looks_foodish(article_url, text)
 
         def _ok_candidate(img_url: str, page_text: str = "") -> bool:
             lower = img_url.lower().replace("www.", "")
-            if any(token in lower for token in ("pixel", "track", "analytics", "1x1", "spacer")):
+            if any(
+                token in lower
+                for token in ("pixel", "track", "analytics", "1x1", "spacer", "logo", "avatar", "icon")
+            ):
                 return False
             if domain_ok:
                 return True
             return foodish(img_url) or foodish(page_text)
+
+        # Priority 1: JSON-LD Recipe image
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                raw_text = script.string or script.get_text() or ""
+                if not raw_text.strip():
+                    continue
+                data = json.loads(raw_text)
+                candidates = (
+                    data.get("@graph", [data])
+                    if isinstance(data, dict)
+                    else (data if isinstance(data, list) else [])
+                )
+                for item in candidates:
+                    if isinstance(item, dict) and item.get("@type") in ("Recipe", ["Recipe"]):
+                        img = item.get("image")
+                        if isinstance(img, list) and img:
+                            img = img[0]
+                        if isinstance(img, dict):
+                            img = img.get("url")
+                        if isinstance(img, str):
+                            img = img.strip()
+                            if img.startswith("//"):
+                                img = "https:" + img
+                            elif img.startswith("/"):
+                                parsed = urllib.parse.urlparse(article_url)
+                                img = f"{parsed.scheme}://{parsed.netloc}{img}"
+                            if img.startswith(("http://", "https://")) and _ok_candidate(img, resp.text):
+                                result = _download_image(img, slug)
+                                if result.get("success"):
+                                    return result
+            except Exception:
+                continue
 
         og_img = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "og:image"})
         if og_img and og_img.get("content"):
@@ -536,6 +613,7 @@ def get_hero_image(
     slug: str,
     domain_handle: str = "",
     image_prompt: str | None = None,
+    candidate_urls: list | None = None,
 ) -> dict:
     os.makedirs(str(OUTPUT_DIR), exist_ok=True)
 
@@ -549,9 +627,32 @@ def get_hero_image(
             "domain": domain_handle or "",
         }
 
+    # --- Tier 1 (Primary): Scraped recipe/food image from researched articles & culinary sources ---
+    logger.info("Attempting Tier 1 (Scraped) hero for '%s'...", keyword)
+    scraped = scrape_hero_from_news(keyword, slug, candidate_urls=candidate_urls)
+    if scraped.get("success"):
+        result = dict(scraped)
+        result["source"] = "scraped"
+        result.setdefault("provider", "scraped")
+        result["domain"] = domain_handle or ""
+        logger.info(
+            "Scraped hero succeeded for %s: %s (%dx%d)",
+            keyword,
+            result.get("output_path"),
+            result.get("width", 0),
+            result.get("height", 0),
+        )
+        return result
+
+    logger.warning(
+        "Scraped hero failed for %s: %s. Falling back to Tier 2 (Codex native image generation)...",
+        keyword,
+        scraped.get("error"),
+    )
+
+    # --- Tier 2 (Fallback 1): Codex native image generation ---
     from rankstein_mcp_server import create_hero_image_codex
 
-    # --- Tier 1 (Primary): Codex native image generation ---
     codex = create_hero_image_codex(
         prompt=prompt,
         slug=slug,
@@ -564,32 +665,13 @@ def get_hero_image(
         result["source"] = "codex"
         result.setdefault("provider", "codex")
         result["domain"] = domain_handle or ""
+        logger.info("Codex hero generation succeeded for %s: %s", keyword, result.get("output_path"))
         return result
 
     logger.warning(
-        "Codex hero generation failed for %s: %s. Attempting Tier 2 (scraped recipe images)...",
+        "Codex hero generation failed for %s: %s. Falling back to Tier 3 (Pollinations AI)...",
         keyword,
         codex.get("error"),
-    )
-
-    # --- Tier 2 (Fallback 1): Scraped recipe/food image from allowlisted culinary sources ---
-    scraped = scrape_hero_from_news(keyword, slug)
-    if scraped.get("success"):
-        result = dict(scraped)
-        result["source"] = "scraped"
-        result.setdefault("provider", "scraped")
-        result["domain"] = domain_handle or ""
-        logger.info(
-            "Scraped hero fallback succeeded for %s: %s",
-            keyword,
-            result.get("output_path"),
-        )
-        return result
-
-    logger.warning(
-        "Scraped hero fallback failed for %s: %s. Attempting Tier 3 (Pollinations AI)...",
-        keyword,
-        scraped.get("error"),
     )
 
     # --- Tier 3 (Fallback 2): Pollinations AI image generation ---
@@ -598,8 +680,8 @@ def get_hero_image(
         return {
             "success": False,
             "error": (
-                f"All approved hero generation options failed (Codex: {codex.get('error', 'unknown error')}, "
-                f"Scraped: {scraped.get('error', 'unknown error')}; Pollinations disabled by policy)"
+                f"All approved hero generation options failed (Scraped: {scraped.get('error', 'unknown error')}, "
+                f"Codex: {codex.get('error', 'unknown error')}; Pollinations disabled by policy)"
             ),
             "source": "failed",
             "provider": "failed",
@@ -628,8 +710,8 @@ def get_hero_image(
     return {
         "success": False,
         "error": (
-            f"All hero generation options failed (Codex: {codex.get('error', 'unknown error')}, "
-            f"Scraped: {scraped.get('error', 'unknown error')}, "
+            f"All hero generation options failed (Scraped: {scraped.get('error', 'unknown error')}, "
+            f"Codex: {codex.get('error', 'unknown error')}, "
             f"Pollinations: {pollinations.get('error', 'unknown error')})"
         ),
         "source": "failed",

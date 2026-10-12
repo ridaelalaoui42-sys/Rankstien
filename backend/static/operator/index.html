@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="dark light" />
     <title>RankStein | Operator</title>
     <link rel="icon" href="/operator-assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/operator-assets/operator.css?v=2" />
+    <link rel="stylesheet" href="/operator-assets/operator.css?v=3" />
     <script defer src="/operator-assets/lucide.min.js"></script>
-    <script defer src="/operator-assets/operator.js?v=2"></script>
+    <script defer src="/operator-assets/operator.js?v=3"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to workspace</a>
@@ -79,6 +79,23 @@
           Control room<span>/</span><strong id="view-title">Overview</strong>
         </div>
         <div class="topbar-actions">
+          <button
+            class="button primary"
+            id="topbar-btn-launch-campaign"
+            title="Start a new article and pin campaign"
+            style="font-size:12px; padding:6px 12px; gap:6px; white-space:nowrap;"
+          >
+            <i data-lucide="rocket"></i>Start Campaign
+          </button>
+          <button
+            class="button"
+            id="topbar-btn-start-launcher"
+            data-command="launch"
+            title="Start multidomain service launcher"
+            style="font-size:12px; padding:6px 12px; gap:6px; white-space:nowrap;"
+          >
+            <i data-lucide="play-circle"></i>Start Launcher
+          </button>
           <label class="sr-only" for="domain">Domain</label
           ><select id="domain">
             <option value="">All domains</option>
@@ -147,19 +164,28 @@
         <section id="view-overview" class="view">
           <div class="metrics" id="metrics" aria-label="System metrics"></div>
           <div class="command-strip">
-            <span class="section-label">QUICK ACTIONS</span
-            ><button class="button" data-command="audit">
-              <i data-lucide="shield-check"></i>Audit & seed</button
-            ><button class="button" data-command="trends">
-              <i data-lucide="trending-up"></i>Refresh trends</button
-            ><button
+            <span class="section-label">QUICK ACTIONS</span>
+            <button class="button primary" id="overview-btn-launch-campaign">
+              <i data-lucide="rocket"></i>Start Campaign
+            </button>
+            <button class="button" id="overview-btn-start-launcher" data-command="launch">
+              <i data-lucide="play-circle"></i>Start Launcher
+            </button>
+            <button class="button" data-command="audit">
+              <i data-lucide="shield-check"></i>Audit & seed
+            </button>
+            <button class="button" data-command="trends">
+              <i data-lucide="trending-up"></i>Refresh trends
+            </button>
+            <button
               class="button"
               id="supervisor-toggle"
               data-command="supervisor"
               disabled
             >
-              <i data-lucide="play"></i>Start supervisor</button
-            ><button class="button" data-command="normalize-boards">
+              <i data-lucide="play"></i>Start supervisor
+            </button>
+            <button class="button" data-command="normalize-boards">
               <i data-lucide="tags"></i>Normalize boards
             </button>
           </div>
@@ -678,14 +704,15 @@
         </div>
         <p class="muted" style="margin-bottom:12px;">Start an end-to-end multi-step campaign with Hermes Codex, hero generation, Supabase publishing, and paired pin remastering.</p>
         <div class="form-fields">
-          <label for="campaign-domain-select">Domain Target</label>
+          <label for="campaign-domain-select">Domain Target / Blog</label>
           <select id="campaign-domain-select" required>
             <option value="recetadolce">Receta Dolce (recetadolce.com)</option>
             <option value="recetagenial">Receta Genial (recetagenial.com)</option>
+            <option value="all">All Domains Simultaneously</option>
           </select>
           <div style="margin-top:12px;">
-            <label for="campaign-keyword-input">Keyword / Topic</label>
-            <input id="campaign-keyword-input" type="text" placeholder="e.g. tarta de queso al horno" />
+            <label for="campaign-keyword-input">Keyword / Topic (Single or comma-separated list)</label>
+            <input id="campaign-keyword-input" type="text" placeholder="e.g. tarta de queso al horno, arroz negro con sepia" />
           </div>
           <div style="margin-top:8px;">
             <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; font-size:12px;">
@@ -693,26 +720,42 @@
               <span>Auto-pick highest priority Pending keyword from roadmap if empty</span>
             </label>
           </div>
-          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-grid" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
             <div>
-              <label for="campaign-pins-count">Target Pin Count (2-30)</label>
-              <input id="campaign-pins-count" type="number" min="2" max="30" value="30" required />
+              <label for="campaign-articles-count">Articles Count (1-20)</label>
+              <input id="campaign-articles-count" type="number" min="1" max="20" value="1" required />
             </div>
             <div>
-              <label for="campaign-workers-count">Worker Threads (1-4)</label>
+              <label for="campaign-workers-count">Article Workers (1-8)</label>
               <select id="campaign-workers-count">
                 <option value="1">1 Worker</option>
-                <option value="2" selected>2 Workers</option>
-                <option value="3">3 Workers</option>
-                <option value="4">4 Workers</option>
+                <option value="2">2 Workers</option>
+                <option value="3" selected>3 Workers (Default)</option>
+                <option value="4">4 Workers (Fast)</option>
+                <option value="6">6 Workers (High)</option>
+                <option value="8">8 Workers (Turbo)</option>
               </select>
             </div>
+            <div>
+              <label for="campaign-pins-count">Target Pins (2-30)</label>
+              <input id="campaign-pins-count" type="number" min="2" max="30" value="30" required />
+            </div>
+          </div>
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px; background:var(--surface, #1e293b); padding:10px 12px; border-radius:6px; border:1px solid var(--line, #334155);">
+            <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--mint, #00ffa3);">
+              <input type="checkbox" id="campaign-bypass-admission-check" checked />
+              <span>Bypass queue backlog / delivery limits (Force start immediately)</span>
+            </label>
+            <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--cyan, #38bdf8);">
+              <input type="checkbox" id="campaign-parallel-check" checked />
+              <span>Run in parallel with existing jobs (Bypass running workers check)</span>
+            </label>
           </div>
         </div>
         <div class="dialog-footer" style="margin-top:16px;">
           <button class="button" type="button" data-close="launch-campaign-dialog">Cancel</button>
           <button class="button primary" type="submit" id="btn-submit-launch-campaign">
-            <i data-lucide="rocket"></i>Launch Campaign
+            <i data-lucide="rocket"></i>Start Fresh Campaign
           </button>
         </div>
         <p id="launch-campaign-error" class="error" role="alert" hidden></p>

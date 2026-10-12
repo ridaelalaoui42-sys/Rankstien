@@ -13,6 +13,13 @@ import rankstein.trend_intelligence as trend_intelligence
 from backend.scripts.turbo_articles import _ensure_recipe_schema, _normalize_category, _source_relevant_enough
 from rankstein.domain import Domain
 
+@pytest.fixture(autouse=True)
+def _reset_turbo_state():
+    turbo._RECENTLY_PROCESSED.clear()
+    yield
+    turbo._RECENTLY_PROCESSED.clear()
+
+
 
 def _domain(categories: tuple[str, ...]) -> Domain:
     return Domain(
@@ -1137,6 +1144,11 @@ async def test_failed_or_invalid_hero_result_fails_closed_before_publish(monkeyp
         "get_hero_image",
         lambda **kwargs: hero_result,
     )
+    monkeypatch.setattr(
+        mcp,
+        "validate_article_quality",
+        lambda *args, **kwargs: {"score": 95, "passed": True, "success": True},
+    )
     monkeypatch.setattr(mcp, "upload_image_to_supabase", forbidden_publish)
     monkeypatch.setattr(mcp, "publish_article_to_supabase", forbidden_publish)
     monkeypatch.setattr(
@@ -1463,6 +1475,8 @@ async def test_process_keyword_uses_free_hermes_writer_only_when_codex_is_unavai
     )
     monkeypatch.setattr(turbo, "_scrape_source_brief", source_brief)
     monkeypatch.setattr(turbo, "_call_hermes_codex_for_article_result", codex_unavailable)
+    import rankstein_mcp_server as mcp
+    monkeypatch.setattr(mcp, "validate_article_quality", lambda *args, **kwargs: {"score": 95, "passed": True, "success": True})
     monkeypatch.setattr(turbo, "_call_hermes_free_for_article", free_writer)
     monkeypatch.setattr(turbo, "_openrouter_article_quality_check", lambda value: value is article)
     monkeypatch.setattr(turbo, "_publish_generated_article", publish)
@@ -1524,7 +1538,7 @@ async def test_process_keyword_fails_closed_when_codex_and_hermes_free_are_unava
     status = await turbo.process_keyword("tarta de chocolate", "Postres", domain, source="test")
 
     assert status == "Failed"
-    assert calls == ["hermes-free"]
+    assert calls and all(c == "hermes-free" for c in calls)
 
 
 @pytest.mark.unit

@@ -173,7 +173,7 @@ class TestPollinationsFallback:
 
 @pytest.mark.unit
 class TestUnifiedHeroProviderRouting:
-    def test_codex_success_short_circuits_scraped_and_pollinations(
+    def test_scraped_success_short_circuits_codex_and_pollinations(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -200,10 +200,10 @@ class TestUnifiedHeroProviderRouting:
         result = rms.create_hero_image("finished paella", "paella")
 
         assert result["success"] is True
-        assert result["provider"] == "codex"
-        assert calls == ["codex"]
+        assert result["provider"] == "scraped"
+        assert calls == ["scraped"]
 
-    def test_codex_failure_falls_back_to_scraped_before_pollinations(
+    def test_scraped_failure_falls_back_to_codex_before_pollinations(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -211,11 +211,11 @@ class TestUnifiedHeroProviderRouting:
 
         def codex(**kwargs):
             calls.append("codex")
-            return {"success": False, "provider": "codex", "error": "quota exhausted"}
+            return {"success": True, "provider": "codex", "output_path": "hero.jpg"}
 
         def scrape(*args, **kwargs):
             calls.append("scraped")
-            return {"success": True, "provider": "scraped", "output_path": "scraped.jpg"}
+            return {"success": False, "provider": "scraped", "error": "no images found"}
 
         def pollinations(**kwargs):
             calls.append("pollinations")
@@ -230,11 +230,11 @@ class TestUnifiedHeroProviderRouting:
         result = rms.create_hero_image("finished paella", "paella")
 
         assert result["success"] is True
-        assert result["provider"] == "scraped"
-        assert result["source"] == "scraped"
-        assert calls == ["codex", "scraped"]
+        assert result["provider"] == "codex"
+        assert result["source"] == "codex"
+        assert calls == ["scraped", "codex"]
 
-    def test_codex_and_scraped_failure_falls_back_to_pollinations(
+    def test_scraped_and_codex_failure_falls_back_to_pollinations(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -262,7 +262,7 @@ class TestUnifiedHeroProviderRouting:
 
         assert result["success"] is True
         assert result["provider"] == "pollinations"
-        assert calls == ["codex", "scraped", "pollinations"]
+        assert calls == ["scraped", "codex", "pollinations"]
 
     def test_all_providers_failure_fails_closed(
         self,
@@ -293,7 +293,7 @@ class TestUnifiedHeroProviderRouting:
         assert result["success"] is False
         assert result["provider"] == "failed"
         assert "quota exhausted" in result["error"]
-        assert calls == ["codex", "scraped", "pollinations"]
+        assert calls == ["scraped", "codex", "pollinations"]
 
 
 @pytest.mark.unit

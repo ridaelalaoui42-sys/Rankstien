@@ -679,7 +679,7 @@ def process_pinterest_backlog(force_all: bool = False) -> dict:
 
 
 @mcp.tool()
-def start_automation_supervisor(dry_run: bool = False) -> dict:
+def start_automation_supervisor(dry_run: bool = False, workers: int | None = None) -> dict:
     """
     Start the Pinterest automation supervisor in the background.
 
@@ -688,6 +688,7 @@ def start_automation_supervisor(dry_run: bool = False) -> dict:
 
     Call this after process_pinterest_backlog to begin pin uploads.
     dry_run: if True, returns the command that would be run without launching it.
+    workers: optional worker count (e.g. 10). If omitted, uses default.
 
     Returns: {launched: bool, pid: int | None, command: str}
     """
@@ -698,6 +699,8 @@ def start_automation_supervisor(dry_run: bool = False) -> dict:
 
     PROJECT_ROOT = Path(__file__).resolve().parent
     cmd = [sys.executable, str(PROJECT_ROOT / "run_autonomous.py"), "run"]
+    if workers is not None and int(workers) > 0:
+        cmd.extend(["--workers", str(int(workers))])
     cmd_str = " ".join(cmd)
 
     if dry_run:
@@ -1919,20 +1922,45 @@ def create_hero_image(
     height: int = 1280,
     model: str = "flux",
     keyword: str = "",
+    candidate_urls: list | None = None,
 ) -> dict:
     """
     Unified production hero generator.
 
     Fallback hierarchy:
-      1. Primary (Tier 1): Codex native image generation (OpenAI gpt-image-2 via Hermes OAuth)
-      2. Fallback (Tier 2): Scraped recipe/food images from allowlisted culinary sources
+      1. Primary (Tier 1): Scraped recipe/food images from researched articles & allowlisted culinary sources
+      2. Fallback (Tier 2): Codex native image generation (OpenAI gpt-image-2 via Hermes OAuth)
       3. Fallback (Tier 3): Pollinations AI image generation (flux model)
 
     Fails closed if all providers fail; programmatic placeholders are never published.
 
     Returns: {success, output_path, format, size_bytes, width, height, provider, source}
     """
-    logger.info("create_hero_image: requesting Tier 1 (Codex) hero for '%s'", slug)
+    search_kw = (keyword or slug.replace("-", " ")).strip()
+
+    # --- Tier 1 (Primary): Scraped recipe/food image from researched articles & allowlisted sources ---
+    scraped_result: dict = {"success": False, "error": "not_attempted"}
+    try:
+        from backend.scripts.hero_image_pipeline import scrape_hero_from_news
+
+        scraped_result = scrape_hero_from_news(search_kw, slug, candidate_urls=candidate_urls)
+        if scraped_result.get("success"):
+            scraped_result["provider"] = "scraped"
+            scraped_result["source"] = "scraped"
+            logger.info("create_hero_image: Scraped hero succeeded for '%s'", slug)
+            return scraped_result
+    except Exception as exc:
+        logger.warning("create_hero_image: Scraped primary raised for '%s': %s", slug, exc)
+        scraped_result = {"success": False, "error": str(exc)}
+
+    logger.warning(
+        "create_hero_image: Scraped failed for '%s' (%s). Falling back to Tier 2 (Codex)...",
+        slug,
+        scraped_result.get("error"),
+    )
+
+    # --- Tier 2 (Fallback 1): Codex native image generation ---
+    logger.info("create_hero_image: requesting Tier 2 (Codex) hero for '%s'", slug)
     codex_result = create_hero_image_codex(
         prompt=prompt,
         slug=slug,
@@ -1947,47 +1975,25 @@ def create_hero_image(
         return codex_result
 
     logger.warning(
-        "create_hero_image: Codex failed for '%s' (%s). Falling back to Tier 2 (Scraped)...",
+        "create_hero_image: Codex failed for '%s' (%s). Falling back to Tier 3 (Pollinations)...",
         slug,
         codex_result.get("error"),
     )
 
-    # --- Tier 2: Scraped recipe/food image from allowlisted culinary sources ---
-    scraped_result: dict = {"success": False, "error": "not_attempted"}
-    try:
-        from backend.scripts.hero_image_pipeline import scrape_hero_from_news
-
-        search_kw = (keyword or slug.replace("-", " ")).strip()
-        scraped_result = scrape_hero_from_news(search_kw, slug)
-        if scraped_result.get("success"):
-            scraped_result["provider"] = "scraped"
-            scraped_result["source"] = "scraped"
-            logger.info("create_hero_image: Scraped fallback succeeded for '%s'", slug)
-            return scraped_result
-    except Exception as exc:
-        logger.warning("create_hero_image: Scraped fallback raised for '%s': %s", slug, exc)
-        scraped_result = {"success": False, "error": str(exc)}
-
-    logger.warning(
-        "create_hero_image: Scraped failed for '%s' (%s). Falling back to Tier 3 (Pollinations)...",
-        slug,
-        scraped_result.get("error"),
-    )
-
-    # --- Tier 3: Pollinations AI image generation ---
+    # --- Tier 3 (Fallback 2): Pollinations AI image generation ---
     if os.environ.get("RANKSTEIN_DISABLE_POLLINATIONS", "").lower() in ("1", "true"):
         logger.warning("create_hero_image: Pollinations hero generation is disabled per policy.")
         return {
             "success": False,
             "error": (
-                f"All approved hero generation options failed (Codex: {codex_result.get('error', 'unknown')}, "
-                f"Scraped: {scraped_result.get('error', 'unknown')}; Pollinations disabled by policy)"
+                f"All approved hero generation options failed (Scraped: {scraped_result.get('error', 'unknown')}, "
+                f"Codex: {codex_result.get('error', 'unknown')}; Pollinations disabled by policy)"
             ),
             "provider": "failed",
             "source": "failed",
             "provider_errors": {
-                "codex": codex_result.get("error", "unknown"),
                 "scraped": scraped_result.get("error", "unknown"),
+                "codex": codex_result.get("error", "unknown"),
                 "pollinations": "disabled_by_policy",
             },
         }
@@ -2015,15 +2021,15 @@ def create_hero_image(
     return {
         "success": False,
         "error": (
-            f"All hero generation options failed (Codex: {codex_result.get('error', 'unknown')}, "
-            f"Scraped: {scraped_result.get('error', 'unknown')}, "
+            f"All hero generation options failed (Scraped: {scraped_result.get('error', 'unknown')}, "
+            f"Codex: {codex_result.get('error', 'unknown')}, "
             f"Pollinations: {pollinations_result.get('error', 'unknown')})"
         ),
         "provider": "failed",
         "source": "failed",
         "provider_errors": {
-            "codex": codex_result.get("error", "unknown"),
             "scraped": scraped_result.get("error", "unknown"),
+            "codex": codex_result.get("error", "unknown"),
             "pollinations": pollinations_result.get("error", "unknown"),
         },
     }
@@ -3811,6 +3817,56 @@ def publish_article_to_supabase(
         v2_ingredients = r_schema.get("recipeIngredient", [])
         v2_faq = _parse_schema(faq_schema, [])
 
+        # Ensure high-CTR, SEO-compliant meta description (never empty or truncated)
+        clean_meta_desc = (meta_description or "").strip()
+        if not clean_meta_desc or len(clean_meta_desc) < 70:
+            clean_meta_desc = (excerpt or "").strip()
+        if not clean_meta_desc or len(clean_meta_desc) < 70:
+            clean_meta_desc = f"Aprende cómo preparar {title} paso a paso con esta receta fácil y deliciosa. Ingredientes, trucos del chef y tiempos exactos."
+        clean_meta_desc = clean_meta_desc[:155]
+        if len(clean_meta_desc) < 100:
+            clean_meta_desc = (
+                f"{clean_meta_desc} ¡Descubre la receta completa paso a paso con trucos del chef!"[:155]
+            )
+
+        # Ensure compliant meta & SEO title (35-60 chars)
+        clean_meta_title = (meta_title or title or f"Receta de {slug}").strip()
+        if len(clean_meta_title) > 60:
+            clean_meta_title = clean_meta_title[:57].rsplit(" ", 1)[0] + "..."
+        if len(clean_meta_title) < 30:
+            clean_meta_title = f"{clean_meta_title} | {domain.display_name}"[:60]
+
+        # Ensure descriptive alt text for image SEO & accessibility
+        clean_image_alt = (
+            image_alt or ""
+        ).strip() or f"Receta de {title} - plato terminado casero y listo para servir"
+
+        # Ensure chef tip for E-E-A-T recipe cards
+        clean_chef_tip = (
+            (chef_tip or "").strip()
+            or f"El truco del chef para {title}: respeta los tiempos de cocción y reposo para lograr una textura y sabor excepcionales."
+        )
+
+        # Ensure FAQ rich snippet data is never empty
+        if not v2_faq or len(v2_faq) < 3:
+            v2_faq = [
+                {
+                    "question": f"¿Cómo conservar {title} para mantener su frescura?",
+                    "answer": f"Conserva {title} en un recipiente hermético en el frigorífico durante 3 a 4 días. Témplalo ligeramente antes de servir.",
+                },
+                {
+                    "question": f"¿Se puede congelar {title}?",
+                    "answer": f"Sí, puedes congelar {title} en porciones individuales envueltas en film apto para congelación hasta por 3 meses.",
+                },
+                {
+                    "question": f"¿Cuál es el secreto clave para que {title} quede perfecto?",
+                    "answer": "El secreto está en respetar las proporciones exactas de los ingredientes y controlar la temperatura de cocción para evitar que se reseque.",
+                },
+            ]
+
+        r_schema.setdefault("name", title)
+        r_schema.setdefault("description", clean_meta_desc)
+
         payload = {
             # Core
             "title": title,
@@ -3820,15 +3876,15 @@ def publish_article_to_supabase(
             # Images (Dual)
             "hero_image": featured_image_url,
             "featured_image": featured_image_url,
-            "image_alt": image_alt or title,
+            "image_alt": clean_image_alt,
             # Category (Dual)
             "category_id": category_assignment.category_id,
             "category": category,
             # SEO (Dual)
-            "seo_title": meta_title or title[:60],
-            "meta_title": meta_title or title[:60],
-            "seo_description": meta_description[:155],
-            "meta_description": meta_description[:155],
+            "seo_title": clean_meta_title,
+            "meta_title": clean_meta_title,
+            "seo_description": clean_meta_desc,
+            "meta_description": clean_meta_desc,
             "keywords": kw_list,
             # Time & Difficulty
             "cooking_time": f"PT{cook_time}M",
@@ -3842,7 +3898,7 @@ def publish_article_to_supabase(
             "faq": v2_faq,
             "recipe_schema": r_schema,
             "faq_schema": v2_faq,
-            "chef_tip": chef_tip,
+            "chef_tip": clean_chef_tip,
             # Status & Metadata
             "is_published": True,
             "status": "published",
@@ -5003,9 +5059,82 @@ def build_supabase_content(
         article["recipe_schema"] = schema
         article["featured_image"] = hero_image_url
 
-        # 4. Set defaults for missing fields
+        # 4. Set defaults for missing fields & guarantee ALL SEO components
+        title = (article.get("title") or keyword[:1].upper() + keyword[1:]).strip()
+        article["title"] = title
         article.setdefault("slug", slug)
-        article.setdefault("excerpt", f"Aprende a preparar {keyword} paso a paso.")
+        article.setdefault(
+            "excerpt", f"Aprende cómo preparar {title} paso a paso con ingredientes exactos y trucos."
+        )
+
+        # Meta & SEO description (strictly 120-155 characters)
+        clean_desc = (
+            (article.get("meta_description") or "").strip()
+            or (article.get("seo_description") or "").strip()
+            or (article.get("excerpt") or "").strip()
+            or f"Aprende cómo preparar {title} paso a paso con esta receta fácil y deliciosa. Ingredientes, trucos del chef y tiempos exactos."
+        )[:155]
+        if len(clean_desc) < 100:
+            clean_desc = f"{clean_desc} ¡Descubre la receta completa paso a paso con trucos del chef!"[:155]
+        article["meta_description"] = clean_desc
+        article["seo_description"] = clean_desc
+
+        # Meta & SEO title (strictly 35-60 characters)
+        clean_meta_t = (
+            article.get("meta_title") or article.get("seo_title") or f"{title} | Receta Fácil y Deliciosa"
+        ).strip()
+        if len(clean_meta_t) > 60:
+            clean_meta_t = clean_meta_t[:57].rsplit(" ", 1)[0] + "..."
+        article["meta_title"] = clean_meta_t
+        article["seo_title"] = clean_meta_t
+
+        # Image Alt Text for Image SEO & Accessibility
+        clean_alt = (
+            article.get("image_alt") or ""
+        ).strip() or f"Receta de {title} - plato terminado casero y listo para servir"
+        article["image_alt"] = clean_alt
+
+        # Chef Tip for E-E-A-T
+        clean_tip = (
+            (article.get("chef_tip") or "").strip()
+            or f"El truco del chef para {title}: respeta los tiempos de reposo y utiliza ingredientes a temperatura ambiente para potenciar sabor y textura."
+        )
+        article["chef_tip"] = clean_tip
+
+        # Focus Keywords
+        kws = article.get("keywords") or []
+        if isinstance(kws, str):
+            kws = [k.strip() for k in kws.split(",") if k.strip()]
+        if not kws:
+            kws = [keyword, f"receta de {keyword}", f"como hacer {keyword}", "cocina casera"]
+        article["keywords"] = kws
+
+        # FAQ Schema (Minimum 3 items for Google rich snippets)
+        faqs = article.get("faq_schema") or article.get("faq") or []
+        if isinstance(faqs, str):
+            try:
+                faqs = json.loads(faqs)
+            except Exception:
+                faqs = []
+        if not isinstance(faqs, list) or len(faqs) < 3:
+            default_faqs = [
+                {
+                    "question": f"¿Cómo conservar {title} para mantener su frescura?",
+                    "answer": f"Conserva {title} en un recipiente hermético en el frigorífico durante 3 a 4 días. Témplalo ligeramente antes de servir.",
+                },
+                {
+                    "question": f"¿Se puede congelar {title}?",
+                    "answer": f"Sí, puedes congelar {title} en porciones individuales envueltas en film apto para congelación hasta por 3 meses.",
+                },
+                {
+                    "question": f"¿Cuál es el secreto clave para que {title} quede perfecto?",
+                    "answer": "El secreto está en respetar las proporciones exactas de los ingredientes y controlar la temperatura de cocción para evitar que se reseque.",
+                },
+            ]
+            faqs = default_faqs
+        article["faq_schema"] = faqs
+        article["faq"] = faqs
+
         article.setdefault("difficulty", "Media")
         article.setdefault("prep_time", 15)
         article.setdefault("cook_time", 30)

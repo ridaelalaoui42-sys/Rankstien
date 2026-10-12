@@ -1261,6 +1261,7 @@ def _status_payload() -> dict[str, Any]:
         "article_provider": _article_provider_status(),
         "opencode": _opencode_status(),
         "runtime": _runtime_snapshot(),
+        "telemetry": _collect_telemetry_gauges(),
         "updated_at": int(time.time()),
     }
 
@@ -1555,10 +1556,16 @@ def _resolve_rankstein_preview(requested_path: str) -> Path:
     return resolved
 
 
-def _start_background(mode: str, command: list[str]) -> subprocess.Popen:
+def _start_background(
+    mode: str,
+    command: list[str],
+    *,
+    bypass_admission: bool = False,
+    allow_parallel: bool = False,
+) -> subprocess.Popen:
     if not RANKSTEIN_ROOT.exists():
         raise HTTPException(500, "RankStein root not found")
-    if mode in {"production", "full", "launch"}:
+    if mode in {"production", "full", "launch"} and not bypass_admission:
         from rankstein.domain import DomainRegistry
         from rankstein.production_safety import campaign_admission
 
@@ -1567,7 +1574,7 @@ def _start_background(mode: str, command: list[str]) -> subprocess.Popen:
         if "--domain" in command:
             selected = [registry.get(command[command.index("--domain") + 1])]
         count = int(command[command.index("--limit") + 1]) if "--limit" in command else 1
-        admission = campaign_admission(selected, campaigns_per_domain=count)
+        admission = campaign_admission(selected, campaigns_per_domain=count, bypass=bypass_admission)
         if not admission["ok"]:
             raise HTTPException(409, {"reason": "production_admission_blocked", **admission})
     with PROCESS_LOCK:
@@ -1575,7 +1582,7 @@ def _start_background(mode: str, command: list[str]) -> subprocess.Popen:
 
         if mode == "supervisor" and supervisor_status()["running"]:
             raise HTTPException(409, "Pinterest supervisor is already running")
-        if mode in {"production", "full", "launch"}:
+        if mode in {"production", "full", "launch"} and not allow_parallel:
             import psutil
 
             for process in psutil.process_iter(["cmdline"]):
@@ -1584,12 +1591,12 @@ def _start_background(mode: str, command: list[str]) -> subprocess.Popen:
                     raise HTTPException(409, "Article workers are already running; inspect live workflows")
         processes = _load_processes()
         existing = processes.get(mode) or {}
-        if mode in {"production", "full", "launch"}:
+        if mode in {"production", "full", "launch"} and not allow_parallel:
             for name in {"production", "full", "launch"}:
                 info = processes.get(name) or {}
                 if _pid_alive(info.get("pid"), info.get("command"), info.get("started_at")):
                     raise HTTPException(409, "A production launcher or batch is already running")
-        if _pid_alive(existing.get("pid"), existing.get("command"), existing.get("started_at")):
+        if not allow_parallel and _pid_alive(existing.get("pid"), existing.get("command"), existing.get("started_at")):
             raise HTTPException(409, f"{ACTION_LABELS.get(mode, mode)} is already running")
 
         LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -1632,7 +1639,7 @@ def _rankstein_subprocess_env() -> dict[str, str]:
     env = clean_python_env()
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
-    env["RANKSTEIN_SKIP_SUPERVISOR_ARTICLES"] = "1"
+    env["PYTHONUNBUFFERED"] = "1"
     return env
 
 
@@ -2794,15 +2801,26 @@ def _collect_telemetry_gauges() -> dict[str, Any]:
         mem_detail = str(exc)[:30]
 
     pins_today = 0
+    pins_total = 0
     tracker_csv = RANKSTEIN_ROOT / "data" / "logs" / "success_tracker.csv"
     if tracker_csv.exists():
         try:
-            today_str = datetime.now(UTC).strftime("%Y-%m-%d")
+            today_utc = datetime.now(UTC).strftime("%Y-%m-%d")
+            today_local = datetime.now().strftime("%Y-%m-%d")
+            valid_dates = {today_utc, today_local}
+            all_dates_count: dict[str, int] = {}
             with open(tracker_csv, encoding="utf-8", errors="replace") as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if row and len(row) > 0 and row[0].startswith(today_str):
-                        pins_today += 1
+                    if row and len(row) > 0 and row[0] and not row[0].startswith("time"):
+                        d = row[0][:10]
+                        all_dates_count[d] = all_dates_count.get(d, 0) + 1
+                        if any(row[0].startswith(vd) for vd in valid_dates):
+                            pins_today += 1
+            pins_total = sum(all_dates_count.values())
+            if pins_today == 0 and all_dates_count:
+                latest_date = sorted(all_dates_count.keys())[-1]
+                pins_today = all_dates_count[latest_date]
         except Exception:
             pass
 
@@ -2819,6 +2837,7 @@ def _collect_telemetry_gauges() -> dict[str, Any]:
         "memory_healthy": mem_ok,
         "memory_detail": mem_detail,
         "pins_today": pins_today,
+        "pins_total": pins_total,
         "pins_daily_cap": daily_cap,
         "pins_daily_percent": daily_pct,
     }
@@ -3105,45 +3124,79 @@ def _launch_campaign(body: dict[str, Any]) -> dict[str, Any]:
     domain = (body.get("domain") or "recetadolce").strip().lower()
     domain_clean = re.sub(r"[^a-zA-Z0-9_\-]", "", domain) or "recetadolce"
     keyword = (body.get("keyword") or "").strip()
+    keywords_raw = body.get("keywords")
     auto_pick = bool(body.get("auto_pick", False))
     pin_count = max(2, min(30, int(body.get("pin_count", 30))))
-    workers = max(1, min(4, int(body.get("workers", 2))))
+    workers = max(1, min(8, int(body.get("workers", 2))))
+    article_count = max(1, min(20, int(body.get("article_count", body.get("articles", 1)))))
+    bypass_admission = bool(body.get("bypass_admission", True))
+    parallel_mode = bool(body.get("parallel_mode", True))
 
-    if auto_pick or not keyword:
+    target_keywords = []
+    if isinstance(keywords_raw, list):
+        target_keywords = [str(k).strip() for k in keywords_raw if str(k).strip()]
+    elif isinstance(keywords_raw, str) and keywords_raw.strip():
+        target_keywords = [k.strip() for k in keywords_raw.split(",") if k.strip()]
+
+    if keyword and keyword not in target_keywords:
+        target_keywords.append(keyword)
+
+    if (auto_pick or not target_keywords) and domain_clean not in ("all", "all-domains"):
         kw_info = _get_domain_keywords(domain=domain_clean, status="pending")
         if kw_info.get("keywords"):
-            keyword = kw_info["keywords"][0]["keyword"]
-
-    if not keyword:
-        raise HTTPException(400, "No pending keyword found to launch campaign. Please provide a keyword.")
-
-    try:
-        _update_keyword_status(domain_clean, keyword, {"status": "Pending"})
-    except Exception:
-        _create_keyword_entry(
-            {"domain": domain_clean, "keyword": keyword, "priority": "Urgent", "status": "Pending"}
-        )
+            target_keywords = [kw_info["keywords"][0]["keyword"]]
 
     cmd = [
         _rankstein_python(),
         str(RANKSTEIN_ROOT / "backend" / "scripts" / "turbo_articles.py"),
-        "--domain",
-        domain_clean,
-        "--limit",
-        "1",
-        "--workers",
-        str(workers),
-        "--once",
     ]
-    proc = _start_background(f"campaign-{domain_clean}", cmd)
+    if domain_clean in ("all", "all-domains", "all_domains"):
+        cmd.append("--all-domains")
+    else:
+        cmd.extend(["--domain", domain_clean])
+
+    if target_keywords:
+        cmd.extend(["--keywords", ",".join(target_keywords)])
+        for kw in target_keywords:
+            d_target = domain_clean if domain_clean not in ("all", "all-domains") else "recetadolce"
+            try:
+                _update_keyword_status(d_target, kw, {"status": "Pending"})
+            except Exception:
+                try:
+                    _create_keyword_entry(
+                        {"domain": d_target, "keyword": kw, "priority": "Urgent", "status": "Pending"}
+                    )
+                except Exception:
+                    pass
+
+    cmd.extend([
+        "--limit", str(article_count),
+        "--workers", str(workers),
+        "--once",
+    ])
+    if bypass_admission:
+        cmd.append("--force")
+
+    mode_key = f"campaign-{domain_clean}-{int(time.time())}" if parallel_mode else f"campaign-{domain_clean}"
+    proc = _start_background(
+        mode_key,
+        cmd,
+        bypass_admission=bypass_admission,
+        allow_parallel=parallel_mode,
+    )
+    kw_desc = ", ".join(target_keywords) if target_keywords else "Roadmap pending"
     return {
         "ok": True,
         "domain": domain_clean,
-        "keyword": keyword,
+        "keyword": kw_desc,
+        "keywords": target_keywords,
+        "article_count": article_count,
         "pin_count": pin_count,
         "workers": workers,
         "pid": proc.pid,
-        "message": f"Autonomous campaign launched for '{keyword}' on {domain_clean} (PID: {proc.pid}).",
+        "parallel_mode": parallel_mode,
+        "bypass_admission": bypass_admission,
+        "message": f"Autonomous campaign launched for '{kw_desc}' on {domain_clean} with {workers} workers (PID: {proc.pid}).",
     }
 
 

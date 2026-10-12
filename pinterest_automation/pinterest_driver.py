@@ -434,10 +434,43 @@ class PinterestDriver:
             return False
 
     async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 50) -> int:
-        """Purge drafts when Pinterest creator is blocked by drafts or reaches limit.
+        """Purge drafts ONLY when Pinterest creator is blocked by drafts or reaches limit.
 
-        Uses select-all bulk deletion first, falling back to individual draft cleanup.
+        Returns 0 immediately during normal uploads when no draft limit is present.
         """
+        try:
+            body_text = await page.locator("body").inner_text(timeout=1500)
+        except Exception:
+            body_text = ""
+
+        draft_count_match = re.search(r"(?:Pin drafts|Drafts|Borradores)\s*\((\d+)\)", body_text, re.I)
+        draft_count = int(draft_count_match.group(1)) if draft_count_match else None
+
+        # Check if editor is disabled or draft limit warning is shown
+        is_editor_disabled = False
+        try:
+            disabled_el = page.locator(
+                '[data-test-id="creation-form"][aria-disabled="true"], [disabled][data-test-id*="upload"]'
+            ).first
+            is_editor_disabled = await disabled_el.count() > 0 and await disabled_el.is_visible(timeout=300)
+        except Exception:
+            pass
+
+        at_draft_limit = (
+            (draft_count is not None and draft_count >= 50)
+            or "50 drafts" in body_text
+            or ("limit" in body_text.lower() and "draft" in body_text.lower())
+            or ("límite" in body_text.lower() and "borrador" in body_text.lower())
+            or is_editor_disabled
+        )
+        if not at_draft_limit:
+            return 0
+
+        self.warning(
+            f"Pinterest creator draft limit/block detected (count={draft_count}, disabled={is_editor_disabled}); "
+            "purging drafts to unlock upload."
+        )
+
         try:
             from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
 
@@ -449,23 +482,6 @@ class PinterestDriver:
             self.warning(
                 f"Bulk draft purge engine encountered error: {purge_err}; attempting direct DOM purge."
             )
-
-        try:
-            body_text = await page.locator("body").inner_text(timeout=3000)
-        except Exception:
-            body_text = ""
-
-        draft_count_match = re.search(r"(?:Pin drafts|Drafts|Borradores)\s*\((\d+)\)", body_text, re.I)
-        draft_count = int(draft_count_match.group(1)) if draft_count_match else None
-        at_draft_limit = (
-            (draft_count is not None and draft_count > 0)
-            or "50 drafts" in body_text
-            or ("limit" in body_text.lower() and "draft" in body_text.lower())
-        )
-        if not at_draft_limit:
-            return 0
-
-        self.warning("Pinterest creator has pending drafts; purging drafts to unlock upload.")
 
         # Try bulk select first
         try:

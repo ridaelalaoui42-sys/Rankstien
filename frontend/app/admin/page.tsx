@@ -118,13 +118,14 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Quick links */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
-          {[
-            { label: 'Configuración Global', href: '/admin/settings', desc: 'Personaliza tu sitio y analytics' },
-            { label: 'Auditoría SEO', href: '/admin/seo-audit', desc: 'Encuentra y arregla problemas SEO' },
-            { label: 'Newsletter', href: '/admin/newsletter', desc: 'Gestiona tu lista de suscriptores' },
-            { label: 'Nueva Receta', href: '/admin/new', desc: 'Crea contenido optimizado con IA' },
-          ].map((link) => (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-12">
+                  {[
+                    { label: 'Operador RankStein', href: '/operator', desc: 'Gestiona campañas y Pinterest' },
+                    { label: 'Configuración Global', href: '/admin/settings', desc: 'Personaliza tu sitio y analytics' },
+                    { label: 'Auditoría SEO', href: '/admin/seo-audit', desc: 'Encuentra y arregla problemas SEO' },
+                    { label: 'Newsletter', href: '/admin/newsletter', desc: 'Gestiona tu lista de suscriptores' },
+                    { label: 'Nueva Receta', href: '/admin/new', desc: 'Crea contenido optimizado con IA' },
+                  ].map((link) => (
             <Link
               key={link.label}
               href={link.href}

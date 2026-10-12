@@ -969,33 +969,116 @@ async def select_board(page, board_name, worker_id):
 
         # 4. Fallback: Automatically create the missing board if not found in account
         logger.info(f"[{worker_id}] Board '{board_name}' not found in account; attempting automatic board creation...")
-        flyout = page.locator('[data-test-id="board-picker-flyout"]').first
-        create_btn = page.locator(
-            '[data-test-id="create-board-button"], button:has-text("Create board"), button:has-text("Crear tablero")'
-        ).first
-        if await create_btn.count() > 0 and await create_btn.is_visible():
-            await create_btn.scroll_into_view_if_needed()
-            await create_btn.click(force=True)
-            await asyncio.sleep(1.5)
+        create_selectors = [
+            '[data-test-id="create-board-button"]',
+            '[data-test-id*="create-board"]',
+            '[data-test-id="board-picker-create-board-button"]',
+            'button:has-text("Create board")',
+            'button:has-text("Crear tablero")',
+            'div[role="button"]:has-text("Create board")',
+            'div[role="button"]:has-text("Crear tablero")',
+            '[role="listitem"]:has-text("Create board")',
+            '[role="listitem"]:has-text("Crear tablero")',
+        ]
 
-            dialog = page.locator('[role="dialog"]:has(#boardEditName), [role="dialog"][aria-label*="Board" i]').first
-            if await dialog.count() > 0 and await dialog.is_visible():
-                name_input = dialog.locator('#boardEditName, input[name="name"]').first
-                if await name_input.count() > 0:
-                    await name_input.fill(board_name)
+        create_btn = None
+        for csel in create_selectors:
+            loc = page.locator(csel).first
+            if await loc.count() > 0:
+                create_btn = loc
+                break
+
+        # If not found with active search query, clear the search box to reveal bottom create button
+        if not create_btn and search:
+            try:
+                await search.fill("")
+                await asyncio.sleep(1)
+                # Scroll flyout container to bottom
+                flyout_scroll = page.locator('[data-test-id="board-picker-flyout"], [role="listbox"]').first
+                if await flyout_scroll.count() > 0:
+                    await flyout_scroll.evaluate("el => el.scrollTop = el.scrollHeight")
                     await asyncio.sleep(0.5)
+                for csel in create_selectors:
+                    loc = page.locator(csel).first
+                    if await loc.count() > 0:
+                        create_btn = loc
+                        break
+            except Exception as e:
+                logger.debug(f"[{worker_id}] Search clear/scroll fallback: {e}")
 
-                submit_btn = dialog.locator(
-                    '[data-test-id="board-form-submit-button"], button:has-text("Create"), button:has-text("Crear")'
-                ).first
-                if await submit_btn.count() > 0:
-                    await submit_btn.click(force=True)
-                    await asyncio.sleep(3)
+        if create_btn and await create_btn.count() > 0:
+            try:
+                await create_btn.scroll_into_view_if_needed()
+            except Exception:
+                pass
+            await create_btn.click(force=True)
+            await asyncio.sleep(2)
+
+            dialog_selectors = [
+                '[role="dialog"]:has(#boardEditName)',
+                '[role="dialog"][aria-label*="Board" i]',
+                '[role="dialog"][aria-label*="Tablero" i]',
+                '[role="dialog"]',
+            ]
+            dialog = None
+            for dsel in dialog_selectors:
+                dloc = page.locator(dsel).first
+                if await dloc.count() > 0 and await dloc.is_visible():
+                    dialog = dloc
+                    break
+
+            if dialog:
+                name_selectors = ['#boardEditName', 'input[name="name"]', 'input[placeholder*="Name" i]', 'input[placeholder*="Nombre" i]']
+                for nsel in name_selectors:
+                    nloc = dialog.locator(nsel).first
+                    if await nloc.count() > 0:
+                        await nloc.fill(board_name)
+                        await asyncio.sleep(0.5)
+                        break
+
+                submit_selectors = [
+                    '[data-test-id="board-form-submit-button"]',
+                    'button[type="submit"]',
+                    'button:has-text("Create")',
+                    'button:has-text("Crear")',
+                ]
+                for ssel in submit_selectors:
+                    sloc = dialog.locator(ssel).first
+                    if await sloc.count() > 0 and await sloc.is_visible():
+                        await sloc.click(force=True)
+                        await asyncio.sleep(3)
+                        break
+
+                selected_text = normalize_seo(await board_btn.inner_text())
+                if target and target in selected_text:
                     logger.info(f"[{worker_id}] Successfully created and selected missing board: {board_name}")
                     circuit.record_success(f"board_selection:{worker_id}")
                     return True
 
-        logger.warning(f"[{worker_id}] Board selection failed: no options found and could not create board")
+                # If board created but not auto-selected, re-open dropdown and click it
+                logger.info(f"[{worker_id}] Board created; re-verifying selection for '{board_name}'...")
+                await board_btn.click(force=True)
+                await asyncio.sleep(1.5)
+                re_rows = page.locator('[data-test-id="boardWithoutSection"][role="listitem"], [role="option"]')
+                for ri in range(await re_rows.count()):
+                    rrow = re_rows.nth(ri)
+                    if normalize_seo(await rrow.inner_text()) == target:
+                        await rrow.click(force=True)
+                        await asyncio.sleep(1)
+                        if target in normalize_seo(await board_btn.inner_text()):
+                            logger.info(f"[{worker_id}] Selected created board '{board_name}' on second pass.")
+                            circuit.record_success(f"board_selection:{worker_id}")
+                            return True
+
+        # Diagnostic capture
+        try:
+            diag_path = f"data/logs/board_selection_failed_{worker_id}_{int(time.time())}.png"
+            await page.screenshot(path=diag_path)
+            logger.info(f"[{worker_id}] Saved diagnostic screenshot: {diag_path}")
+        except Exception:
+            pass
+
+        logger.warning(f"[{worker_id}] Board selection failed: '{board_name}' not found and auto-creation was not completed")
         circuit.record_failure(f"board_selection:{worker_id}")
         return False
 
@@ -1168,12 +1251,36 @@ async def turbo_create_pin(
             )
             await asyncio.sleep(5)
 
-        # Clear drafts if creator is blocked or has pending drafts
+        # Clear drafts ONLY if creator is blocked or at 50-draft limit
         try:
-            from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
-            await clear_drafts_for_page(page, account_name=str(worker_id))
-        except Exception as draft_clear_exc:
-            logger.warning(f"[{worker_id}] Pre-upload draft check non-fatal error: {draft_clear_exc}")
+            body_text = await page.locator("body").inner_text(timeout=1500)
+        except Exception:
+            body_text = ""
+        draft_count_match = re.search(r"(?:Pin drafts|Drafts|Borradores)\s*\((\d+)\)", body_text, re.I)
+        draft_count = int(draft_count_match.group(1)) if draft_count_match else None
+        is_editor_disabled = False
+        try:
+            disabled_el = page.locator(
+                '[data-test-id="creation-form"][aria-disabled="true"], [disabled][data-test-id*="upload"]'
+            ).first
+            is_editor_disabled = await disabled_el.count() > 0 and await disabled_el.is_visible(timeout=300)
+        except Exception:
+            pass
+
+        at_draft_limit = (
+            (draft_count is not None and draft_count >= 50)
+            or "50 drafts" in body_text
+            or ("limit" in body_text.lower() and "draft" in body_text.lower())
+            or ("límite" in body_text.lower() and "borrador" in body_text.lower())
+            or is_editor_disabled
+        )
+        if at_draft_limit:
+            try:
+                from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
+                logger.info(f"[{worker_id}] Draft limit detected (count={draft_count}, disabled={is_editor_disabled}); clearing drafts.")
+                await clear_drafts_for_page(page, account_name=str(worker_id))
+            except Exception as draft_clear_exc:
+                logger.warning(f"[{worker_id}] Pre-upload draft check non-fatal error: {draft_clear_exc}")
 
         file_input = await page.wait_for_selector('input[type="file"]', timeout=45000)
         await file_input.set_input_files(str(temp_img))

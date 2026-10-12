@@ -11,8 +11,9 @@ interface HorizontalFeaturedCardProps {
 }
 
 export default function HorizontalFeaturedCard({ post }: HorizontalFeaturedCardProps) {
-  const averageRating = post.rating_value || 4.9;
-  const ratingCount = post.rating_count || 24;
+  const hasRating = Boolean(post.rating_count && post.rating_count > 0 && post.rating_value);
+  const averageRating = hasRating ? post.rating_value : 0;
+  const ratingCount = post.rating_count || 0;
 
   const imageUrl = !post.hero_image || post.hero_image === 'PLACEHOLDER' 
     ? 'https://res.cloudinary.com/dlopg0jmq/image/upload/v1777282752/RecetaDolce/mediterranean_ingredients_fallback.jpg' 
@@ -48,15 +49,23 @@ export default function HorizontalFeaturedCard({ post }: HorizontalFeaturedCardP
           <div className="absolute top-0 right-0 w-24 h-24 bg-cream-base/30 rounded-bl-[4rem] -z-10" />
           
           <div className="flex items-center space-x-4 mb-6">
-            <div className="flex text-gold-accent gap-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <FaStar key={i} size={12} className="fill-current" />
-              ))}
-            </div>
-            <span className="w-6 h-px bg-cream-dark" />
-            <span className="text-gray-600 text-sm font-bold uppercase tracking-[0.3em]">
-              {(post.rating_value || 4.9).toFixed(1)} / 5.0
-            </span>
+            {hasRating ? (
+              <>
+                <div className="flex text-gold-accent gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <FaStar key={i} size={12} className={i <= Math.round(averageRating) ? "fill-current" : "opacity-30"} />
+                  ))}
+                </div>
+                <span className="w-6 h-px bg-cream-dark" />
+                <span className="text-gray-600 text-sm font-bold uppercase tracking-[0.3em]">
+                  {averageRating.toFixed(1)} / 5.0
+                </span>
+              </>
+            ) : (
+              <span className="text-brand-fresa text-xs font-bold uppercase tracking-[0.3em]">
+                {post.category || "Receta Especial"} • {post.prep_time ? `${post.prep_time} min` : "Guía Paso a Paso"}
+              </span>
+            )}
           </div>
 
           <h2 className="text-3xl md:text-4xl font-serif text-ink mb-5 leading-tight tracking-tight group-hover:text-brand-fresa transition-colors duration-500">

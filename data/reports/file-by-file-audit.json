@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-10T09:00:22.467946+00:00",
+  "generated_at": "2026-10-12T18:46:57.983902+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 488,
+  "files_audited": 494,
   "status_counts": {
-    "ok": 401,
+    "ok": 407,
     "review": 80,
     "fail": 7
   },
@@ -13,9 +13,9 @@
     "core": 53,
     "docs": 29,
     "domain-data": 4,
-    "frontend": 130,
+    "frontend": 134,
     "project": 8,
-    "scripts": 130,
+    "scripts": 132,
     "tests": 68
   },
   "files": [
@@ -191,8 +191,8 @@
       "path": "backend/api/operator_routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 134388,
-      "lines": 3597,
+      "bytes": 136865,
+      "lines": 3650,
       "findings": []
     },
     {
@@ -383,16 +383,16 @@
       "path": "backend/scripts/hero_image_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 21466,
-      "lines": 677,
+      "bytes": 25377,
+      "lines": 759,
       "findings": []
     },
     {
       "path": "backend/scripts/pinterest_batch_core.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 68066,
-      "lines": 1693,
+      "bytes": 75712,
+      "lines": 1858,
       "findings": []
     },
     {
@@ -415,8 +415,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 200096,
-      "lines": 4963,
+      "bytes": 221637,
+      "lines": 5456,
       "findings": []
     },
     {
@@ -463,8 +463,8 @@
       "path": "backend/services/news_scraper.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 31759,
-      "lines": 804,
+      "bytes": 35428,
+      "lines": 913,
       "findings": []
     },
     {
@@ -527,8 +527,8 @@
       "path": "backend/static/operator/index.html",
       "kind": "backend",
       "status": "ok",
-      "bytes": 42268,
-      "lines": 923,
+      "bytes": 44726,
+      "lines": 966,
       "findings": []
     },
     {
@@ -543,16 +543,16 @@
       "path": "backend/static/operator/operator.css",
       "kind": "backend",
       "status": "ok",
-      "bytes": 31590,
-      "lines": 1702,
+      "bytes": 31636,
+      "lines": 1705,
       "findings": []
     },
     {
       "path": "backend/static/operator/operator.js",
       "kind": "backend",
       "status": "ok",
-      "bytes": 106112,
-      "lines": 2595,
+      "bytes": 107624,
+      "lines": 2628,
       "findings": []
     },
     {
@@ -607,7 +607,7 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 8989,
+      "bytes": 9027,
       "lines": 268,
       "findings": []
     },
@@ -615,7 +615,7 @@
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1396,
+      "bytes": 1449,
       "lines": 22,
       "findings": []
     },
@@ -631,15 +631,15 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 86783,
-      "lines": 754,
+      "bytes": 98879,
+      "lines": 850,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 8739,
+      "bytes": 8662,
       "lines": 268,
       "findings": []
     },
@@ -647,7 +647,7 @@
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1402,
+      "bytes": 1504,
       "lines": 22,
       "findings": []
     },
@@ -663,8 +663,8 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 62632,
-      "lines": 548,
+      "bytes": 72150,
+      "lines": 624,
       "findings": []
     },
     {
@@ -895,8 +895,8 @@
       "path": "frontend/app/admin/page.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 9783,
-      "lines": 210,
+      "bytes": 9952,
+      "lines": 211,
       "findings": []
     },
     {
@@ -969,6 +969,30 @@
       "status": "ok",
       "bytes": 1055,
       "lines": 36,
+      "findings": []
+    },
+    {
+      "path": "frontend/app/api/operator/campaign/route.ts",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 2076,
+      "lines": 81,
+      "findings": []
+    },
+    {
+      "path": "frontend/app/api/operator/pins/route.ts",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 2381,
+      "lines": 79,
+      "findings": []
+    },
+    {
+      "path": "frontend/app/api/operator/status/route.ts",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 1324,
+      "lines": 43,
       "findings": []
     },
     {
@@ -1057,6 +1081,14 @@
       "status": "ok",
       "bytes": 9877,
       "lines": 179,
+      "findings": []
+    },
+    {
+      "path": "frontend/app/operator/page.tsx",
+      "kind": "frontend",
+      "status": "ok",
+      "bytes": 17149,
+      "lines": 425,
       "findings": []
     },
     {
@@ -1263,8 +1295,8 @@
       "path": "frontend/components/HorizontalFeaturedCard.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 4444,
-      "lines": 93,
+      "bytes": 4962,
+      "lines": 102,
       "findings": []
     },
     {
@@ -1319,8 +1351,8 @@
       "path": "frontend/components/QuickViewModal.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 5564,
-      "lines": 127,
+      "bytes": 5908,
+      "lines": 134,
       "findings": []
     },
     {
@@ -1431,7 +1463,7 @@
       "path": "frontend/components/StarRating.tsx",
       "kind": "frontend",
       "status": "ok",
-      "bytes": 3548,
+      "bytes": 3664,
       "lines": 102,
       "findings": []
     },
@@ -1919,8 +1951,8 @@
       "path": "pinterest_automation/config.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 18541,
-      "lines": 499,
+      "bytes": 18878,
+      "lines": 513,
       "findings": []
     },
     {
@@ -1935,8 +1967,8 @@
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 55174,
-      "lines": 1331,
+      "bytes": 65809,
+      "lines": 1576,
       "findings": []
     },
     {
@@ -1967,8 +1999,8 @@
       "path": "pinterest_automation/pinterest_driver.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 61099,
-      "lines": 1364,
+      "bytes": 62284,
+      "lines": 1398,
       "findings": []
     },
     {
@@ -1983,16 +2015,16 @@
       "path": "pinterest_automation/routing.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 3468,
-      "lines": 86,
+      "bytes": 4134,
+      "lines": 102,
       "findings": []
     },
     {
       "path": "pinterest_automation/runtime_state.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 5309,
-      "lines": 152,
+      "bytes": 5821,
+      "lines": 164,
       "findings": []
     },
     {
@@ -2015,8 +2047,8 @@
       "path": "pinterest_automation/supervisor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 40946,
-      "lines": 849,
+      "bytes": 42638,
+      "lines": 880,
       "findings": []
     },
     {
@@ -2207,8 +2239,8 @@
       "path": "rankstein/production_safety.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 2984,
-      "lines": 70,
+      "bytes": 3642,
+      "lines": 87,
       "findings": []
     },
     {
@@ -2255,8 +2287,8 @@
       "path": "rankstein/runtime_env.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 1295,
-      "lines": 36,
+      "bytes": 1343,
+      "lines": 41,
       "findings": []
     },
     {
@@ -2327,8 +2359,8 @@
       "path": "rankstein_mcp_server.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 232589,
-      "lines": 5521,
+      "bytes": 239398,
+      "lines": 5655,
       "findings": []
     },
     {
@@ -2343,7 +2375,7 @@
       "path": "scripts/debug/audit_all_105_urls.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2850,
+      "bytes": 2926,
       "lines": 77,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2364,7 +2396,7 @@
       "path": "scripts/debug/audit_blog_admin.cjs",
       "kind": "scripts",
       "status": "review",
-      "bytes": 21070,
+      "bytes": 21424,
       "lines": 355,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2374,7 +2406,7 @@
       "path": "scripts/debug/audit_blog_preview.cjs",
       "kind": "scripts",
       "status": "review",
-      "bytes": 8099,
+      "bytes": 8228,
       "lines": 130,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2395,7 +2427,7 @@
       "path": "scripts/debug/build_redirects_file.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1345,
+      "bytes": 1385,
       "lines": 41,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2405,7 +2437,7 @@
       "path": "scripts/debug/capture_operator_dashboard.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1986,
+      "bytes": 2037,
       "lines": 52,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2415,7 +2447,7 @@
       "path": "scripts/debug/capture_operator_tabs.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2216,
+      "bytes": 2270,
       "lines": 55,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2425,7 +2457,7 @@
       "path": "scripts/debug/check_articles.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1608,
+      "bytes": 1652,
       "lines": 45,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2435,7 +2467,7 @@
       "path": "scripts/debug/check_boards_list.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1486,
+      "bytes": 1520,
       "lines": 35,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2445,7 +2477,7 @@
       "path": "scripts/debug/check_fresh_keywords.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1533,
+      "bytes": 1570,
       "lines": 38,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2455,7 +2487,7 @@
       "path": "scripts/debug/check_media_boards.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1382,
+      "bytes": 1414,
       "lines": 33,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2465,7 +2497,7 @@
       "path": "scripts/debug/check_models.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1677,
+      "bytes": 1721,
       "lines": 45,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2475,7 +2507,7 @@
       "path": "scripts/debug/check_nvidia_log.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 407,
+      "bytes": 417,
       "lines": 11,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2485,7 +2517,7 @@
       "path": "scripts/debug/check_pollinations_and_deprecated.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2236,
+      "bytes": 2295,
       "lines": 60,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2495,7 +2527,7 @@
       "path": "scripts/debug/check_proof.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 875,
+      "bytes": 893,
       "lines": 19,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2505,7 +2537,7 @@
       "path": "scripts/debug/check_published_today.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1682,
+      "bytes": 1726,
       "lines": 45,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2515,7 +2547,7 @@
       "path": "scripts/debug/check_robots.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 453,
+      "bytes": 466,
       "lines": 14,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2525,7 +2557,7 @@
       "path": "scripts/debug/check_soft404.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1928,
+      "bytes": 1990,
       "lines": 63,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2535,18 +2567,8 @@
       "path": "scripts/debug/dump_posts.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1173,
+      "bytes": 1204,
       "lines": 32,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/ensure_all_boards.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 4791,
-      "lines": 115,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2555,7 +2577,7 @@
       "path": "scripts/debug/extract_arch_ribbons.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2126,
+      "bytes": 2179,
       "lines": 54,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2565,7 +2587,7 @@
       "path": "scripts/debug/extract_design_assets.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 6116,
+      "bytes": 6249,
       "lines": 134,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2575,7 +2597,7 @@
       "path": "scripts/debug/extract_straight_ribbons.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2624,
+      "bytes": 2686,
       "lines": 63,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2585,7 +2607,7 @@
       "path": "scripts/debug/fetch_urls.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1651,
+      "bytes": 1689,
       "lines": 39,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2606,7 +2628,7 @@
       "path": "scripts/debug/find_recent.ps1",
       "kind": "scripts",
       "status": "review",
-      "bytes": 522,
+      "bytes": 527,
       "lines": 6,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2616,7 +2638,7 @@
       "path": "scripts/debug/find_tables.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 469,
+      "bytes": 483,
       "lines": 15,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2626,7 +2648,7 @@
       "path": "scripts/debug/fix_last_pollinations.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 3841,
+      "bytes": 3958,
       "lines": 118,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2636,7 +2658,7 @@
       "path": "scripts/debug/fix_single_calamares.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1632,
+      "bytes": 1678,
       "lines": 47,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2646,7 +2668,7 @@
       "path": "scripts/debug/fuzzy_check.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2082,
+      "bytes": 2147,
       "lines": 66,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2656,7 +2678,7 @@
       "path": "scripts/debug/generate_ensalada_pasta.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 13475,
+      "bytes": 13669,
       "lines": 195,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2666,7 +2688,7 @@
       "path": "scripts/debug/generate_redirect_rules.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 8861,
+      "bytes": 8989,
       "lines": 129,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2676,7 +2698,7 @@
       "path": "scripts/debug/generate_tarta_tatin.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 14668,
+      "bytes": 14864,
       "lines": 197,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2697,7 +2719,7 @@
       "path": "scripts/debug/inspect_boards_medridaelalaoui6.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2816,
+      "bytes": 2872,
       "lines": 57,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2707,7 +2729,7 @@
       "path": "scripts/debug/inspect_create_board.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 3560,
+      "bytes": 3632,
       "lines": 73,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2717,8 +2739,18 @@
       "path": "scripts/debug/inspect_create_board_modal.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 3004,
+      "bytes": 3069,
       "lines": 66,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_draft_drawer.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 1105,
+      "lines": 25,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2738,7 +2770,7 @@
       "path": "scripts/debug/inspect_page_schema.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 985,
+      "bytes": 1013,
       "lines": 29,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2748,8 +2780,18 @@
       "path": "scripts/debug/inspect_pinterest_remaster_dom.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2431,
+      "bytes": 2500,
       "lines": 70,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/inspect_queue_breakdown.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 839,
+      "lines": 23,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2769,18 +2811,8 @@
       "path": "scripts/debug/inspect_user_boards.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2427,
+      "bytes": 2480,
       "lines": 54,
-      "findings": [
-        "non-production helper retained under scripts/debug or scripts/oneoff"
-      ]
-    },
-    {
-      "path": "scripts/debug/list_dropdown_boards.py",
-      "kind": "scripts",
-      "status": "review",
-      "bytes": 2033,
-      "lines": 48,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -2789,7 +2821,7 @@
       "path": "scripts/debug/map_soft404_solutions.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 4212,
+      "bytes": 4331,
       "lines": 120,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2799,7 +2831,7 @@
       "path": "scripts/debug/match_posts_normalized.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1738,
+      "bytes": 1797,
       "lines": 60,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2809,7 +2841,7 @@
       "path": "scripts/debug/operator_accessibility_audit.js",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1554,
+      "bytes": 1579,
       "lines": 26,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2819,7 +2851,7 @@
       "path": "scripts/debug/operator_browser_audit.js",
       "kind": "scripts",
       "status": "review",
-      "bytes": 7483,
+      "bytes": 7665,
       "lines": 183,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2829,7 +2861,7 @@
       "path": "scripts/debug/operator_recovery_audit.js",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2546,
+      "bytes": 2594,
       "lines": 49,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2839,7 +2871,7 @@
       "path": "scripts/debug/perfect_extract_ribbons.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2787,
+      "bytes": 2866,
       "lines": 80,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2849,7 +2881,7 @@
       "path": "scripts/debug/post_remediation_audit.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 5170,
+      "bytes": 5336,
       "lines": 167,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2859,7 +2891,7 @@
       "path": "scripts/debug/probe_source_ocr.ps1",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1942,
+      "bytes": 1973,
       "lines": 32,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2869,7 +2901,7 @@
       "path": "scripts/debug/provision_boards_medridaelalaoui6.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 5083,
+      "bytes": 5210,
       "lines": 128,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2879,7 +2911,7 @@
       "path": "scripts/debug/publish_test_article.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 721,
+      "bytes": 743,
       "lines": 23,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2900,7 +2932,7 @@
       "path": "scripts/debug/test_arc_text.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 4315,
+      "bytes": 4434,
       "lines": 120,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2910,7 +2942,7 @@
       "path": "scripts/debug/test_article_slug.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1226,
+      "bytes": 1252,
       "lines": 28,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2920,7 +2952,7 @@
       "path": "scripts/debug/test_asset_loading.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2547,
+      "bytes": 2608,
       "lines": 62,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2930,7 +2962,7 @@
       "path": "scripts/debug/test_board_dropdown_live.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 4300,
+      "bytes": 4392,
       "lines": 93,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2940,7 +2972,7 @@
       "path": "scripts/debug/test_bolder_color_headers.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 15473,
+      "bytes": 15833,
       "lines": 361,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2950,7 +2982,7 @@
       "path": "scripts/debug/test_bright_recipe_pin.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 16960,
+      "bytes": 17352,
       "lines": 393,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2960,7 +2992,7 @@
       "path": "scripts/debug/test_create_missing_board.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 3364,
+      "bytes": 3436,
       "lines": 73,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2970,7 +3002,7 @@
       "path": "scripts/debug/test_full_nemotron_article.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 4006,
+      "bytes": 4101,
       "lines": 96,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2980,7 +3012,7 @@
       "path": "scripts/debug/test_gemini_api.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 700,
+      "bytes": 721,
       "lines": 22,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -2990,7 +3022,7 @@
       "path": "scripts/debug/test_gemini_rest.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1867,
+      "bytes": 1911,
       "lines": 45,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3000,7 +3032,7 @@
       "path": "scripts/debug/test_live_urls.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1161,
+      "bytes": 1190,
       "lines": 30,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3010,7 +3042,7 @@
       "path": "scripts/debug/test_local_server.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 725,
+      "bytes": 745,
       "lines": 21,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3020,7 +3052,7 @@
       "path": "scripts/debug/test_nemotron_stream.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2363,
+      "bytes": 2434,
       "lines": 72,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3030,7 +3062,7 @@
       "path": "scripts/debug/test_nvidia_fast.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1397,
+      "bytes": 1436,
       "lines": 40,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3040,7 +3072,7 @@
       "path": "scripts/debug/test_nvidia_live_gen.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2002,
+      "bytes": 2048,
       "lines": 47,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3050,7 +3082,7 @@
       "path": "scripts/debug/test_nvidia_module.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1162,
+      "bytes": 1194,
       "lines": 33,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3060,7 +3092,7 @@
       "path": "scripts/debug/test_nvidia_nemotron.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2262,
+      "bytes": 2314,
       "lines": 53,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3070,7 +3102,7 @@
       "path": "scripts/debug/test_paso_step_layouts.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 33312,
+      "bytes": 34146,
       "lines": 835,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3080,7 +3112,7 @@
       "path": "scripts/debug/test_perfect_culinary_pin_v8.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 31737,
+      "bytes": 32472,
       "lines": 736,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3090,7 +3122,7 @@
       "path": "scripts/debug/test_perfect_culinary_pin_v9.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 27531,
+      "bytes": 28242,
       "lines": 712,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3100,7 +3132,7 @@
       "path": "scripts/debug/test_primp_gemini.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 834,
+      "bytes": 856,
       "lines": 23,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3110,7 +3142,7 @@
       "path": "scripts/debug/test_professional_assets_pin.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 22709,
+      "bytes": 23229,
       "lines": 521,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3120,7 +3152,7 @@
       "path": "scripts/debug/test_professional_assets_pin_v6.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 27267,
+      "bytes": 27942,
       "lines": 676,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3130,7 +3162,7 @@
       "path": "scripts/debug/test_recipe_card_visual_ref.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 13066,
+      "bytes": 13400,
       "lines": 335,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3140,7 +3172,7 @@
       "path": "scripts/debug/test_recipe_suite_pins.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 29959,
+      "bytes": 30613,
       "lines": 655,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3150,7 +3182,7 @@
       "path": "scripts/debug/test_submit_board.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2645,
+      "bytes": 2701,
       "lines": 57,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3160,7 +3192,7 @@
       "path": "scripts/debug/verify_20.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 778,
+      "bytes": 794,
       "lines": 17,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3170,7 +3202,7 @@
       "path": "scripts/debug/verify_dashboard.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1769,
+      "bytes": 1811,
       "lines": 43,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3180,7 +3212,7 @@
       "path": "scripts/debug/verify_final_deployment.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1620,
+      "bytes": 1663,
       "lines": 44,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3190,7 +3222,7 @@
       "path": "scripts/debug/verify_live_fixes.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 1667,
+      "bytes": 1703,
       "lines": 37,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3200,7 +3232,7 @@
       "path": "scripts/debug/verify_live_sites.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2453,
+      "bytes": 2503,
       "lines": 52,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3210,7 +3242,7 @@
       "path": "scripts/debug/verify_nemotron_json.py",
       "kind": "scripts",
       "status": "review",
-      "bytes": 2829,
+      "bytes": 2907,
       "lines": 79,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
@@ -3324,8 +3356,8 @@
       "path": "scripts/dev/self_clean.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 6028,
-      "lines": 212,
+      "bytes": 6088,
+      "lines": 213,
       "findings": []
     },
     {
@@ -3404,8 +3436,8 @@
       "path": "scripts/ops/clear_pinterest_drafts.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 13761,
-      "lines": 299,
+      "bytes": 14051,
+      "lines": 304,
       "findings": []
     },
     {
@@ -3454,6 +3486,22 @@
       "status": "ok",
       "bytes": 2147,
       "lines": 64,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/rankstein_campaign_watchdog.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 8748,
+      "lines": 260,
+      "findings": []
+    },
+    {
+      "path": "scripts/ops/rebalance_queue_accounts.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 1743,
+      "lines": 60,
       "findings": []
     },
     {
@@ -3708,7 +3756,7 @@
       "path": "tests/unit/test_create_hero_image_pollinations.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 13130,
+      "bytes": 13127,
       "lines": 343,
       "findings": []
     },
@@ -3724,8 +3772,8 @@
       "path": "tests/unit/test_direct_upload_cross_save.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 3518,
-      "lines": 110,
+      "bytes": 3590,
+      "lines": 112,
       "findings": []
     },
     {
@@ -3852,8 +3900,8 @@
       "path": "tests/unit/test_pinterest_production_runtime.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 24612,
-      "lines": 704,
+      "bytes": 27248,
+      "lines": 767,
       "findings": []
     },
     {
@@ -3940,7 +3988,7 @@
       "path": "tests/unit/test_remaster_native_fallback.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 10369,
+      "bytes": 10344,
       "lines": 309,
       "findings": []
     },
@@ -4092,8 +4140,8 @@
       "path": "tests/unit/test_turbo_articles.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 93072,
-      "lines": 2620,
+      "bytes": 93585,
+      "lines": 2634,
       "findings": []
     },
     {

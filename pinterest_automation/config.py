@@ -112,11 +112,20 @@ class BrowserConfig:
     def __post_init__(self):
         self.headless = True
         try:
+            target_max = max(
+                1,
+                int(
+                    os.environ.get(
+                        "PINTEREST_MAX_WORKERS",
+                        os.environ.get("PINTEREST_WORKER_COUNT", "10"),
+                    )
+                ),
+            )
             self.max_sessions = max(
                 1,
                 min(
-                    int(os.environ.get("PINTEREST_MAX_SESSIONS", str(self.max_sessions))),
-                    int(os.environ.get("PINTEREST_MAX_WORKERS", "3")),
+                    int(os.environ.get("PINTEREST_MAX_SESSIONS", str(target_max))),
+                    target_max,
                 ),
             )
             self.session_ttl_minutes = max(

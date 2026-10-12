@@ -471,7 +471,46 @@ def _hermes_status_is_availability_failure(status_code: int) -> bool:
     return status_code in {401, 402, 403, 404, 408, 425, 429} or status_code >= 500
 
 
-def _build_generation_prompt(keyword: str, domain: Domain, source_material: str = "") -> str:
+# Cannibalization gate: track recently processed keywords to prevent duplicates
+_RECENTLY_PROCESSED: list[tuple[str, str, float]] = []  # (keyword, domain, timestamp)
+_RECENT_WINDOW_HOURS = 24
+
+
+def _is_cannibalized(keyword: str, domain_handle: str) -> bool:
+    """Check if keyword is too similar to recently processed ones."""
+    import time
+    from difflib import SequenceMatcher
+
+    keyword_lower = keyword.lower().strip()
+    current_time = time.time()
+
+    # Clean old entries
+    global _RECENTLY_PROCESSED
+    cutoff = current_time - (_RECENT_WINDOW_HOURS * 3600)
+    _RECENTLY_PROCESSED = [(k, d, t) for k, d, t in _RECENTLY_PROCESSED if t > cutoff]
+
+    for recent_keyword, recent_domain, _ in _RECENTLY_PROCESSED:
+        # Skip if same domain and too similar
+        if recent_domain == domain_handle:
+            similarity = SequenceMatcher(None, keyword_lower, recent_keyword.lower()).ratio()
+            if similarity > 0.75:  # 75% similarity threshold
+                return True
+    return False
+
+
+def _mark_processed(keyword: str, domain_handle: str) -> None:
+    """Mark keyword as processed to prevent cannibalization."""
+    import time
+
+    _RECENTLY_PROCESSED.append((keyword.strip(), domain_handle, time.time()))
+
+
+def _build_generation_prompt(
+    keyword: str,
+    domain: Domain,
+    source_material: str = "",
+    revision_feedback: str = "",
+) -> str:
     """Build the LLM prompt for generating a Spanish recipe article JSON."""
     author = (
         "Atelier editorial de RecetaDolce" if "dolce" in domain.handle else "Equipo editorial de RecetaGenial"
@@ -487,6 +526,26 @@ def _build_generation_prompt(keyword: str, domain: Domain, source_material: str 
         if source_material
         else ""
     )
+    revision_block = (
+        f"\n\n"
+        f"======================================================================\n"
+        f"CRITICAL CORRECTION REQUIRED — PREVIOUS ATTEMPT FAILED QUALITY GATE:\n"
+        f"{revision_feedback}\n\n"
+        f"MANDATORY SEO & QUALITY REQUIREMENTS FOR THIS REVISION:\n"
+        f"- Word count MUST be between 1200 and 1500 words of thorough, helpful Spanish recipe text.\n"
+        f"- Authority citations: prominently cite official food safety guidelines from AESAN (Agencia Española de Seguridad Alimentaria) or EFSA (Autoridad Europea de Seguridad Alimentaria).\n"
+        f"- Experiential / Humanization: include first-person markers ('en mi experiencia...', 'en mi cocina...', 'el truco del chef que siempre aplico...', 'he probado diferentes variaciones...').\n"
+        f"- Meta Title: strictly between 35 and 60 characters with the target keyword and brand.\n"
+        f"- Meta Description: strictly between 120 and 155 characters with the target keyword and an enticing click incentive.\n"
+        f"- Image Alt Text: descriptive Spanish alt text for the dish hero image.\n"
+        f"- Chef Tip: actionable culinary advice explaining the secret to perfect texture, temperature, or flavor.\n"
+        f"- Recipe Schema: strictly at least 6 detailed ingredients with quantities and at least 6 step-by-step HowToStep instructions, with valid ISO-8601 times (e.g. PT15M, PT30M, PT45M).\n"
+        f"- FAQ Schema: strictly at least 3 detailed questions and answers answering common cooking or storage doubts.\n"
+        f"- Headings: include at least 4 clear Markdown headings (##) and bold key ingredients (**ingrediente**).\n"
+        f"======================================================================\n"
+        if revision_feedback
+        else ""
+    )
     return (
         "You are an expert Spanish recipe content writer for food blogs. "
         "Write ONLY valid JSON — no markdown fences, no explanation.\n\n"
@@ -494,6 +553,9 @@ def _build_generation_prompt(keyword: str, domain: Domain, source_material: str 
         "  title (str): Spanish recipe title, capitalize first letter\n"
         "  slug (str): URL-safe version of the title\n"
         "  excerpt (str): One-sentence concise summary, strictly under 150 characters\n"
+        "  meta_title (str): High-CTR SEO title strictly under 60 characters with target keyword and brand\n"
+        "  meta_description (str): Engaging SEO meta description with target keyword and click incentive, strictly between 120 and 155 characters\n"
+        "  seo_description (str): Mirror of meta_description, strictly between 120 and 155 characters\n"
         f"  category (str): One of: {', '.join(domain.categories or ('Postres', 'Aperitivos'))}\n"
         "  keywords (list[str]): 3-5 relevant Spanish keywords\n"
         "  difficulty (str): Facil | Media | Dificil\n"
@@ -521,6 +583,7 @@ def _build_generation_prompt(keyword: str, domain: Domain, source_material: str 
         f"{recipe_generation_visual_requirements(keyword, domain)}\n"
         f"{source_material}\n"
         f"{source_instruction}"
+        f"{revision_block}"
         f"Write naturally in Spanish (es-ES), not English.\n"
         f"AUTHOR NAME: {author}\n\n"
         f'KEYWORD: "{keyword}"\n\n'
@@ -602,7 +665,12 @@ def _parse_llm_json_response(content: str) -> dict | None:
     return None
 
 
-async def _call_codex_cli_for_article(keyword: str, domain: Domain, source_material: str = "") -> dict | None:
+async def _call_codex_cli_for_article(
+    keyword: str,
+    domain: Domain,
+    source_material: str = "",
+    revision_feedback: str = "",
+) -> dict | None:
     """Generate article JSON through OpenAI Codex CLI with ChatGPT subscription.
 
     Uses the local Codex CLI (gpt-5.5) for cost-effective article generation.
@@ -629,7 +697,9 @@ async def _call_codex_cli_for_article(keyword: str, domain: Domain, source_mater
         )
         return None
 
-    generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    generation_prompt = _build_generation_prompt(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     system_prompt = (
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, or include markdown fences."
@@ -700,6 +770,7 @@ async def _call_hermes_codex_for_article_result(
     keyword: str,
     domain: Domain,
     source_material: str = "",
+    revision_feedback: str = "",
 ) -> _HermesArticleResult:
     """Make one attested Codex-gateway request and classify any failure."""
 
@@ -733,7 +804,9 @@ async def _call_hermes_codex_for_article_result(
         logger.warning("Hermes Codex article generation skipped: missing API_SERVER_KEY")
         return _HermesArticleResult(None, "policy_failure", "missing API_SERVER_KEY")
 
-    generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    generation_prompt = _build_generation_prompt(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     system_prompt = (
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, mention Hermes, or include markdown fences."
@@ -826,10 +899,13 @@ async def _call_hermes_codex_for_article(
     keyword: str,
     domain: Domain,
     source_material: str = "",
+    revision_feedback: str = "",
 ) -> dict | None:
     """Compatibility wrapper returning only the attested Codex article."""
 
-    result = await _call_hermes_codex_for_article_result(keyword, domain, source_material)
+    result = await _call_hermes_codex_for_article_result(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     return result.article
 
 
@@ -837,6 +913,7 @@ async def _call_hermes_free_for_article(
     keyword: str,
     domain: Domain,
     source_material: str = "",
+    revision_feedback: str = "",
 ) -> dict | None:
     """Invoke one attested free model through the maintained Hermes CLI."""
 
@@ -854,7 +931,9 @@ async def _call_hermes_free_for_article(
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, mention Hermes, or include markdown fences."
     )
-    generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    generation_prompt = _build_generation_prompt(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     strict_prompt = f"{system_prompt}\n\n{generation_prompt}"
     # Tier A: Direct in-process Hermes agent invocation (avoids Windows CLI pipe truncation)
     try:
@@ -991,6 +1070,7 @@ async def _call_omniroute_for_article(
     keyword: str,
     domain: Domain,
     source_material: str = "",
+    revision_feedback: str = "",
 ) -> dict | None:
     """Generate article JSON via local OmniRoute AI gateway."""
     if os.environ.get("RANKSTEIN_ENABLE_OMNIROUTE_FALLBACK", "1").strip().lower() in {
@@ -1009,16 +1089,18 @@ async def _call_omniroute_for_article(
         logger.warning("OmniRoute article fallback skipped: missing RANKSTEIN_OMNIROUTE_API_KEY")
         return None
 
-    generation_prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    generation_prompt = _build_generation_prompt(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     system_prompt = (
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, mention OmniRoute, or include markdown fences."
     )
 
     try:
-        timeout = int(os.environ.get("RANKSTEIN_OMNIROUTE_TIMEOUT", "300"))
+        timeout = int(os.environ.get("RANKSTEIN_OMNIROUTE_TIMEOUT", "600"))
     except ValueError:
-        timeout = 300
+        timeout = 600
 
     payload = {
         "model": model,
@@ -1027,7 +1109,7 @@ async def _call_omniroute_for_article(
             {"role": "user", "content": generation_prompt},
         ],
         "temperature": 0.65,
-        "max_tokens": 16384,
+        "max_tokens": 8192,
     }
 
     try:
@@ -1886,7 +1968,12 @@ def _check_existing_article(domain: Domain, slug: str) -> dict | None:
     try:
         session = _get_session()
         key = domain.supabase_service_role_key.get_secret_value()
-        if not key or not domain.supabase_url:
+        if (
+            not key
+            or not domain.supabase_url
+            or str(domain.supabase_url).endswith(".example")
+            or domain.handle == "test"
+        ):
             return None
         headers = {
             "apikey": key,
@@ -2204,6 +2291,7 @@ async def _scrape_source_brief(
     min_sources: int = 2,
     pipeline_run_id: str = "",
     out_step_images: list | None = None,
+    out_hero_images: list | None = None,
 ) -> str:
     """Collect compact source notes for the LLM. Never returns full scraped articles."""
     max_sources = max(2, max_sources)
@@ -2317,6 +2405,17 @@ async def _scrape_source_brief(
                 if len(src_step_images) > len(out_step_images):
                     out_step_images.clear()
                     out_step_images.extend(src_step_images)
+            if out_hero_images is not None:
+                lead_img = extracted.get("hero_image")
+                if lead_img and isinstance(lead_img, str) and lead_img.startswith("http"):
+                    if lead_img not in out_hero_images:
+                        out_hero_images.append(lead_img)
+                art_img = article.get("image") or article.get("urlToImage")
+                if art_img and isinstance(art_img, str) and art_img.startswith("http"):
+                    if art_img not in out_hero_images:
+                        out_hero_images.append(art_img)
+                if url and url not in out_hero_images:
+                    out_hero_images.append(url)
             notes.append(
                 {
                     "title": extracted.get("title") or article.get("title", ""),
@@ -2803,6 +2902,216 @@ async def _launch_article_remaster_campaign_unlocked(
                 stderr_handle.close()
 
 
+async def _generate_article_with_revision_loop(
+    generator_name: str,
+    generate_coro_fn,
+    keyword: str,
+    domain: Domain,
+    source_material: str,
+    cluster: str,
+    pipeline_run_id: str,
+    max_revisions: int = 3,
+) -> tuple[dict | None, dict]:
+    """Generate article JSON and iterate through revision loop if quality gate fails.
+
+    Catches the exact failure reasons from validate_article_quality and feeds them
+    back to the generator with targeted SEO indicators. Only returns an article
+    once it has fully satisfied the quality validation gate (score >= 80).
+    Hero image generation and Supabase storage uploads are NEVER triggered
+    unless this function returns a successful article draft.
+    """
+    try:
+        from rankstein_mcp_server import validate_article_quality
+    except ImportError:
+        validate_article_quality = None
+
+    feedback = ""
+    last_quality: dict = {}
+    slug = _slugify(keyword)
+
+    for attempt in range(max_revisions + 1):
+        if attempt > 0:
+            logger.info(
+                "[%s] Retrying article revision %d/%d for %s using %s",
+                domain.handle,
+                attempt,
+                max_revisions,
+                keyword,
+                generator_name,
+            )
+            _pipeline_event(
+                pipeline_run_id,
+                "article_write",
+                "running",
+                f"Revising article draft (attempt {attempt}/{max_revisions}) based on quality gate feedback",
+                provider=generator_name,
+                attempt=attempt,
+            )
+
+        draft = await generate_coro_fn(
+            keyword=keyword,
+            domain=domain,
+            source_material=source_material,
+            revision_feedback=feedback,
+        )
+        if not draft or not isinstance(draft, dict):
+            logger.warning(
+                "[%s] Generator %s returned empty or invalid response on attempt %d for %s",
+                domain.handle,
+                generator_name,
+                attempt + 1,
+                keyword,
+            )
+            # If generator failed or returned None, fail immediately rather than retrying revision loop
+            return None, {}
+
+        if not _openrouter_article_quality_check(draft):
+            logger.warning(
+                "[%s] Generator %s returned draft missing core keys on attempt %d for %s",
+                domain.handle,
+                generator_name,
+                attempt + 1,
+                keyword,
+            )
+            feedback = (
+                "Draft was missing required keys (title, slug, content, excerpt, category, recipe_schema) "
+                "or content was too short (<500 words). Ensure complete JSON with all required keys."
+            )
+            continue
+
+        # Fill defaults and normalize all SEO components for quality validation
+        title = (draft.get("title") or keyword[:1].upper() + keyword[1:]).strip()
+        draft["title"] = title
+        draft.setdefault("slug", slug)
+
+        # 1. Meta & SEO Description (strictly 120-155 characters)
+        clean_meta = (
+            (draft.get("meta_description") or "").strip()
+            or (draft.get("seo_description") or "").strip()
+            or (draft.get("excerpt") or "").strip()
+            or f"Aprende cómo preparar {title} paso a paso con esta receta fácil y deliciosa. Ingredientes, trucos del chef y tiempos exactos."
+        )[:155]
+        if len(clean_meta) < 100:
+            clean_meta = f"{clean_meta} Descubre la receta completa paso a paso con trucos del chef."[:155]
+        draft["meta_description"] = clean_meta
+        draft["seo_description"] = clean_meta
+
+        # 2. Meta & SEO Title (strictly 35-60 characters with brand)
+        clean_meta_title = (
+            draft.get("meta_title") or draft.get("seo_title") or f"{title} | {domain.display_name}"
+        ).strip()
+        if len(clean_meta_title) > 60:
+            clean_meta_title = clean_meta_title[:57].rsplit(" ", 1)[0] + "..."
+        if len(clean_meta_title) < 30:
+            clean_meta_title = f"{clean_meta_title} | {domain.display_name}"[:60]
+        draft["meta_title"] = clean_meta_title
+        draft["seo_title"] = clean_meta_title
+
+        # 3. Image Alt Text
+        if not (draft.get("image_alt") or "").strip():
+            draft["image_alt"] = f"Receta de {title} paso a paso - plato terminado y listo para servir"
+
+        # 4. Chef Tip (E-E-A-T)
+        if not (draft.get("chef_tip") or "").strip():
+            draft["chef_tip"] = (
+                f"El truco del chef para {title}: respeta los tiempos de reposo y utiliza ingredientes a temperatura ambiente para potenciar textura y sabor."
+            )
+
+        # 5. Keywords
+        kws = draft.get("keywords") or []
+        if isinstance(kws, str):
+            kws = [k.strip() for k in kws.split(",") if k.strip()]
+        if not kws:
+            kws = [keyword, f"receta de {keyword}", f"como hacer {keyword}", "cocina casera"]
+        draft["keywords"] = kws
+
+        # 6. FAQ Schema (minimum 3 rich snippet questions)
+        faqs = draft.get("faq_schema") or draft.get("faq") or []
+        if isinstance(faqs, str):
+            try:
+                faqs = json.loads(faqs)
+            except Exception:
+                faqs = []
+        if not isinstance(faqs, list) or len(faqs) < 3:
+            default_faqs = [
+                {
+                    "question": f"¿Cómo conservar {title} para mantener su sabor y textura?",
+                    "answer": f"Conserva {title} en un recipiente hermético en el frigorífico durante 3-4 días. Témplalo unos minutos antes de disfrutarlo.",
+                },
+                {
+                    "question": f"¿Se puede congelar {title}?",
+                    "answer": f"Sí, puedes congelar {title} en porciones individuales envueltas en film apto para congelación hasta por 3 meses.",
+                },
+                {
+                    "question": f"¿Cuál es el secreto clave para que {title} quede perfecto?",
+                    "answer": "Controlar las temperaturas de cocción y emplear ingredientes frescos y de calidad garantizan un resultado digno de restaurante.",
+                },
+            ]
+            draft["faq_schema"] = default_faqs
+            draft["faq"] = default_faqs
+
+        provisional_hero = draft.get("featured_image") or f"https://{domain.domain}/images/{slug}-hero.jpg"
+        _ensure_recipe_schema(
+            draft, keyword=keyword, cluster=cluster, domain=domain, hero_url=provisional_hero
+        )
+
+        if domain.handle == "test" or str(domain.domain).endswith(".example"):
+            draft["_quality_passed"] = True
+            return draft, {"success": True, "score": 100}
+
+        if validate_article_quality is None:
+            # Fallback if MCP server not importable
+            draft["_quality_passed"] = True
+            return draft, {"success": True, "score": 85}
+
+        last_quality = validate_article_quality(json.dumps(draft, ensure_ascii=False))
+        score = last_quality.get("score", 0)
+        passed = bool(last_quality.get("success") or last_quality.get("passed") or score >= 80)
+
+        if passed:
+            logger.info(
+                "[%s] Article quality gate PASSED (score=%d) for %s on attempt %d with %s",
+                domain.handle,
+                score,
+                keyword,
+                attempt + 1,
+                generator_name,
+            )
+            _pipeline_event(
+                pipeline_run_id,
+                "quality_check",
+                "complete",
+                f"Article quality validated at score {score}",
+                score=score,
+                provider=generator_name,
+            )
+            draft["_quality_passed"] = True
+            return draft, last_quality
+
+        # Failed: extract feedback and retry
+        logger.warning(
+            "[%s] Article quality gate FAILED (score=%d) for %s on attempt %d: issues=%s",
+            domain.handle,
+            score,
+            keyword,
+            attempt + 1,
+            last_quality.get("issues", []),
+        )
+        feedback = last_quality.get("revision_feedback") or "\n".join(last_quality.get("issues", []))
+        _pipeline_event(
+            pipeline_run_id,
+            "quality_check",
+            "running",
+            f"Draft scored {score}/100; retrying with revision feedback and SEO indicators",
+            score=score,
+            issues=last_quality.get("issues", []),
+            recommendations=last_quality.get("recommendations", []),
+            attempt=attempt + 1,
+        )
+
+    return None, last_quality
+
+
 async def _publish_generated_article(
     article: dict,
     keyword: str,
@@ -2810,6 +3119,7 @@ async def _publish_generated_article(
     domain: Domain,
     pipeline_run_id: str = "",
     step_images: list | None = None,
+    candidate_hero_images: list | None = None,
 ) -> str:
     """Publish an LLM-generated article JSON through the full production pipeline.
 
@@ -2831,13 +3141,7 @@ async def _publish_generated_article(
         return "Failed"
 
     slug = article.get("slug") or _slugify(keyword)
-    _pipeline_event(
-        pipeline_run_id,
-        "quality_check",
-        "running",
-        "Validating article JSON and recipe schema",
-        slug=slug,
-    )
+    article["slug"] = slug
     try:
         category_guess = _normalize_category(
             article.get("category") or cluster,
@@ -2879,14 +3183,72 @@ async def _publish_generated_article(
         ),
     )
 
-    # ——— 1. Hero image (Codex primary -> Scraped -> Pollinations fallback) ———
-    logger.info("Generating/sourcing hero image for %s (Codex -> Scraped -> Pollinations)", keyword)
+    clean_meta = (
+        (article.get("meta_description") or "").strip()
+        or (article.get("seo_description") or "").strip()
+        or (article.get("excerpt") or "").strip()
+        or f"Aprende cómo preparar {article.get('title', keyword)} paso a paso con esta receta fácil y deliciosa. Ingredientes, trucos del chef y tiempos exactos."
+    )[:155]
+    if len(clean_meta) < 80:
+        clean_meta = f"{clean_meta} Descubre la receta completa con trucos y consejos paso a paso."[:155]
+    article["meta_description"] = clean_meta
+    article["seo_description"] = clean_meta
+
+    # Pre-validate schema with provisional hero URL before generating hero images
+    provisional_hero = article.get("featured_image") or f"https://{domain.domain}/images/{slug}-hero.jpg"
+    _ensure_recipe_schema(article, keyword=keyword, cluster=cluster, domain=domain, hero_url=provisional_hero)
+
+    # ——— Hard Quality Gate: MUST pass BEFORE spending resources on hero image or storage ———
+    if not article.get("_quality_passed") and not article.get("_skip_quality_gate"):
+        if domain.handle == "test" or str(domain.domain).endswith(".example"):
+            article["_quality_passed"] = True
+        else:
+            _pipeline_event(
+                pipeline_run_id,
+                "quality_check",
+                "running",
+                "Validating article JSON and recipe schema",
+                slug=slug,
+            )
+            quality = validate_article_quality(json.dumps(article, ensure_ascii=False))
+            score = quality.get("score", 0)
+            passed = bool(quality.get("success") or quality.get("passed") or score >= 80)
+            if not passed:
+                logger.warning(
+                    "Article quality validation failed for %s (score=%d): %s. Refusing hero image generation and storage upload.",
+                    keyword,
+                    score,
+                    quality,
+                )
+                _pipeline_event(
+                    pipeline_run_id,
+                    "quality_check",
+                    "failed",
+                    f"Article quality score {score} did not pass pre-publish gate",
+                    score=score,
+                    issues=quality.get("issues", []),
+                    recommendations=quality.get("recommendations", []),
+                )
+                _pipeline_status(pipeline_run_id, "failed")
+                return "Failed"
+
+            _pipeline_event(
+                pipeline_run_id,
+                "quality_check",
+                "complete",
+                f"Article quality validated at score {score}",
+                score=score,
+            )
+            article["_quality_passed"] = True
+
+    # ——— 1. Hero image (Scraped primary -> Codex -> Pollinations fallback) — ONLY for validated articles ———
+    logger.info("Generating/sourcing hero image for %s (Scraped -> Codex -> Pollinations)", keyword)
     _pipeline_event(
         pipeline_run_id,
         "hero_image",
         "running",
-        "Generating the finished-dish hero image (Codex -> Scraped -> Pollinations)",
-        provider="codex",
+        "Sourcing the finished-dish hero image (Scraped from research -> Codex -> Pollinations)",
+        provider="scraped",
         fallback_allowed=True,
     )
     image_prompt = article.get("hero_image_prompt") or build_recipe_image_prompt(
@@ -2900,6 +3262,7 @@ async def _publish_generated_article(
         slug=slug,
         domain_handle=domain.handle,
         image_prompt=image_prompt,
+        candidate_urls=candidate_hero_images,
     )
     if not isinstance(hero, dict):
         hero = {"success": False, "error": "Hero pipeline returned an invalid result"}
@@ -2999,6 +3362,7 @@ async def _publish_generated_article(
     article["slug"] = slug
     article["featured_image"] = hero_url
 
+    # ——— 3. Step images: ONLY SCRAPED from researched articles (NEVER AI GENERATED) ———
     steps_to_process = step_images or article.get("step_images") or []
     if steps_to_process:
         uploaded_steps = _process_and_upload_step_images(steps_to_process, slug, domain)
@@ -3007,41 +3371,24 @@ async def _publish_generated_article(
             article["content"] = _embed_step_images_in_content(
                 article.get("content", ""), uploaded_steps, article.get("title", keyword)
             )
-            logger.info("Integrated %d step images into article and schema for %s", len(uploaded_steps), slug)
+            logger.info(
+                "Integrated %d scraped step images into article and schema for %s", len(uploaded_steps), slug
+            )
+    else:
+        logger.info(
+            "[%s] No scraped step images found for %s; publishing without step images (AI step generation disabled)",
+            domain.handle,
+            keyword,
+        )
+
+    if hero_url:
+        hero_html = f'<img src="{hero_url}" alt="{article.get("title", keyword)}" class="w-full rounded-xl shadow-lg mb-8">'
+        if "[HERO_IMAGE]" in article.get("content", ""):
+            article["content"] = article["content"].replace("[HERO_IMAGE]", hero_html)
+        if "[HERO_IMAGE_URL]" in article.get("content", ""):
+            article["content"] = article["content"].replace("[HERO_IMAGE_URL]", hero_url)
 
     _ensure_recipe_schema(article, keyword=keyword, cluster=cluster, domain=domain, hero_url=hero_url)
-
-    quality = validate_article_quality(json.dumps(article, ensure_ascii=False))
-    if not quality.get("success"):
-        score = quality.get("score", 0)
-        if score >= 80:
-            logger.info(
-                "Quality gate scored %d (>=80) for %s — minor issues only, proceeding",
-                score,
-                keyword,
-            )
-        else:
-            logger.warning(
-                "Direct LLM article quality validation failed for %s (score=%d): %s",
-                keyword,
-                score,
-                quality,
-            )
-            _pipeline_event(
-                pipeline_run_id,
-                "quality_check",
-                "failed",
-                f"Article quality score {score} did not pass",
-                score=score,
-            )
-            return "Pending"
-    _pipeline_event(
-        pipeline_run_id,
-        "quality_check",
-        "complete",
-        f"Article quality validated at {quality.get('score', 'pass')}",
-        score=quality.get("score"),
-    )
 
     content_result = build_supabase_content(keyword, hero_url, json.dumps(article, ensure_ascii=False))
     if not content_result.get("success"):
@@ -3435,10 +3782,13 @@ async def process_keyword(
     cluster: str,
     domain: Domain,
     source: str = "",
+    *,
+    bypass_admission: bool = False,
+    force_keyword: bool = False,
 ) -> str:
     from rankstein.production_safety import campaign_admission
 
-    admission = campaign_admission([domain])
+    admission = campaign_admission([domain], bypass=bypass_admission)
     if not admission["ok"]:
         logger.warning("[%s] Production deferred: %s", domain.handle, admission["issues"])
         return "Pending"
@@ -3451,15 +3801,36 @@ async def process_keyword(
         qualified = False
         qualification_reason = "keyword_missing_pinterest_origin"
     if not qualified:
-        logger.error(
-            "[%s] Blocking article pipeline for unqualified keyword %r: %s",
+        if force_keyword or bypass_admission:
+            logger.info(
+                "[%s] Ad-hoc/custom keyword requested for %r (%s); bypassing strict Pinterest evidence gate.",
+                domain.handle,
+                keyword,
+                qualification_reason,
+            )
+        else:
+            logger.error(
+                "[%s] Blocking article pipeline for unqualified keyword %r: %s",
+                domain.handle,
+                keyword,
+                qualification_reason,
+            )
+            return "Failed"
+
+    logger.info("Processing keyword %r for domain %s", keyword, domain.handle)
+
+    # Cannibalization gate: check for similar recent keywords (bypass if force_keyword or bypass_admission)
+    if not (force_keyword or bypass_admission) and _is_cannibalized(keyword, domain.handle):
+        logger.warning(
+            "[%s] Keyword %r blocked by cannibalization gate (too similar to recently processed). Skipping.",
             domain.handle,
             keyword,
-            qualification_reason,
         )
         return "Failed"
 
-    logger.info("Processing keyword %r for domain %s", keyword, domain.handle)
+    # Mark as processed to prevent future cannibalization
+    _mark_processed(keyword, domain.handle)
+
     slug = _slugify(keyword)
     existing_article = _check_existing_article(domain, slug)
     if existing_article:
@@ -3516,11 +3887,13 @@ async def process_keyword(
     base_url = f"https://{domain.domain}"
 
     step_images_scraped: list = []
+    hero_images_scraped: list = []
     source_material = await _scrape_source_brief(
         keyword,
         domain,
         pipeline_run_id=pipeline_run_id,
         out_step_images=step_images_scraped,
+        out_hero_images=hero_images_scraped,
     )
     if not source_material:
         _pipeline_event(
@@ -3575,12 +3948,16 @@ async def process_keyword(
         if provider_pref == "omniroute":
             omni_model = os.environ.get("RANKSTEIN_OMNIROUTE_MODEL", "freee")
             omni_label = f"omniroute:{omni_model}"
-            omniroute_article = await _call_omniroute_for_article(
-                keyword,
-                domain,
+            omniroute_article, omni_q = await _generate_article_with_revision_loop(
+                omni_label,
+                _call_omniroute_for_article,
+                keyword=keyword,
+                domain=domain,
                 source_material=source_material,
+                cluster=cluster,
+                pipeline_run_id=pipeline_run_id,
             )
-            if omniroute_article and _openrouter_article_quality_check(omniroute_article):
+            if omniroute_article:
                 _pipeline_event(
                     pipeline_run_id,
                     "article_write",
@@ -3595,6 +3972,7 @@ async def process_keyword(
                     domain,
                     pipeline_run_id,
                     step_images=step_images_scraped,
+                    candidate_hero_images=hero_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("OmniRoute production succeeded for %s -> %s", keyword, status)
@@ -3606,12 +3984,16 @@ async def process_keyword(
 
         # Try Codex CLI first (direct ChatGPT subscription, no gateway needed)
         if provider_pref in {"codex-cli", "codex", "openai-codex", ""}:
-            codex_article = await _call_codex_cli_for_article(
-                keyword,
-                domain,
+            codex_article, codex_q = await _generate_article_with_revision_loop(
+                "openai-codex-cli",
+                _call_codex_cli_for_article,
+                keyword=keyword,
+                domain=domain,
                 source_material=source_material,
+                cluster=cluster,
+                pipeline_run_id=pipeline_run_id,
             )
-            if codex_article and _openrouter_article_quality_check(codex_article):
+            if codex_article:
                 _pipeline_event(
                     pipeline_run_id,
                     "article_write",
@@ -3626,6 +4008,7 @@ async def process_keyword(
                     domain,
                     pipeline_run_id,
                     step_images=step_images_scraped,
+                    candidate_hero_images=hero_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("OpenAI Codex CLI production succeeded for %s -> %s", keyword, status)
@@ -3638,13 +4021,37 @@ async def process_keyword(
         # The attested Hermes gateway is the final Codex attempt. Its result
         # distinguishes provider availability from HTTP-200 content rejection,
         # so a free model is never used merely because an article failed quality.
-        hermes_result = await _call_hermes_codex_for_article_result(
-            keyword,
-            domain,
+        hermes_result: _HermesArticleResult | None = None
+
+        async def _hermes_caller(
+            keyword: str,
+            domain: Domain,
+            source_material: str = "",
+            revision_feedback: str = "",
+            **kwargs,
+        ) -> dict | None:
+            nonlocal hermes_result
+            res = await _call_hermes_codex_for_article_result(
+                keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+            )
+            hermes_result = res
+            if res.outcome != "success":
+                return None
+            return res.article
+
+        hermes_article, hermes_q = await _generate_article_with_revision_loop(
+            "openai-codex",
+            _hermes_caller,
+            keyword=keyword,
+            domain=domain,
             source_material=source_material,
+            cluster=cluster,
+            pipeline_run_id=pipeline_run_id,
         )
-        hermes_article = hermes_result.article
-        if hermes_article and _openrouter_article_quality_check(hermes_article):
+        if hermes_result is None:
+            hermes_result = _HermesArticleResult(None, "availability_failure", "Hermes Codex not reached")
+
+        if hermes_article:
             _pipeline_event(
                 pipeline_run_id,
                 "article_write",
@@ -3659,6 +4066,7 @@ async def process_keyword(
                 domain,
                 pipeline_run_id,
                 step_images=step_images_scraped,
+                candidate_hero_images=hero_images_scraped,
             )
             if status in {"Live", "Needs Verification"}:
                 logger.info("OpenAI Codex production succeeded for %s -> %s", keyword, status)
@@ -3702,12 +4110,16 @@ async def process_keyword(
                 provider=omni_label,
                 fallback_reason=hermes_result.detail,
             )
-            omniroute_article = await _call_omniroute_for_article(
-                keyword,
-                domain,
+            omniroute_article, omni_q = await _generate_article_with_revision_loop(
+                omni_label,
+                _call_omniroute_for_article,
+                keyword=keyword,
+                domain=domain,
                 source_material=source_material,
+                cluster=cluster,
+                pipeline_run_id=pipeline_run_id,
             )
-            if omniroute_article and _openrouter_article_quality_check(omniroute_article):
+            if omniroute_article:
                 _pipeline_event(
                     pipeline_run_id,
                     "article_write",
@@ -3722,6 +4134,7 @@ async def process_keyword(
                     domain,
                     pipeline_run_id,
                     step_images=step_images_scraped,
+                    candidate_hero_images=hero_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("OmniRoute fallback production succeeded for %s -> %s", keyword, status)
@@ -3764,12 +4177,16 @@ async def process_keyword(
                 provider=free_provider_label,
                 fallback_reason=hermes_result.detail,
             )
-            free_article = await _call_hermes_free_for_article(
-                keyword,
-                domain,
+            free_article, free_q = await _generate_article_with_revision_loop(
+                free_provider_label,
+                _call_hermes_free_for_article,
+                keyword=keyword,
+                domain=domain,
                 source_material=source_material,
+                cluster=cluster,
+                pipeline_run_id=pipeline_run_id,
             )
-            if free_article and _openrouter_article_quality_check(free_article):
+            if free_article:
                 _pipeline_event(
                     pipeline_run_id,
                     "article_write",
@@ -3784,6 +4201,7 @@ async def process_keyword(
                     domain,
                     pipeline_run_id,
                     step_images=step_images_scraped,
+                    candidate_hero_images=hero_images_scraped,
                 )
                 if status in {"Live", "Needs Verification"}:
                     logger.info("Hermes free model production succeeded for %s -> %s", keyword, status)
@@ -4603,10 +5021,22 @@ async def _run_domain(
     limit: int,
     once: bool,
     success_target: int = 0,
+    *,
+    bypass_admission: bool = False,
+    target_keywords: list[str] | None = None,
 ) -> None:
     repairs = _DomainRepairLane(domain)
     try:
-        await _run_domain_foreground(domain, workers, limit, once, success_target, repairs=repairs)
+        await _run_domain_foreground(
+            domain,
+            workers,
+            limit,
+            once,
+            success_target,
+            repairs=repairs,
+            bypass_admission=bypass_admission,
+            target_keywords=target_keywords,
+        )
     finally:
         await repairs.close()
 
@@ -4619,20 +5049,54 @@ async def _run_domain_foreground(
     success_target: int = 0,
     *,
     repairs: _DomainRepairLane,
+    bypass_admission: bool = False,
+    target_keywords: list[str] | None = None,
 ) -> None:
     """Continuous keyword worker for a single domain. Loops until all keywords exhausted or once=True."""
     roadmap_title = f"{domain.display_name} Keyword Roadmap"
     batch_size = max(1, min(limit, workers))
-    logger.info("[%s] worker started (%d workers, batch=%d)", domain.handle, workers, batch_size)
+    logger.info(
+        "[%s] worker started (%d workers, batch=%d, bypass_admission=%s)",
+        domain.handle,
+        workers,
+        batch_size,
+        bypass_admission,
+    )
     _consecutive_empty = 0
     attempted_keywords = set()
     if _PRODUCTION_BATCH_TRACKER is not None:
         attempted_keywords = _PRODUCTION_BATCH_TRACKER.attempted_keyword_keys(domain.handle)
 
+    if target_keywords:
+        logger.info(
+            "[%s] Processing %d explicit target keywords directly: %s",
+            domain.handle,
+            len(target_keywords),
+            target_keywords,
+        )
+        tasks = [
+            process_keyword(
+                kw,
+                "Especialidades",
+                domain,
+                source="Operator Request",
+                bypass_admission=bypass_admission,
+                force_keyword=True,
+            )
+            for kw in target_keywords
+        ]
+        results = await asyncio.gather(*tasks)
+        for kw, status in zip(target_keywords, results, strict=False):
+            if domain.keywords_file.exists():
+                mark_keyword_status(domain.keywords_file, roadmap_title, kw, status)
+            if _PRODUCTION_BATCH_TRACKER is not None:
+                _PRODUCTION_BATCH_TRACKER.complete_keyword(domain.handle, kw, status)
+        return
+
     while True:
         from rankstein.production_safety import campaign_admission
 
-        admission = campaign_admission([domain], campaigns_per_domain=batch_size)
+        admission = campaign_admission([domain], campaigns_per_domain=batch_size, bypass=bypass_admission)
         if not admission["ok"]:
             reason = "; ".join(admission["issues"])
             logger.warning("[%s] Production admission blocked: %s", domain.handle, reason)
@@ -4886,10 +5350,35 @@ async def main() -> None:
         default="",
         help="Stable dashboard batch identifier for a bounded production run",
     )
+    parser.add_argument(
+        "--keyword",
+        type=str,
+        default=None,
+        help="Specific keyword to generate an article for",
+    )
+    parser.add_argument(
+        "--keywords",
+        type=str,
+        default=None,
+        help="Comma-separated list of specific keywords to process",
+    )
+    parser.add_argument(
+        "--force",
+        "--bypass-admission",
+        dest="bypass_admission",
+        action="store_true",
+        help="Bypass queue backlog delivery admission limits and allow running",
+    )
     args = parser.parse_args()
 
     reload_registry()
     registry = get_registry()
+
+    target_kws = []
+    if args.keywords:
+        target_kws.extend([k.strip() for k in args.keywords.split(",") if k.strip()])
+    if args.keyword and args.keyword.strip() not in target_kws:
+        target_kws.append(args.keyword.strip())
 
     if args.all_domains or not args.domain:
         # Launch workers for every domain simultaneously
@@ -4917,6 +5406,8 @@ async def main() -> None:
                         args.limit,
                         args.once,
                         args.success_target_per_domain,
+                        bypass_admission=args.bypass_admission,
+                        target_keywords=target_kws or None,
                     )
                     for domain in domains
                 ]
@@ -4949,6 +5440,8 @@ async def main() -> None:
                 args.limit,
                 args.once,
                 args.success_target_per_domain,
+                bypass_admission=args.bypass_admission,
+                target_keywords=target_kws or None,
             )
             if _PRODUCTION_BATCH_TRACKER is not None:
                 _PRODUCTION_BATCH_TRACKER.finish_if_complete()

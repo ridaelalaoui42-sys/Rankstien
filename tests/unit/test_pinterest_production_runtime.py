@@ -701,3 +701,66 @@ def test_supervisor_heartbeat_survives_windows_replace_contention(
         assert not state_file.with_suffix(".tmp").exists()
     finally:
         lease.release()
+
+
+@pytest.mark.unit
+def test_supervisor_lease_overrides_stale_lock_from_living_process(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import os
+
+    import pinterest_automation.runtime_state as runtime_state
+
+    lock_file = tmp_path / "supervisor.lock"
+    state_file = tmp_path / "supervisor.json"
+    stop_file = tmp_path / "supervisor.stop"
+    monkeypatch.setattr(runtime_state, "RUNTIME_DIR", tmp_path)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_LOCK_FILE", lock_file)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_STATE_FILE", state_file)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_STOP_FILE", stop_file)
+
+    # Simulate an external process (e.g. MCP server PID) that wrote a lock file
+    # but has a stale/missing heartbeat
+    lock_file.write_text(json.dumps({"pid": 999999, "started_at": time.time() - 500}), encoding="utf-8")
+    state_file.write_text(
+        json.dumps({"pid": 999999, "heartbeat_at": time.time() - 500, "worker_count": 2}), encoding="utf-8"
+    )
+    monkeypatch.setattr(runtime_state, "_process_alive", lambda pid: True)
+
+    lease = runtime_state.SupervisorLease(worker_count=3)
+    lease.acquire()
+    try:
+        status = runtime_state.supervisor_status(max_age_seconds=10)
+        assert status["running"] is True
+        assert status["pid"] == os.getpid()
+        assert status["worker_count"] == 3
+    finally:
+        lease.release()
+
+
+@pytest.mark.unit
+def test_supervisor_lease_blocks_when_external_supervisor_is_actively_running(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pinterest_automation.runtime_state as runtime_state
+
+    lock_file = tmp_path / "supervisor.lock"
+    state_file = tmp_path / "supervisor.json"
+    stop_file = tmp_path / "supervisor.stop"
+    monkeypatch.setattr(runtime_state, "RUNTIME_DIR", tmp_path)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_LOCK_FILE", lock_file)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_STATE_FILE", state_file)
+    monkeypatch.setattr(runtime_state, "SUPERVISOR_STOP_FILE", stop_file)
+
+    # Simulate an external process that is actively heartbeating
+    lock_file.write_text(json.dumps({"pid": 888888, "started_at": time.time()}), encoding="utf-8")
+    state_file.write_text(
+        json.dumps({"pid": 888888, "heartbeat_at": time.time(), "worker_count": 2}), encoding="utf-8"
+    )
+    monkeypatch.setattr(runtime_state, "_process_alive", lambda pid: True)
+
+    lease = runtime_state.SupervisorLease(worker_count=3)
+    with pytest.raises(RuntimeError, match="Pinterest supervisor already running with PID 888888"):
+        lease.acquire()

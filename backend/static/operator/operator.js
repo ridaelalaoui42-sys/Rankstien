@@ -698,7 +698,24 @@ async function refreshStatus() {
   try {
     const hadDomains = state.data?.domains?.length;
     state.data = await api("/api/rankstein/status");
+    if (state.data?.telemetry) {
+      updateTelemetryHud(state.data.telemetry);
+      if (state.data.telemetry.pins_total !== undefined) {
+        state.pinTotal = state.data.telemetry.pins_total;
+      }
+    } else {
+      api("/api/rankstein/telemetry/gauges").then((res) => {
+        if (res && res.ok && res.telemetry) {
+          updateTelemetryHud(res.telemetry);
+          if (res.telemetry.pins_total !== undefined) {
+            state.pinTotal = res.telemetry.pins_total;
+            renderOverview();
+          }
+        }
+      }).catch(() => {});
+    }
     renderStatus();
+    renderOverview();
     const refresh = state.data.status_refresh || {};
     const age = Math.max(
       0,
@@ -1113,6 +1130,11 @@ const commands = {
     "Stop production batch",
     "Stop the tracked production process and its child article workers. The Pinterest supervisor and queued pins keep running. In-flight articles may need verification; published content is not removed.",
     "Stop batch",
+  ],
+  launch: [
+    "Start multidomain launcher",
+    "Launch the full multidomain service suite (preflight checks, background services, Pinterest supervisor, and monitoring).",
+    "Start launcher",
   ],
 };
 function openCommand(command) {
@@ -2121,15 +2143,23 @@ setInterval(() => {
 // Mission Control Dialogs & Event Handlers
 // ====================================================================
 
-// Launch Campaign Modal
-$("btn-open-launch-campaign")?.addEventListener("click", () => {
+function openLaunchCampaign() {
   const select = $("campaign-domain-select");
   if (select && state.data?.domains) {
-    select.innerHTML = state.data.domains.map(d => `<option value="${esc(d.handle)}">${esc(d.handle)} (${esc(d.domain)})</option>`).join("");
+    let opts = state.data.domains.map(d => `<option value="${esc(d.handle)}">${esc(d.handle)} (${esc(d.domain)})</option>`).join("");
+    opts += `<option value="all">All Domains Simultaneously (--all-domains)</option>`;
+    select.innerHTML = opts;
     if (domainScope()) select.value = domainScope();
   }
   $("launch-campaign-dialog").showModal();
-});
+}
+
+$("btn-open-launch-campaign")?.addEventListener("click", openLaunchCampaign);
+$("topbar-btn-launch-campaign")?.addEventListener("click", openLaunchCampaign);
+$("overview-btn-launch-campaign")?.addEventListener("click", openLaunchCampaign);
+
+$("topbar-btn-start-launcher")?.addEventListener("click", () => openCommand("launch"));
+$("overview-btn-start-launcher")?.addEventListener("click", () => openCommand("launch"));
 
 $("launch-campaign-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -2140,9 +2170,12 @@ $("launch-campaign-form")?.addEventListener("submit", async (e) => {
     const payload = {
       domain: $("campaign-domain-select").value,
       keyword: $("campaign-keyword-input").value.trim(),
-      auto_pick: $("campaign-autopick-check").checked,
-      pins_target: parseInt($("campaign-pins-count").value, 10) || 30,
-      workers: parseInt($("campaign-workers-count").value, 10) || 2,
+      auto_pick: $("campaign-autopick-check")?.checked ?? true,
+      article_count: parseInt($("campaign-articles-count")?.value || "1", 10) || 1,
+      pin_count: parseInt($("campaign-pins-count")?.value || "30", 10) || 30,
+      workers: parseInt($("campaign-workers-count")?.value || "3", 10) || 3,
+      bypass_admission: $("campaign-bypass-admission-check")?.checked ?? true,
+      parallel_mode: $("campaign-parallel-check")?.checked ?? true,
     };
     const res = await api("/api/rankstein/campaigns/launch", {
       method: "POST",

@@ -600,7 +600,7 @@
 | pasteles recetas caseras | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Failed |
 | pasteles recetas faciles y rapidas | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles recetas puerto rico | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
-| pasteles recetas de chocolate | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
+| pasteles recetas de chocolate | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Failed |
 | Cursos de repostería y cocina | Pasteles | Google News | Receta Dolce | High | Pending |
 | recetas pasteles de belem | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | galletas recetas de la abuela | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
@@ -617,7 +617,7 @@
 | galletas digestive | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | galletas gullon | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | Galletas con forma de corazón de San Valentín | Galletas | Google Autocomplete Demand + Google News | Receta Dolce | High | Pending |
-| galletas nutella | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| galletas nutella | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | la falsa tarta árabe | Postres | Google News | Receta Dolce | Medium | Pending |
 | galletas milka | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | pasteles ideas | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
@@ -626,7 +626,7 @@
 | pasteles ideas para hombre | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles ideas mujer | Pasteles | Google News + Google Suggestions | Receta Dolce | High | Pending |
 | Cuáles son las 10 mejores galletas del mundo | Galletas | Google News | Receta Dolce | Medium | Pending |
-| ideas pasteles cumpleaños | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| ideas pasteles cumpleaños | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
 | pasteles marroquíes | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | pasteles de frutas | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | pasteles de costco | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
@@ -635,39 +635,39 @@
 | pasteles para hombre | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles verdes | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | pasteles para mujer | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
-| ideas galletas de arroz | Galletas | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
+| ideas galletas de arroz | Galletas | Google News + Google Suggestions | Receta Dolce | Medium | Failed |
 | ideas galletas dia del padre | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| Día Mundial de la Tarta de Queso | fresas-y-nata | Google Autocomplete Demand + Google News | Receta Dolce | Low | Pending |
+| Día Mundial de la Tarta de Queso | fresas-y-nata | Google Autocomplete Demand + Google News | Receta Dolce | Low | Failed |
 | Postres, ideas virales y sabor a Semana Santa | Postres | Google News | Receta Dolce | Medium | Pending |
 | tarta tres chocolates recetas | Chocolates | Google Suggestions | Receta Dolce | Low | Pending |
-| ideas galletas halloween oreo | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| ideas galletas halloween oreo | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | recetas pasteles hello kitty island adventure | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | recetas pasteles salados | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
-| galletas recetas con chispas de chocolate | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| galletas recetas con chispas de chocolate | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | pasteles ideas hombre | Pasteles | Google News + Google Suggestions | Receta Dolce | Medium | Pending |
 | ideas pasteles dia del padre | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | ideas pasteles san valentin | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| galletas de Navidad de María Pombo | Galletas | Google Autocomplete Demand + Google News | Receta Dolce | Medium | Pending |
+| galletas de Navidad de María Pombo | Galletas | Google Autocomplete Demand + Google News | Receta Dolce | Medium | Failed |
 | 12 recetas frías con calabacín | Pasteles | Google News | Receta Dolce | Medium | Pending |
 | galletas recetas de la abuela arcor | Galletas | Google Autocomplete Demand + Google Suggestions | Receta Dolce | Medium | Pending |
 | galletas saladas | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
 | galletas marroquies | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| galletas de chocolate | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
-| galletas recetas sin mantequilla | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Pending |
+| galletas de chocolate | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
+| galletas recetas sin mantequilla | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | ideas pasteles de graduacion | Pasteles | Google Autocomplete Demand + Google Suggestions | Receta Dolce | Medium | Pending |
 | paella de marisco paso a paso | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
-| Galletas de avena | Galletas | Google Autocomplete Demand + Google News + Google Suggestions + Pinterest Trends | Receta Dolce | High | Pending |
+| Galletas de avena | Galletas | Google Autocomplete Demand + Google News + Google Suggestions + Pinterest Trends | Receta Dolce | High | Failed |
 | ensalada de garbanzos aguacate | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | tortilla española receta original | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
 | tortilla española emplatado | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | croquetas caseras de jamon | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | salmón al horno con espárragos | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | ensalada de garbanzos atun | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| Galletas de mantequilla | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| Galletas de jengibre | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
+| Galletas de mantequilla | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |
+| Galletas de jengibre | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |
 | pollo al horno con papas | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | paella de marisco video | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
-| pastel de zanahoria la esperanza precio | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| pastel de zanahoria la esperanza precio | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
 | croquetas caseras de pollo | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | croquetas caseras de cocido | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
 | croquetas caseras en freidora de aire | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
@@ -682,57 +682,55 @@
 | salmón al horno con miel y mostaza | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | salmón al horno como cocinar | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | salmón al horno recetas faciles | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
-| mousse de chocolate tradicional | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| helado de pistacho mercadona | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| mousse de chocolate thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de queso mercadona | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de queso sin horno | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de coco y galletas | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
-| tortilla española gourmet | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
+| mousse de chocolate tradicional | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
+| helado de pistacho mercadona | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| mousse de chocolate thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| tarta de queso mercadona | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| tarta de queso sin horno | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
+| tarta de coco y galletas | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Failed |
 | ensalada de garbanzos con queso feta | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
-| mousse de chocolate con leche condensada | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| mousse de chocolate con leche condensada | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
 | tortilla española de papa | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | salmón al horno como preparar | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | pollo al horno con patatas | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | croquetas caseras recetas para hacer | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
 | tortilla española con chorizo | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| helado de pistacho receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| pastel de zanahoria receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| Tartas sin gluten y sin lactosa de Mercadona | fresas-y-nata | Google Autocomplete Demand + Google News | Receta Dolce | Low | Pending |
-| galletas de avena y platano | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena y banana | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena y manzana | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena y miel | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena quaker | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| galletas de avena y chocolate | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| helado de pistacho receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| galletas de avena receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| pastel de zanahoria receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| Tartas sin gluten y sin lactosa de Mercadona | fresas-y-nata | Google Autocomplete Demand + Google News | Receta Dolce | Low | Failed |
+| galletas de avena y platano | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Live |
+| galletas de avena y banana | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
+| galletas de avena y manzana | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| galletas de avena y miel | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Live |
+| galletas de avena quaker | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
+| galletas de avena y chocolate | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
 | America de Cali vs Aguilas Doradas | fresas-y-nata | Google Autocomplete Demand + Google News + Google Trends | Receta Dolce | Low | Pending |
 | bizcocho de chocolate para hombre | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| galletas de avena sin azucar | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| arroz con leche saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
-| bizcocho de chocolate receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de queso san sebastian | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de queso thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| bizcocho de chocolate thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| mousse de chocolate receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| pastel de zanahoria la esperanza | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| pastel de zanahoria precio | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| galletas de avena sin azucar | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |
+| arroz con leche saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| bizcocho de chocolate receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| tarta de queso san sebastian | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| tarta de queso thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| bizcocho de chocolate thermomix | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| mousse de chocolate receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| pastel de zanahoria la esperanza | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Needs Verification |
+| pastel de zanahoria precio | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
 | paella de marisco restaurante | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Low | Pending |
 | paella de marisco pollo | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
-| pastel de zanahoria con harina de avena | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
-| tarta de manzana con hojaldre crujiente | tartas-y-pasteles | SEO Feedback Radar | Receta Dolce | High | Pending |
+| pastel de zanahoria con harina de avena | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
+| tarta de manzana con hojaldre crujiente | tartas-y-pasteles | SEO Feedback Radar | Receta Dolce | High | Failed |
 | postres en vaso de tiramisu y frutos rojos | fresas-y-nata | SEO Feedback Radar | Receta Dolce | High | Pending |
-| bizcocho de avena platano y chocolate sin azucar | dulces-saludables | SEO Feedback Radar | Receta Dolce | High | Pending |
-| croquetas caseras de carne | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Pending |
+| bizcocho de avena platano y chocolate sin azucar | dulces-saludables | SEO Feedback Radar | Receta Dolce | High | Failed |
 | brownie de chocolate con nueces | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| tarta de manzana casera facil | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
-| flan de huevo al bano maria | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
-| churros rellenos de chocolate | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
-| bizcocho de yogur esponjoso | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
+| tarta de manzana casera facil | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
+| flan de huevo al bano maria | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
+| churros rellenos de chocolate | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
+| bizcocho de yogur esponjoso | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
 | coulant de chocolate fundente | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | tarta de queso japonesa | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | profiteroles de chocolate y nata | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
-| tarta de santiago con almendra | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Pending |
+| tarta de santiago con almendra | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Failed |
 | bizcocho de zanahoria con frosting | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | High | Live |
 | bizcocho de chocolate matilda | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Live |
 | arroz con leche animado | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Needs Verification |
@@ -746,8 +744,106 @@
 | arroz con leche para vender publicidad | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
 | mousse de chocolate emplatado | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
 | helado de pistacho sarita | fresas-y-nata | Google Autocomplete Demand + Pinterest Trends | Receta Dolce | Medium | Needs Verification |
-| pastel de zanahoria receta facil | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
-| bizcocho de chocolate saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| pastel de zanahoria receta facil | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Needs Verification |
+| bizcocho de chocolate saludable | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
 | mousse de chocolate chantilly | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Needs Verification |
-| bizcocho de chocolate con dulce de leche | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
-| pastel de zanahoria navideño | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Pending |
+| pastel de zanahoria navideño | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| Tarta de manzana casera rapida | General | Mission Control | Receta Dolce | Urgent | Needs Verification |
+| tarta de queso casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de queso artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| bizcocho de chocolate estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| bizcocho de chocolate artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| Galletas de mantequilla faciles | General | Mission Control | Receta Dolce | Urgent | Needs Verification |
+| galletas de avena con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| galletas de avena artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| pastel de zanahoria facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| pastel de zanahoria artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| helado de pistacho sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| helado de pistacho con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Live |
+| helado de pistacho estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| helado de pistacho con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| helado de pistacho con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| helado de pistacho crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| helado de pistacho artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| mousse de chocolate facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| mousse de chocolate estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| mousse de chocolate artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| panellets de boniato | dulces-saludables | Editorial Autumn Demand 2026 | Receta Dolce | High | Pending |
+| buñuelos de viento rellenos | tartas-y-pasteles | Editorial Autumn Demand 2026 | Receta Dolce | High | Pending |
+| bizcocho de calabaza esponjoso | tartas-y-pasteles | Editorial Autumn Demand 2026 | Receta Dolce | High | Needs Verification |
+| galletas de Halloween fáciles | chocolates | Editorial Autumn Demand 2026 | Receta Dolce | High | Pending |
+| rollitos de calabaza y canela | tartas-y-pasteles | Editorial Autumn Demand 2026 | Receta Dolce | High | Pending |
+| pan de muerto tradicional | tartas-y-pasteles | Editorial Autumn Demand 2026 | Receta Dolce | High | Pending |
+| bizcocho de chocolate con dulce de leche | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Needs Verification |
+| tarta de manzana sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de manzana estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de manzana con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
+| tarta de manzana con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
+| tarta de manzana con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
+| tarta de manzana crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| tarta de manzana artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| flan de huevo estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |

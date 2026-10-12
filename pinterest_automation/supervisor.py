@@ -542,6 +542,17 @@ class AutonomousSupervisor:
                                                     f"Worker {worker_id}: Self-healing draft purge failed: {heal_exc}"
                                                 )
 
+                                        # Self-healing: if board selection failed, run board normalization and queue recovery
+                                        if "board" in error.lower() and ("selection failed" in error.lower() or "not found" in error.lower()):
+                                            logger.warning(
+                                                f"Worker {worker_id}: Board selection failure detected ({error}). Running self-healing board normalization and recovery..."
+                                            )
+                                            try:
+                                                from pinterest_automation.board_normalizer import normalize_queue_boards
+                                                normalize_queue_boards()
+                                            except Exception as board_heal_exc:
+                                                logger.debug(f"Worker {worker_id}: Board normalization helper notice: {board_heal_exc}")
+
                                         await driver.close(healthy=False)
                                         driver = PinterestDriver()
                                         await self.queue.retry_or_fail_async(job.id, error)

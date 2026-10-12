@@ -16,7 +16,12 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-UNSAFE_PYTHON_ENV_VARS = ("PYTHONHOME", "UV_INTERNAL__PYTHONHOME")
+UNSAFE_PYTHON_ENV_VARS = (
+    "PYTHONHOME",
+    "UV_INTERNAL__PYTHONHOME",
+    "PYTHONPATH",
+    "VIRTUAL_ENV",
+)
 
 
 def clean_python_env(env: Mapping[str, str] | None = None) -> dict[str, str]:

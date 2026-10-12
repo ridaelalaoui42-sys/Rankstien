@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
 
 from .config import DATA_DIR
+
+logger = logging.getLogger("rankstein.runtime_state")
 
 RUNTIME_DIR = DATA_DIR / "runtime"
 SUPERVISOR_LOCK_FILE = RUNTIME_DIR / "supervisor.lock"
@@ -90,8 +93,14 @@ class SupervisorLease:
         RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
         existing = _read_json(SUPERVISOR_LOCK_FILE)
         existing_pid = int(existing.get("pid") or 0)
-        if existing_pid and _process_alive(existing_pid):
-            raise RuntimeError(f"Pinterest supervisor already running with PID {existing_pid}")
+        if existing_pid and existing_pid != self.pid and _process_alive(existing_pid):
+            status = supervisor_status()
+            if status["running"]:
+                raise RuntimeError(f"Pinterest supervisor already running with PID {existing_pid}")
+            logger.warning(
+                "Clearing stale supervisor lock from PID %d (process alive but supervisor heartbeat stale or inactive)",
+                existing_pid,
+            )
 
         for stale in (SUPERVISOR_LOCK_FILE, SUPERVISOR_STATE_FILE, SUPERVISOR_STOP_FILE):
             try:
@@ -100,7 +109,10 @@ class SupervisorLease:
                 pass
 
         flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-        descriptor = os.open(SUPERVISOR_LOCK_FILE, flags)
+        try:
+            descriptor = os.open(SUPERVISOR_LOCK_FILE, flags)
+        except FileExistsError:
+            raise RuntimeError("Another supervisor process acquired the lock concurrently")
         try:
             os.write(
                 descriptor,

@@ -11,7 +11,7 @@ interface StarRatingProps {
   initialCount?: number;
 }
 
-export default function StarRating({ postId, initialRating = 4.9, initialCount = 24 }: StarRatingProps) {
+export default function StarRating({ postId, initialRating = 0, initialCount = 0 }: StarRatingProps) {
   const [rating, setRating] = useState(initialRating);
   const [count, setCount] = useState(initialCount);
   const [hover, setHover] = useState(0);
@@ -84,10 +84,10 @@ export default function StarRating({ postId, initialRating = 4.9, initialCount =
 
       <div className="space-y-2">
         <p className="text-3xl font-serif text-ink italic">
-          {rating.toFixed(1)} <span className="text-lg text-gray-600 not-italic">/ 5.0</span>
+          {count > 0 ? rating.toFixed(1) : '5.0'} <span className="text-lg text-gray-600 not-italic">/ 5.0</span>
         </p>
         <p className="text-xs text-gray-600 font-sans uppercase tracking-widest">
-          {hasRated ? '¡Tu opinión ha sido registrada!' : `Basado en ${count} experiencias culinarias`}
+          {hasRated ? '¡Tu opinión ha sido registrada!' : count > 0 ? `Basado en ${count} ${count === 1 ? 'experiencia culinaria' : 'experiencias culinarias'}` : 'Sé el primero en valorar esta receta'}
         </p>
       </div>
 

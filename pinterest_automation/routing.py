@@ -90,8 +90,12 @@ def select_upload_account(domain_handle: str, asset_key: str, *, config=None) ->
 
 
 def cross_save_targets(domain_handle: str, source_handle: str, *, config=None) -> list[str]:
+    raw = os.environ.get("PINTEREST_CROSS_SAVE_LIMIT", "").strip().lower()
+    cohort = [handle for handle in account_cohort(domain_handle, config=config) if handle != source_handle]
+    if raw in ("-1", "none", "unlimited", "all", "infinite", "no_limit", "nolimit"):
+        return cohort
+
     limit = _positive_int_env("PINTEREST_CROSS_SAVE_LIMIT", 0)
     if limit == 0:
         return []
-    cohort = [handle for handle in account_cohort(domain_handle, config=config) if handle != source_handle]
     return cohort[:limit]

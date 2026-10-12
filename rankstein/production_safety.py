@@ -17,7 +17,11 @@ PINS_PER_CAMPAIGN = 31
 
 
 def campaign_admission(
-    domains: list[Domain], *, campaigns_per_domain: int = 1, queue_path: Path | None = None
+    domains: list[Domain],
+    *,
+    campaigns_per_domain: int = 1,
+    queue_path: Path | None = None,
+    bypass: bool = False,
 ) -> dict[str, Any]:
     """Do not start new campaigns faster than their configured delivery budget.
 
@@ -26,6 +30,19 @@ def campaign_admission(
     """
     resources = log_manager.check_resource_budget()
     issues = list(resources["issues"])
+    if bypass or os.environ.get("RANKSTEIN_BYPASS_QUEUE_ADMISSION", "0").lower() in ("1", "true", "yes"):
+        delivery = {
+            domain.handle: {
+                "pending_pins": 0,
+                "new_pins": PINS_PER_CAMPAIGN * campaigns_per_domain,
+                "daily_pin_budget": domain.daily_pin_budget,
+                "projected_days": 0.0,
+                "max_days": float(os.environ.get("RANKSTEIN_MAX_QUEUE_DAYS", "3")),
+                "ok": True,
+            }
+            for domain in domains
+        }
+        return {"ok": True, "resources": resources, "delivery": delivery, "issues": []}
     path = queue_path or Path(
         os.environ.get("PINTEREST_QUEUE_DB_FILE") or PROJECT_ROOT / "data" / "queue" / "jobs.db"
     )

@@ -83,7 +83,7 @@ def test_hero_image_fallback_order_scraped_before_pollinations(
         calls.append("codex")
         return {"success": False, "error": "Codex unavailable"}
 
-    def mock_scrape(keyword: str, slug: str) -> dict:
+    def mock_scrape(*args, **kwargs) -> dict:
         calls.append("scraped")
         return {
             "success": True,
@@ -111,7 +111,7 @@ def test_hero_image_fallback_order_scraped_before_pollinations(
 
     assert result["success"] is True
     assert result["source"] == "scraped"
-    assert calls == ["codex", "scraped"]
+    assert calls == ["scraped"]
 
 
 @pytest.mark.unit
@@ -126,7 +126,7 @@ def test_hero_image_fallback_to_pollinations_when_scraped_fails(
         calls.append("codex")
         return {"success": False, "error": "Codex unavailable"}
 
-    def mock_scrape(keyword: str, slug: str) -> dict:
+    def mock_scrape(*args, **kwargs) -> dict:
         calls.append("scraped")
         return {"success": False, "error": "no scraped sources"}
 
@@ -154,7 +154,7 @@ def test_hero_image_fallback_to_pollinations_when_scraped_fails(
 
     assert result["success"] is True
     assert result["source"] == "pollinations"
-    assert calls == ["codex", "scraped", "pollinations"]
+    assert calls == ["scraped", "codex", "pollinations"]
 
 
 @pytest.mark.unit

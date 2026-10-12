@@ -350,11 +350,90 @@ def _extract_step_images(soup, base_url=""):
     return step_images
 
 
+def _extract_hero_image(soup, base_url=""):
+    """Extract lead/hero image from recipe article (JSON-LD Recipe, og:image, or featured image)."""
+    # 1. JSON-LD Recipe image
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            raw_text = script.string or script.get_text() or ""
+            if not raw_text.strip():
+                continue
+            data = json.loads(raw_text)
+            candidates = (
+                data.get("@graph", [data])
+                if isinstance(data, dict)
+                else (data if isinstance(data, list) else [])
+            )
+            for item in candidates:
+                if isinstance(item, dict) and item.get("@type") in ("Recipe", ["Recipe"]):
+                    img = item.get("image")
+                    if isinstance(img, list) and img:
+                        img = img[0]
+                    if isinstance(img, dict):
+                        img = img.get("url")
+                    if isinstance(img, str) and img.startswith("http"):
+                        return img
+        except Exception:
+            continue
+
+    # 2. OpenGraph og:image
+    og = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "og:image"})
+    if og and og.get("content"):
+        img = og["content"].strip()
+        if img.startswith("//"):
+            img = "https:" + img
+        elif img.startswith("/") and base_url:
+            img = urllib.parse.urljoin(base_url, img)
+        if img.startswith("http"):
+            lower = img.lower()
+            if not any(
+                bad in lower for bad in ["logo", "avatar", "icon", "pixel", "default", "placeholder", "blank"]
+            ):
+                return img
+
+    # 3. Twitter image
+    tw = soup.find("meta", attrs={"name": "twitter:image"}) or soup.find("meta", property="twitter:image")
+    if tw and tw.get("content"):
+        img = tw["content"].strip()
+        if img.startswith("//"):
+            img = "https:" + img
+        elif img.startswith("/") and base_url:
+            img = urllib.parse.urljoin(base_url, img)
+        if img.startswith("http"):
+            lower = img.lower()
+            if not any(
+                bad in lower for bad in ["logo", "avatar", "icon", "pixel", "default", "placeholder", "blank"]
+            ):
+                return img
+
+    # 4. Featured / Header / Article Image Selectors
+    for sel in [
+        ".featured-image img",
+        ".post-thumbnail img",
+        ".entry-thumbnail img",
+        ".lead-image img",
+        "article header img",
+        "figure.wp-block-post-featured-image img",
+        "article img",
+    ]:
+        tag = soup.select_one(sel)
+        if tag:
+            src = tag.get("src") or tag.get("data-src") or tag.get("data-lazy-src") or ""
+            if src and not src.startswith("http") and base_url:
+                src = urllib.parse.urljoin(base_url, src)
+            if src.startswith("http"):
+                lower = src.lower()
+                if not any(bad in lower for bad in ["logo", "avatar", "icon", "pixel", "ad", "spacer"]):
+                    return src
+
+    return ""
+
+
 def extract_article(url: str) -> dict:
     """
     Extract full article content from any URL.
     Multi-strategy: <article> → content selectors → largest text block → all <p>.
-    Returns: {success, url, title, content, author, date, word_count, key_sections, step_images}
+    Returns: {success, url, title, content, author, date, word_count, key_sections, step_images, hero_image}
     """
     if not url or not url.startswith("http"):
         return {"success": False, "error": "Invalid or empty URL", "url": url}
@@ -377,8 +456,9 @@ def extract_article(url: str) -> dict:
         resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # Extract step images BEFORE stripping scripts and tags
+        # Extract step and hero images BEFORE stripping scripts and tags
         step_images = _extract_step_images(soup, url)
+        hero_image = _extract_hero_image(soup, url)
 
         # Strip noise
         for tag in soup.select(
@@ -435,6 +515,7 @@ def extract_article(url: str) -> dict:
             "key_sections": sections[:10],
             "videos": videos,
             "step_images": step_images,
+            "hero_image": hero_image,
         }
     except requests.exceptions.Timeout:
         return {"success": False, "error": f"Timeout: {url}", "url": url}
@@ -642,24 +723,47 @@ def validate_article(data: dict) -> dict:
     domain_handle = (data.get("domain_handle") or data.get("domain") or "").strip().lower()
 
     dolce_categories = {
-        "fresas-y-nata", "tartas-y-pasteles", "chocolates", "dulces-saludables",
-        "Fresas y Nata", "Tartas y Pasteles", "Chocolates", "Dulces Saludables",
-        "pasteles", "galletas", "chocolates", "repostería", "helados",
+        "fresas-y-nata",
+        "tartas-y-pasteles",
+        "chocolates",
+        "dulces-saludables",
+        "Fresas y Nata",
+        "Tartas y Pasteles",
+        "Chocolates",
+        "Dulces Saludables",
+        "pasteles",
+        "galletas",
+        "repostería",
+        "helados",
     }
     genial_categories = {
-        "Aperitivos", "Arroces", "Carnes", "Pescados", "Ensaladas", "Postres",
-        "aperitivos", "arroces", "carnes", "pescados", "ensaladas", "postres",
+        "Aperitivos",
+        "Arroces",
+        "Carnes",
+        "Pescados",
+        "Ensaladas",
+        "Postres",
+        "aperitivos",
+        "arroces",
+        "carnes",
+        "pescados",
+        "ensaladas",
+        "postres",
     }
 
     if domain_handle in ("recetadolce", "dolce"):
         valid = dolce_categories
         if cat and cat not in valid:
-            issues.append(f"Invalid category '{cat}' for RecetaDolce. Must be one of {sorted(dolce_categories)}")
+            issues.append(
+                f"Invalid category '{cat}' for RecetaDolce. Must be one of {sorted(dolce_categories)}"
+            )
             score -= 30
     elif domain_handle in ("recetagenial", "genial"):
         valid = genial_categories
         if cat and cat not in valid:
-            issues.append(f"Invalid category '{cat}' for RecetaGenial. Must be one of {sorted(genial_categories)}")
+            issues.append(
+                f"Invalid category '{cat}' for RecetaGenial. Must be one of {sorted(genial_categories)}"
+            )
             score -= 30
     else:
         valid = dolce_categories | genial_categories
@@ -670,11 +774,15 @@ def validate_article(data: dict) -> dict:
     # Cross-brand leak guards
     if domain_handle in ("recetadolce", "dolce"):
         if "recetagenial" in low or "receta genial" in low or "hokcljsrrnjxzgdhjice" in content:
-            issues.append("Cross-brand contamination: RecetaGenial text or storage bucket found on RecetaDolce")
+            issues.append(
+                "Cross-brand contamination: RecetaGenial text or storage bucket found on RecetaDolce"
+            )
             score -= 40
     elif domain_handle in ("recetagenial", "genial"):
         if "recetadolce" in low or "receta dolce" in low or "xjvmnmfczvwkjiasirsl" in content:
-            issues.append("Cross-brand contamination: RecetaDolce text or storage bucket found on RecetaGenial")
+            issues.append(
+                "Cross-brand contamination: RecetaDolce text or storage bucket found on RecetaGenial"
+            )
             score -= 40
 
     # 7. Recipe schema. Google recipe rich-result eligibility depends on a
@@ -752,7 +860,8 @@ def validate_article(data: dict) -> dict:
         score -= 5
 
     # 9. Unreplaced placeholders, template leaks, and content-quality hazards
-    for ph in ["[TODO]", "[INSERT", "[PINTEREST_IFRAME]", "[HERO_IMAGE]", "[PINTEREST_PIN]", "[IMAGE]"]:
+    # Note: [HERO_IMAGE] and [PINTEREST_IFRAME*] are valid assembly placeholders replaced by build_supabase_content.
+    for ph in ["[TODO]", "[INSERT", "[IMAGE]"]:
         if ph in content:
             issues.append(f"Unreplaced template placeholder found: {ph}")
             score -= 20

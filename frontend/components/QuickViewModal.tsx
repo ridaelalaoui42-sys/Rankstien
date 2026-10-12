@@ -80,10 +80,17 @@ export default function QuickViewModal({ post, isOpen, onClose }: QuickViewModal
                 <FaClock className="text-brand-fresa-light" size={14} />
                 <span>{post.prep_time || 45} MIN</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <FaStar className="text-gold-accent" size={14} />
-                <span>{(post.rating_value || 4.9).toFixed(1)}</span>
-              </div>
+              {post.rating_count && post.rating_count > 0 && post.rating_value ? (
+                <div className="flex items-center space-x-3">
+                  <FaStar className="text-gold-accent" size={14} />
+                  <span>{post.rating_value.toFixed(1)}</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <FaUtensils className="text-gold-accent" size={14} />
+                  <span>{post.difficulty || "Fácil"}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
