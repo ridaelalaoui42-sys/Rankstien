@@ -1,6 +1,6 @@
 # Daily Best Keywords - Receta Dolce
 
-Generated: 2026-10-12T18:40:47.326275+00:00
+Generated: 2026-10-12T20:17:25.111204+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|

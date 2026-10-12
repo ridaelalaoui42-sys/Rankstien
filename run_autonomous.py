@@ -422,30 +422,41 @@ async def run_supervisor(args):
     except Exception as e:
         logger.warning("[boot] Backlog enqueue failed (non-fatal): %s", e)
 
-    # ── Step 2: Enqueue all unpinned posts from ALL domains ───────────────────
+    # ── Step 2: Enqueue all unpinned posts from ALL domains (background) ───────
     if _env_enabled("RANKSTEIN_ENQUEUE_UNPINNED_POSTS", False):
-        logger.info("[boot] Enqueuing unpinned posts from all domains...")
-        try:
-            import argparse as _argparse
+        logger.info("[boot] Starting background enqueue of unpinned posts from all domains...")
+        import argparse as _argparse
+        import threading
 
-            enqueue_batch(_argparse.Namespace())
-        except Exception as e:
-            logger.warning("[boot] Batch enqueue failed (non-fatal): %s", e)
+        def _bg_enqueue_batch():
+            try:
+                enqueue_batch(_argparse.Namespace())
+            except Exception as e:
+                logger.warning("[bg] Batch enqueue failed (non-fatal): %s", e)
+
+        threading.Thread(target=_bg_enqueue_batch, daemon=True, name="unpinned-enqueuer").start()
     else:
         logger.info("[boot] Unpinned post enqueue skipped by RANKSTEIN_ENQUEUE_UNPINNED_POSTS")
 
-    # ── Step 2.5: Enqueue ALL remastered images from remaster_final ───────────
+    # ── Step 2.5: Enqueue ALL remastered images from remaster_final (background) ─
     if _env_enabled("RANKSTEIN_ENQUEUE_REMASTER_FOLDER", False):
-        logger.info("[boot] Enqueuing remastered pins from data/media/remaster_final/...")
-        try:
-            from pinterest_automation.campaign import enqueue_folder as _enqueue_folder
-            from rankstein.domain import get_registry
+        logger.info(
+            "[boot] Starting background enqueue of remastered pins from data/media/remaster_final/..."
+        )
+        import threading
 
-            default_domain = get_registry().default.domain
-            result = _enqueue_folder(domain_url=default_domain)
-            agent_memory.log_event("startup", "Remaster folder enqueue complete", result)
-        except Exception as e:
-            logger.warning("[boot] Remaster folder enqueue failed (non-fatal): %s", e)
+        def _bg_enqueue_remaster():
+            try:
+                from pinterest_automation.campaign import enqueue_folder as _enqueue_folder
+                from rankstein.domain import get_registry
+
+                default_domain = get_registry().default.domain
+                result = _enqueue_folder(domain_url=default_domain)
+                agent_memory.log_event("startup", "Remaster folder enqueue complete", result)
+            except Exception as e:
+                logger.warning("[bg] Remaster folder enqueue failed (non-fatal): %s", e)
+
+        threading.Thread(target=_bg_enqueue_remaster, daemon=True, name="remaster-enqueuer").start()
 
     # ── Step 2.6: Launch social siphon worker as background process ────────────
     if _env_enabled("RANKSTEIN_ENABLE_REMASTER_SIPHON", False):
@@ -499,15 +510,15 @@ async def run_supervisor(args):
         try:
             article_workers = _bounded_int_env(
                 "RANKSTEIN_ARTICLE_WORKERS",
-                default=2,
+                default=5,
                 max_env_name="RANKSTEIN_MAX_ARTICLE_WORKERS",
-                max_default=3,
+                max_default=10,
             )
             keywords_per_cycle = _bounded_int_env(
                 "RANKSTEIN_KEYWORDS_PER_CYCLE",
-                default=3,
+                default=10,
                 max_env_name="RANKSTEIN_MAX_KEYWORDS_PER_CYCLE",
-                max_default=5,
+                max_default=20,
             )
             _subprocess.Popen(
                 [
@@ -535,10 +546,11 @@ async def run_supervisor(args):
     # ── Step 3: Start Pinterest supervisor ────────────────────────────────────
     try:
         workers = getattr(args, "workers", None)
-        if workers is not None and int(workers) > 0:
-            os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
-            os.environ["PINTEREST_MAX_WORKERS"] = str(max(10, int(workers)))
-            os.environ["PINTEREST_MAX_SESSIONS"] = str(max(10, int(workers)))
+        if workers is None or int(workers) <= 0:
+            workers = int(os.environ.get("PINTEREST_WORKER_COUNT", "10"))
+        os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
+        os.environ["PINTEREST_MAX_WORKERS"] = str(max(10, int(workers)))
+        os.environ["PINTEREST_MAX_SESSIONS"] = str(max(10, int(workers)))
         supervisor = AutonomousSupervisor(worker_count=workers)
         await supervisor.run()
     except Exception as e:

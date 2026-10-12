@@ -127,8 +127,14 @@ def build_pipeline_payload(
         keyword_slug = _slugify(run.get("keyword"))
         slug = _slugify(run.get("slug") or keyword_slug)
         key = (domain, keyword_slug or slug)
-        if key in campaigns:
-            continue
+        candidate_updated = float(run.get("updated_at") or 0)
+        existing = campaigns.get(key)
+        if existing is not None:
+            existing_updated = float(existing.get("updated_at") or 0)
+            existing_failed = any(s.get("state") == "failed" for s in existing.get("stages", []))
+            # If candidate is older than existing and existing didn't fail, keep existing
+            if candidate_updated <= existing_updated and not existing_failed:
+                continue
         campaign = _new_campaign(
             domain=domain,
             keyword=run.get("keyword", ""),
@@ -624,7 +630,12 @@ def _remaster_contract_status(
 
     target_count = int(report.get("target_count") or generated or REQUIRED_PIN_ASSETS)
     source_target = int(report.get("source_target") or pair_count or (target_count // 2))
-    if report.get("success") is True and 2 <= generated and generated % 2 == 0 and pair_count == (generated // 2):
+    if (
+        report.get("success") is True
+        and 2 <= generated
+        and generated % 2 == 0
+        and pair_count == (generated // 2)
+    ):
         target_count = generated
         source_target = pair_count
     expected_jobs = target_count
@@ -1129,6 +1140,7 @@ def _read_current_production_batch(root: Path) -> dict[str, Any]:
     report_dir = root / "data" / "reports" / "production_batches"
     if not report_dir.exists():
         return {"batch_id": "", "articles": {}}
+    now = time.time()
     paths = sorted(
         [
             *report_dir.glob("production-*.json"),
@@ -1143,27 +1155,32 @@ def _read_current_production_batch(root: Path) -> dict[str, Any]:
     for path in paths:
         if path.stem != latest_stem:
             continue
+        # Stale production batches older than 2 hours are not actively running
+        if now - path.stat().st_mtime > 7200:
+            continue
         try:
             report = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
+        state = str(report.get("state") or "").strip().lower()
+        if state in {"completed", "aborted", "failed", "stopped"}:
+            return {"batch_id": "", "articles": {}}
         articles: dict[str, dict[str, Any]] = {}
         domains = report.get("domains") or {}
-        if not isinstance(domains, dict):
-            continue
-        for domain_handle, domain in domains.items():
-            if not isinstance(domain, dict):
-                continue
-            for article in domain.get("articles") or []:
-                if not isinstance(article, dict):
+        if isinstance(domains, dict):
+            for domain_handle, domain in domains.items():
+                if not isinstance(domain, dict):
                     continue
-                run_id = str(article.get("pipeline_run_id") or "")
-                if not run_id:
-                    continue
-                articles[run_id] = {
-                    **article,
-                    "domain_handle": _domain_handle(domain_handle),
-                }
+                for article in domain.get("articles") or []:
+                    if not isinstance(article, dict):
+                        continue
+                    run_id = str(article.get("pipeline_run_id") or "")
+                    if not run_id:
+                        continue
+                    articles[run_id] = {
+                        **article,
+                        "domain_handle": _domain_handle(domain_handle),
+                    }
         return {
             "batch_id": str(report.get("batch_id") or path.stem),
             "state": str(report.get("state") or ""),
@@ -1201,6 +1218,7 @@ def _read_event_runs(
                     wanted,
                 ).fetchall()
             )
+        rows.sort(key=lambda row: float(row["updated_at"] or 0), reverse=True)
         output = []
         for row in rows:
             run = dict(row)

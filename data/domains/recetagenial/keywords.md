@@ -614,10 +614,44 @@
 | salmón al horno con patatas y romero | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
 | salmón al horno de jamon iberico cremosas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
 | salmón al horno jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
-| salmón al horno tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| salmón al horno con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| salmón al horno tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| salmón al horno con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
 | crema de calabaza casera | Aperitivos | Editorial Autumn Demand 2026 | Receta Genial | High | Pending |
 | calabaza en freidora de aire | Aperitivos | Editorial Autumn Demand 2026 | Receta Genial | High | Pending |
 | boniato asado en freidora de aire | Aperitivos | Editorial Autumn Demand 2026 | Receta Genial | High | Pending |
 | pasta cremosa con calabaza | Arroces | Editorial Autumn Demand 2026 | Receta Genial | High | Pending |
 | sopa de repollo casera | Aperitivos | Editorial Autumn Demand 2026 | Receta Genial | High | Pending |
+| salmón al horno con verduras y limon | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| salmón al horno con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| salmón al horno en salsa de la abuela | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| salmón al horno con almejas y perejil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| salmón al horno receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| salmón al horno con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| salmón al horno casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| salmón al horno con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| salmón al horno al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso con patatas y romero | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso de jamon iberico cremosas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso con verduras y limon | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| tarta de queso mascarpone | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| tortilla española gourmet | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| croquetas caseras de carne | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| paella de marisco en casa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
+| arroz caldoso con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| albondigas caseras con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| albondigas caseras con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde con patatas y romero | Pescados | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| merluza en salsa verde de jamon iberico cremosas | Pescados | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| merluza en salsa verde jugosa con cebolla | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde tradicional valenciana | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde con verduras y limon | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde con bogavante y gambas | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |

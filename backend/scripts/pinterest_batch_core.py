@@ -244,8 +244,11 @@ def load_accounts():
     # Fallback to data/pinterest_accounts.json if available
     try:
         from pinterest_automation.config import DATA_DIR
+
         accounts_file_path = os.environ.get("PINTEREST_ACCOUNTS_FILE")
-        accounts_file = Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        accounts_file = (
+            Path(accounts_file_path) if accounts_file_path else (DATA_DIR / "pinterest_accounts.json")
+        )
         if accounts_file.is_file():
             data = json.loads(accounts_file.read_text(encoding="utf-8"))
             acc_list = data.get("accounts")
@@ -256,8 +259,20 @@ def load_accounts():
                 for idx, entry in enumerate(acc_list, 1):
                     if not isinstance(entry, dict):
                         continue
-                    session_value = entry.get("session_dir") or entry.get("session_name") or entry.get("session") or entry.get("handle") or entry.get("name") or f"account_{idx}"
-                    name = str(entry.get("handle") or entry.get("name") or Path(str(session_value)).name or f"account_{idx}")
+                    session_value = (
+                        entry.get("session_dir")
+                        or entry.get("session_name")
+                        or entry.get("session")
+                        or entry.get("handle")
+                        or entry.get("name")
+                        or f"account_{idx}"
+                    )
+                    name = str(
+                        entry.get("handle")
+                        or entry.get("name")
+                        or Path(str(session_value)).name
+                        or f"account_{idx}"
+                    )
                     session_name = Path(str(session_value)).name
                     mapped_browser = DEFAULT_BROWSER_MAP.get(
                         name, DEFAULT_BROWSER_MAP.get(session_name, default_browser)
@@ -968,7 +983,9 @@ async def select_board(page, board_name, worker_id):
                 logger.debug(f"[{worker_id}] Board row candidate failed: {exc}")
 
         # 4. Fallback: Automatically create the missing board if not found in account
-        logger.info(f"[{worker_id}] Board '{board_name}' not found in account; attempting automatic board creation...")
+        logger.info(
+            f"[{worker_id}] Board '{board_name}' not found in account; attempting automatic board creation..."
+        )
         create_selectors = [
             '[data-test-id="create-board-button"]',
             '[data-test-id*="create-board"]',
@@ -1028,7 +1045,12 @@ async def select_board(page, board_name, worker_id):
                     break
 
             if dialog:
-                name_selectors = ['#boardEditName', 'input[name="name"]', 'input[placeholder*="Name" i]', 'input[placeholder*="Nombre" i]']
+                name_selectors = [
+                    "#boardEditName",
+                    'input[name="name"]',
+                    'input[placeholder*="Name" i]',
+                    'input[placeholder*="Nombre" i]',
+                ]
                 for nsel in name_selectors:
                     nloc = dialog.locator(nsel).first
                     if await nloc.count() > 0:
@@ -1051,7 +1073,9 @@ async def select_board(page, board_name, worker_id):
 
                 selected_text = normalize_seo(await board_btn.inner_text())
                 if target and target in selected_text:
-                    logger.info(f"[{worker_id}] Successfully created and selected missing board: {board_name}")
+                    logger.info(
+                        f"[{worker_id}] Successfully created and selected missing board: {board_name}"
+                    )
                     circuit.record_success(f"board_selection:{worker_id}")
                     return True
 
@@ -1059,14 +1083,18 @@ async def select_board(page, board_name, worker_id):
                 logger.info(f"[{worker_id}] Board created; re-verifying selection for '{board_name}'...")
                 await board_btn.click(force=True)
                 await asyncio.sleep(1.5)
-                re_rows = page.locator('[data-test-id="boardWithoutSection"][role="listitem"], [role="option"]')
+                re_rows = page.locator(
+                    '[data-test-id="boardWithoutSection"][role="listitem"], [role="option"]'
+                )
                 for ri in range(await re_rows.count()):
                     rrow = re_rows.nth(ri)
                     if normalize_seo(await rrow.inner_text()) == target:
                         await rrow.click(force=True)
                         await asyncio.sleep(1)
                         if target in normalize_seo(await board_btn.inner_text()):
-                            logger.info(f"[{worker_id}] Selected created board '{board_name}' on second pass.")
+                            logger.info(
+                                f"[{worker_id}] Selected created board '{board_name}' on second pass."
+                            )
                             circuit.record_success(f"board_selection:{worker_id}")
                             return True
 
@@ -1078,7 +1106,9 @@ async def select_board(page, board_name, worker_id):
         except Exception:
             pass
 
-        logger.warning(f"[{worker_id}] Board selection failed: '{board_name}' not found and auto-creation was not completed")
+        logger.warning(
+            f"[{worker_id}] Board selection failed: '{board_name}' not found and auto-creation was not completed"
+        )
         circuit.record_failure(f"board_selection:{worker_id}")
         return False
 
@@ -1116,8 +1146,16 @@ async def log_publish_diagnostics(page, worker_id):
 async def dismiss_publish_success_overlays(page):
     """Dismiss non-critical Pinterest prompts that can cover the published toast."""
     try:
-        await page.keyboard.press("Escape")
-        await asyncio.sleep(0.3)
+        # Never press Escape if the published/success toast is currently on screen
+        has_success = False
+        try:
+            toast = page.get_by_text(re.compile(r"published|publicado|guardado", re.I)).first
+            has_success = await toast.count() > 0 and await toast.is_visible(timeout=200)
+        except Exception:
+            has_success = False
+        if not has_success:
+            await page.keyboard.press("Escape")
+            await asyncio.sleep(0.3)
     except Exception:
         pass
     try:
@@ -1168,8 +1206,6 @@ async def dismiss_publish_success_overlays(page):
 async def extract_published_pin_id(page, worker_id, click_view=True):
     """Return the published pin id from current URL, toast links, or the success View button."""
     try:
-        await dismiss_publish_success_overlays(page)
-
         match = re.search(r"/pin/(\d+)", page.url)
         if match:
             return match.group(1)
@@ -1277,7 +1313,10 @@ async def turbo_create_pin(
         if at_draft_limit:
             try:
                 from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
-                logger.info(f"[{worker_id}] Draft limit detected (count={draft_count}, disabled={is_editor_disabled}); clearing drafts.")
+
+                logger.info(
+                    f"[{worker_id}] Draft limit detected (count={draft_count}, disabled={is_editor_disabled}); clearing drafts."
+                )
                 await clear_drafts_for_page(page, account_name=str(worker_id))
             except Exception as draft_clear_exc:
                 logger.warning(f"[{worker_id}] Pre-upload draft check non-fatal error: {draft_clear_exc}")

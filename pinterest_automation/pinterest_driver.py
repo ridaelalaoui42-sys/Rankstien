@@ -142,8 +142,8 @@ class PinterestDriver:
                 for p in ["/v3/pins", "pinresource/create", "pin-builder", "/resource/pin", "graphql"]
             ):
                 return
-            if "graphql" in url:
-                post_data = (response.request.post_data or "").lower()
+            if "graphql" in url and response.request.post_data:
+                post_data = response.request.post_data.lower()
                 if not any(
                     marker in post_data
                     for marker in (
@@ -161,14 +161,14 @@ class PinterestDriver:
             try:
                 data = await response.json()
 
-                # Recursive search for a Pin ID (18-19 digit string or integer)
+                # Recursive search for a Pin ID (15-22 digit string or integer)
                 import re
 
                 def find_pin_id(obj):
                     if isinstance(obj, dict):
                         if "id" in obj:
                             val = str(obj["id"])
-                            if re.match(r"^\d{17,20}$", val):
+                            if re.match(r"^\d{15,22}$", val):
                                 return val
                         for k, v in obj.items():
                             res = find_pin_id(v)
