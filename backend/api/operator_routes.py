@@ -2522,25 +2522,25 @@ def _codex_project_trusted() -> bool:
 def _rankstein_setting(name: str, default: str = "") -> str:
     """Read one non-secret RankStein setting without loading its environment."""
 
-    configured = os.environ.get(name)
-    if configured is not None:
-        return configured.strip()
     env_path = RANKSTEIN_ROOT / ".env"
     try:
         lines = env_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        for line in lines:
+            candidate = line.strip()
+            if not candidate or candidate.startswith("#") or "=" not in candidate:
+                continue
+            key, value = candidate.split("=", 1)
+            if key.strip() != name:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                value = value[1:-1]
+            return value.strip()
     except OSError:
-        return default
-    for line in lines:
-        candidate = line.strip()
-        if not candidate or candidate.startswith("#") or "=" not in candidate:
-            continue
-        key, value = candidate.split("=", 1)
-        if key.strip() != name:
-            continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        return value.strip()
+        pass
+    configured = os.environ.get(name)
+    if configured is not None:
+        return configured.strip()
     return default
 
 
@@ -2615,6 +2615,12 @@ def _article_provider_status() -> dict[str, Any]:
         api_mode = str(hermes.get("api_mode") or "")
         config_path = str(hermes.get("config_path") or "")
         fallbacks_disabled = bool(hermes.get("fallback_providers_disabled"))
+    elif provider in {"gemini", "gemini-api"}:
+        model = _rankstein_setting("GEMINI_MODEL", "gemini-3.5-flash")
+        backend_provider = "gemini-api"
+        api_mode = "rest_v1beta"
+        config_path = str(RANKSTEIN_ROOT / ".env")
+        fallbacks_disabled = False
     else:
         model = ""
         backend_provider = provider
