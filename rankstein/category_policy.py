@@ -96,13 +96,16 @@ _GENIAL_DESSERT = re.compile(
     r"flan(?:es)?|natillas?|torrijas?|postres?|chocolates?|crema catalana|"
     r"arroz con leche|yogur con|merengues?|magdalenas?|cupcakes?|dulces?|turron|eclairs?)\b"
 )
-_GENIAL_SALAD = re.compile(r"\b(ensaladas?|gazpachos?|salmorejos?|pokes?|bowls?|tabule|tabbouleh)\b")
+_GENIAL_SALAD = re.compile(
+    r"\b(ensaladas?|gazpachos?|salmorejos?|pokes?|bowls?|tabule|tabbouleh|cremas?|sopas?|pures?|verduras?)\b"
+)
 _GENIAL_RICE = re.compile(r"\b(paellas?|arroz|arroces|risottos?|fideuas?)\b")
 _GENIAL_APPETIZER = re.compile(
     r"\b(aperitivos?|tapas?|canapes?|croquetas?|hummus|dips?|bravas|tostas?|"
     r"tostadas?|empanadas?|empanadillas?|bocaditos?|bocados?|bunuelos?|pinchos?|"
     r"brochetas?|guacamole|tartar|quesos?|sandwiches?|tequenos?|alcachofas?|"
-    r"tortillas?|pan de ajo|papas arrugadas)\b"
+    r"tortillas?|pan de ajo|papas arrugadas|hojaldres?|momias?|huevos?|dedos?|"
+    r"pimientos?|rollitos?|pizzas?)\b"
 )
 _GENIAL_FISH = re.compile(
     r"\b(pescados?|salmon|atunes?|bonitos?|bacalaos?|merluzas?|gambas?|langostinos?|"
@@ -112,7 +115,7 @@ _GENIAL_FISH = re.compile(
 )
 _GENIAL_MEAT = re.compile(
     r"\b(pollos?|terneras?|cerdos?|corderos?|carnes?|costillas?|albondigas?|"
-    r"hamburguesas?|burgers?|pavos?|conejos?|carrilleras?|chorizos?|lomos?|pucheros?)\b"
+    r"hamburguesas?|burgers?|pavos?|conejos?|carrilleras?|chorizos?|lomos?|pucheros?|salchichas?)\b"
 )
 
 

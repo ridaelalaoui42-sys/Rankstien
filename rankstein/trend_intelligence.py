@@ -148,6 +148,18 @@ _DISH_SUBSTRINGS = {
     "paella",
     "ensalada",
     "sopa",
+    "crema",
+    "huevo",
+    "huevos",
+    "albondiga",
+    "albondigas",
+    "pimiento",
+    "pimientos",
+    "hojaldre",
+    "salchicha",
+    "salchichas",
+    "momias",
+    "dedos",
     "helado",
     "natillas",
     "torrijas",
@@ -455,7 +467,8 @@ _CONCRETE_QUALIFIERS = set(
     "guisado guisada relleno rellena rellenos rellenas gratinado gratinada freidora "
     "air fryer frio fria frios frias cremosa cremoso cremosas cremosos crujiente crujientes "
     "esponjoso esponjosa esponjosos esponjosas philadelphia lotus nutella oreo opera "
-    "navidad cumpleanos pascua navideno navidena navidenos navidenas pascua cuaresma".split()
+    "navidad cumpleanos pascua navideno navidena navidenos navidenas pascua cuaresma "
+    "halloween bruja brujas arana aranas momia momias fantasma fantasmas sangrienta sangriento frankfurt aceituna aceitunas".split()
 )
 _DISH_PATTERN = re.compile(
     r"\b(?:"
@@ -482,7 +495,8 @@ def _fold(text: str) -> str:
 
 def _has_spanish_human_recipe_intent(keyword: str) -> bool:
     folded = _fold(keyword).strip()
-    if not folded or len(folded.split()) > 8 or _is_pinterest_ui_noise(keyword):
+    content_tokens = [w for w in folded.split() if w not in {"de", "con", "del", "la", "el", "los", "las", "al", "en", "para"}]
+    if not folded or len(content_tokens) > 8 or _is_pinterest_ui_noise(keyword):
         return False
     if any(char.isalpha() and not _fold(char) for char in keyword):
         return False

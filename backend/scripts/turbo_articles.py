@@ -49,6 +49,12 @@ logger = logging.getLogger("TurboArticles")
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / ".env", override=True)
+except ImportError:
+    pass
+
 from backend.scripts.gemini_token_rotator import (
     current_account_label,
     ensure_account_1,
@@ -1204,7 +1210,11 @@ async def _call_omniroute_for_article(
 
 
 async def _call_gemini_api_for_article(
-    keyword: str, domain: Domain, source_material: str = ""
+    keyword: str,
+    domain: Domain,
+    source_material: str = "",
+    revision_feedback: str = "",
+    **kwargs,
 ) -> dict | None:
     """Generate article JSON directly using Gemini REST API with GEMINI_API_KEY / GOOGLE_API_KEY."""
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -1212,15 +1222,19 @@ async def _call_gemini_api_for_article(
         logger.warning("No GEMINI_API_KEY or GOOGLE_API_KEY available for direct Gemini API call")
         return None
 
-    prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
+    prompt = _build_generation_prompt(
+        keyword, domain, source_material=source_material, revision_feedback=revision_feedback
+    )
     system_instruction = "You are a professional recipe article generator for RankStein. Output ONLY valid, complete JSON matching the requested schema."
-    models = [
-        "gemini-3.5-flash",
+    preferred_model = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+    candidate_models = [
+        preferred_model,
         "gemini-2.5-flash",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview",
-        "gemini-3.8-flash",
         "gemini-flash-latest",
     ]
+    models = list(dict.fromkeys(m for m in candidate_models if m))
     session = _get_session()
 
     for model in models:
@@ -4436,6 +4450,8 @@ async def process_keyword(
             "codex-only",
             "openai-codex",
             "omniroute",
+            "gemini",
+            "gemini-api",
         }
         if provider_pref not in allowed_providers:
             _pipeline_event(
@@ -4447,6 +4463,41 @@ async def process_keyword(
             )
             _pipeline_status(pipeline_run_id, "failed")
             return "Failed"
+
+        # Direct Gemini REST API execution if primary requested (main provider mode)
+        if provider_pref in {"gemini", "gemini-api"}:
+            gemini_article, gemini_q = await _generate_article_with_revision_loop(
+                "gemini-api",
+                _call_gemini_api_for_article,
+                keyword=keyword,
+                domain=domain,
+                source_material=source_material,
+                cluster=cluster,
+                pipeline_run_id=pipeline_run_id,
+            )
+            if gemini_article:
+                _pipeline_event(
+                    pipeline_run_id,
+                    "article_write",
+                    "complete",
+                    "Gemini REST API returned complete article JSON",
+                    provider="gemini-api",
+                )
+                status = await _publish_generated_article(
+                    gemini_article,
+                    keyword,
+                    cluster,
+                    domain,
+                    pipeline_run_id,
+                    step_images=step_images_scraped,
+                    candidate_hero_images=hero_images_scraped,
+                )
+                if status in {"Live", "Needs Verification"}:
+                    logger.info("Gemini API production succeeded for %s -> %s", keyword, status)
+                    return status
+                logger.warning("Gemini API publication failed for %s: %s", keyword, status)
+                return status
+            logger.warning("Gemini API generation failed for %s; falling back to secondary providers", keyword)
 
         # Direct OmniRoute execution if explicitly requested
         if provider_pref == "omniroute":
