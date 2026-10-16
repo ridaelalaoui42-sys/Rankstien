@@ -103,6 +103,11 @@ class Domain:
     daily_pin_budget: int = 25
 
     @property
+    def public_domain(self) -> str:
+        """Alias for domain (e.g. recetadolce.com)."""
+        return self.domain
+
+    @property
     def is_synthesized(self) -> bool:
         """True if this domain was synthesized from flat-layout fallbacks
         rather than loaded from ``data/domains/<handle>/domain.json``.

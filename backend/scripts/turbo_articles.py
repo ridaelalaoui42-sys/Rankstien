@@ -3658,9 +3658,10 @@ async def _publish_generated_article(
     slug = article.get("slug") or _slugify(keyword)
     article["slug"] = slug
     if "content" in article and isinstance(article["content"], str):
+        public_host = getattr(domain, "public_domain", getattr(domain, "domain", "recetadolce.com"))
         article["content"] = re.sub(
             r'https?://(?:www\.)?receta(?:dolce|genial)\.com/recetas/([a-zA-Z0-9_-]+)',
-            r'https://' + domain.public_domain + r'/\1',
+            r'https://' + public_host + r'/\1',
             article["content"],
         )
         article["content"] = re.sub(r'\]\(/recetas/([a-zA-Z0-9_-]+)\)', r'](/\1)', article["content"])
