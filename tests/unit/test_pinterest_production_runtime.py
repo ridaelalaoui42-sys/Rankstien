@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -18,9 +19,12 @@ def _isolated_session_pool():
     pool = object.__new__(SessionPool)
     pool.config = SimpleNamespace(
         browser=SimpleNamespace(session_ttl_minutes=60, max_sessions=2),
-        accounts={},
+        accounts={"rida": SimpleNamespace(session_name="default")},
     )
     pool._sessions = {}
+    pool._creating_sessions = 0
+    pool._pause_reader = lambda: set()
+    pool._profile_guard_factory = nullcontext
     pool._session_counter = 0
     pool._dict_lock = asyncio.Lock()
     pool._granular_locks = {}
@@ -687,9 +691,13 @@ def test_supervisor_heartbeat_survives_windows_replace_contention(
     lease.acquire()
     original_replace = Path.replace
 
+    failures = 0
+
     def blocked_replace(path: Path, target: Path) -> Path:
-        if path == state_file.with_suffix(".tmp"):
-            raise OSError("simulated Windows file-sharing contention")
+        nonlocal failures
+        if target == state_file and failures == 0:
+            failures += 1
+            raise PermissionError("simulated Windows file-sharing contention")
         return original_replace(path, target)
 
     monkeypatch.setattr(Path, "replace", blocked_replace)
@@ -698,6 +706,7 @@ def test_supervisor_heartbeat_survives_windows_replace_contention(
         state = json.loads(state_file.read_text(encoding="utf-8"))
         assert state["pid"] == lease.pid
         assert state["worker_count"] == 2
+        assert failures == 1
         assert not state_file.with_suffix(".tmp").exists()
     finally:
         lease.release()
@@ -760,6 +769,7 @@ def test_supervisor_lease_blocks_when_external_supervisor_is_actively_running(
         json.dumps({"pid": 888888, "heartbeat_at": time.time(), "worker_count": 2}), encoding="utf-8"
     )
     monkeypatch.setattr(runtime_state, "_process_alive", lambda pid: True)
+    monkeypatch.setattr(runtime_state, "_process_matches_lease", lambda pid, started: True)
 
     lease = runtime_state.SupervisorLease(worker_count=3)
     with pytest.raises(RuntimeError, match="Pinterest supervisor already running with PID 888888"):

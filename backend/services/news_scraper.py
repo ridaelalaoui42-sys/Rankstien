@@ -7,6 +7,7 @@ Used by the MCP server to provide source material for content rewriting.
 import json
 import logging
 import re
+import unicodedata
 import urllib.parse
 
 import requests
@@ -215,139 +216,307 @@ def _google_news_rss(keyword, lang, country, count):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _extract_step_images(soup, base_url=""):
-    """Extract step-by-step preparation images from recipe pages (via JSON-LD, URL patterns, or HTML)."""
-    step_images = []
-    seen_urls = set()
+_STEP_IMAGE_NOISE = re.compile(
+    r"(?:^|[\s/_.-])(?:logo|avatar|icon|pixel|gravatar|ads?|ad-banner|advertisement|"
+    r"placeholder|blank|spacer|loading)(?:[\s/_.-]|$)",
+    re.I,
+)
+_STEP_CONTAINER_NOISE = re.compile(
+    r"(?:^|[\s_-])(?:ads?|advertisement|publicidad|banner|sidebar|related|recommended|"
+    r"recommendations|recetas-relacionadas|otras-recetas|author|autor|avatar|social|share|"
+    r"comments?|comentarios|newsletter|featured|thumbnail|hero)(?:[\s_-]|$)",
+    re.I,
+)
+_PREPARATION_SECTION = re.compile(
+    r"preparaci|elaboraci|instrucci|instruction|procedimiento|recipe-step|"
+    r"recipe-instruction|paso|c.*?mo.*?(?:hacer|preparar)|method|direction",
+    re.I,
+)
+_RELATED_SECTION = re.compile(
+    r"otras recetas|recetas relacionadas|tambien te|te puede gustar|related|recommended|"
+    r"comentarios|comments|sobre el autor",
+    re.I,
+)
 
-    # 1. JSON-LD Recipe Instructions
+
+def _image_url(value, base_url=""):
+    """Resolve only usable HTTP image URLs; lazy placeholders are not source images."""
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    value = value.strip()
+    try:
+        if value.startswith("//"):
+            value = urllib.parse.urljoin(base_url or "https://example.invalid", value)
+        elif base_url:
+            value = urllib.parse.urljoin(base_url, value)
+        parsed = urllib.parse.urlsplit(value)
+    except ValueError:
+        return ""
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    if _STEP_IMAGE_NOISE.search(parsed.path) or parsed.path.lower().endswith(".svg"):
+        return ""
+    return urllib.parse.urldefrag(value)[0]
+
+
+def _image_identity(url):
+    """Deduplicate common WordPress and CDN size variants without losing asset identifiers."""
+    parsed = urllib.parse.urlsplit(url)
+    path = re.sub(r"-\d+x\d+(?=\.[^.]+$)", "", parsed.path)
+    size_parameters = {"w", "h", "width", "height", "resize", "quality", "q", "fit"}
+    query = urllib.parse.urlencode(
+        [
+            (key, value)
+            for key, value in urllib.parse.parse_qsl(parsed.query)
+            if key.lower() not in size_parameters
+        ]
+    )
+    return urllib.parse.urlunsplit((parsed.scheme.lower(), parsed.netloc.lower(), path, query, ""))
+
+
+def _srcset_image(value, base_url):
+    """Read URL/descriptor tokens; commas inside CDN transformation URLs are valid."""
+    value = str(value or "")
+    candidates = []
+    position = 0
+    while position < len(value):
+        while position < len(value) and (value[position].isspace() or value[position] == ","):
+            position += 1
+        start = position
+        while position < len(value) and not value[position].isspace():
+            position += 1
+        url_token = value[start:position]
+        descriptor = "1x"
+        if url_token.endswith(","):
+            url_token = url_token.rstrip(",")
+        else:
+            start = position
+            while position < len(value) and value[position] != ",":
+                position += 1
+            descriptor = value[start:position].strip() or "1x"
+        url = _image_url(url_token, base_url)
+        match = re.fullmatch(r"(\d+(?:\.\d+)?)([wx])", descriptor)
+        if url and match and float(match[1]) > 0:
+            score = float(match[1]) * (1000 if match[2] == "x" else 1)
+            candidates.append((score, url))
+    return max(candidates, default=(0, ""), key=lambda item: item[0])[1]
+
+
+def _tag_image_url(tag, base_url):
+    """Prefer real lazy/responsive assets to the placeholder in img.src."""
+    picture = tag.find_parent("picture")
+    sources = picture.find_all("source") if picture else []
+    for node in [tag, *sources]:
+        for attribute in ("data-srcset", "data-lazy-srcset"):
+            if url := _srcset_image(node.get(attribute), base_url):
+                return url
+    for attribute in ("data-src", "data-lazy-src", "data-original", "data-original-src"):
+        if url := _image_url(tag.get(attribute), base_url):
+            return url
+    for node in [*sources, tag]:
+        if url := _srcset_image(node.get("srcset"), base_url):
+            return url
+    return _image_url(tag.get("src"), base_url)
+
+
+def _schema_images(value, base_url):
+    if isinstance(value, list):
+        for item in value:
+            yield from _schema_images(item, base_url)
+    elif isinstance(value, dict):
+        yield from _schema_images(value.get("url") or value.get("contentUrl"), base_url)
+    elif url := _image_url(value, base_url):
+        yield url
+
+
+def _recipe_nodes(value):
+    if isinstance(value, list):
+        for item in value:
+            yield from _recipe_nodes(item)
+    elif isinstance(value, dict):
+        types = value.get("@type") or []
+        if "Recipe" in (types if isinstance(types, list) else [types]):
+            yield value
+        yield from _recipe_nodes(value.get("@graph"))
+
+
+def _instruction_steps(value):
+    if isinstance(value, list):
+        for item in value:
+            yield from _instruction_steps(item)
+    elif isinstance(value, dict) and value.get("itemListElement"):
+        yield from _instruction_steps(value["itemListElement"])
+    elif isinstance(value, (dict, str)):
+        yield value
+
+
+def _image_in_noise_container(tag):
+    for node in [tag, *tag.parents]:
+        if node.name in {"nav", "aside", "footer", "header"}:
+            return True
+        labels = " ".join([str(node.get("id") or ""), *node.get("class", [])])
+        if _STEP_CONTAINER_NOISE.search(labels) or node.get("role") in {"navigation", "banner"}:
+            return True
+    dimensions = [re.fullmatch(r"\d+", str(tag.get(name) or "")) for name in ("width", "height")]
+    values = [int(match[0]) for match in dimensions if match]
+    return bool(values and (min(values) <= 32 or (len(values) == 2 and max(values) <= 120)))
+
+
+def _step_image_text(tag, container=None):
+    figure = tag.find_parent("figure")
+    caption = figure.find("figcaption") if figure else None
+    if caption:
+        return caption.get_text(" ", strip=True)[:200]
+    if tag.get("alt"):
+        return str(tag["alt"]).strip()[:200]
+    if container is not None:
+        instruction = tag.find_parent("li")
+        if instruction is not None and any(parent is container for parent in instruction.parents):
+            return instruction.get_text(" ", strip=True)[:200]
+        return container.get_text(" ", strip=True)[:200]
+    preceding = tag.find_previous(["p", "li"])
+    if preceding and any(parent is preceding.parent for parent in tag.parents):
+        return preceding.get_text(" ", strip=True)[:200]
+    return ""
+
+
+def _plain_section_text(value):
+    return "".join(c for c in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(c))
+
+
+def _extract_step_images(soup, base_url=""):
+    """Extract researched preparation photos, preferring explicit steps over content heuristics."""
+    recipes = []
     for script in soup.find_all("script", type="application/ld+json"):
         try:
-            raw_text = script.string or script.get_text() or ""
-            if not raw_text.strip():
-                continue
-            data = json.loads(raw_text)
-            candidates = (
-                data.get("@graph", [data])
-                if isinstance(data, dict)
-                else (data if isinstance(data, list) else [])
-            )
-            for item in candidates:
-                if isinstance(item, dict) and item.get("@type") in ("Recipe", ["Recipe"]):
-                    instructions = item.get("recipeInstructions") or []
-                    for idx, step in enumerate(instructions):
-                        if isinstance(step, dict):
-                            img = step.get("image")
-                            if isinstance(img, list) and img:
-                                img = img[0]
-                            if isinstance(img, dict):
-                                img = img.get("url")
-                            text = step.get("text", "") or step.get("name", "")
-                            if isinstance(img, str) and img.startswith("http") and img not in seen_urls:
-                                seen_urls.add(img)
-                                step_images.append(
-                                    {"step_number": idx + 1, "image_url": img, "text": text[:200]}
-                                )
-        except Exception:
+            recipes.extend(_recipe_nodes(json.loads(script.string or script.get_text() or "")))
+        except (ValueError, TypeError):
             continue
 
-    if step_images:
-        return step_images
+    hero_urls = {url for recipe in recipes for url in _schema_images(recipe.get("image"), base_url)}
+    for meta in soup.select(
+        "meta[property='og:image'], meta[name='og:image'], meta[name='twitter:image'], meta[property='twitter:image']"
+    ):
+        if url := _image_url(meta.get("content"), base_url):
+            hero_urls.add(url)
+    hero_ids = {_image_identity(url) for url in hero_urls}
+    seen = set()
+    accepted_numbers = set()
+    results = []
 
-    # 2. Filename and Alt-text Pattern Matching (e.g. paso-1, paso-2, step-1)
-    pattern_steps = {}
-    for img in soup.find_all("img"):
-        src = img.get("src") or img.get("data-src") or img.get("data-lazy-src") or ""
-        alt = img.get("alt") or ""
-        if src and not src.startswith("http") and base_url:
-            src = urllib.parse.urljoin(base_url, src)
-        if not src.startswith("http"):
+    def add(url, number, text=""):
+        identity = _image_identity(url)
+        if not url or identity in seen or identity in hero_ids:
+            return
+        # A schema step wins over an alternate numbered file for the same step. Reserve
+        # the rejected file as well so content traversal cannot re-add it under a new number.
+        seen.add(identity)
+        if number in accepted_numbers:
+            return
+        accepted_numbers.add(number)
+        results.append({"step_number": number, "image_url": url, "text": text[:200]})
+
+    # Recipe instructions are the most reliable source of step numbering.
+    for recipe in recipes:
+        for number, step in enumerate(_instruction_steps(recipe.get("recipeInstructions")), 1):
+            if isinstance(step, dict):
+                text = str(step.get("text") or step.get("name") or "")
+                image = next(_schema_images(step.get("image"), base_url), "")
+                add(image, number, text)
+    # Preserve explicitly numbered filenames/alt text, including lazy and responsive images.
+    numbered = []
+    for tag in soup.find_all("img"):
+        if _image_in_noise_container(tag):
             continue
-
-        lower_src = src.lower()
-        if any(
-            bad in lower_src
-            for bad in [
-                "logo",
-                "avatar",
-                "icon",
-                "pixel",
-                "gravatar",
-                "/ads/",
-                "/ad/",
-                "ad-banner",
-                "advertisement",
-            ]
-        ):
-            continue
-
-        match = re.search(r"[-_]paso[-_]?(\d+)|[-_]step[-_]?(\d+)", src, re.I) or re.search(
-            r"paso\s*(\d+)", alt, re.I
+        url = _tag_image_url(tag, base_url)
+        text = _step_image_text(tag)
+        match = re.search(r"(?:^|[/_-])(?:paso|step)[-_]?(\d+)", url, re.I) or re.search(
+            r"(?:paso|step)\s*[-:]?\s*(\d+)", text, re.I
         )
         if match:
-            num = int(match.group(1) or match.group(2) or len(pattern_steps) + 1)
-            if num not in pattern_steps and src not in seen_urls:
-                seen_urls.add(src)
-                pattern_steps[num] = {
-                    "step_number": num,
-                    "image_url": src,
-                    "text": alt[:200] or f"Paso {num}",
-                }
-
-    if pattern_steps:
-        # Return sorted by step number
-        return [pattern_steps[k] for k in sorted(pattern_steps.keys())]
-
-    # 3. HTML DOM extraction from step containers
-    selectors = [
-        ".recipe-instructions li",
-        ".recipe-steps li",
-        ".instrucciones li",
-        ".pasos li",
-        ".recipe-instruction",
-        ".step",
-        ".wp-block-recipe-step",
-        "[itemprop='recipeInstructions']",
+            numbered.append((int(match[1]), url, text))
+    for number, url, text in sorted(numbered, key=lambda item: item[0]):
+        add(url, number, text or f"Paso {number}")
+    # Explicit instruction containers can contain a single photo or several figures.
+    selector = (
+        ".recipe-instructions, .recipe-steps, .instrucciones, .pasos, .recipe-instruction, "
+        ".step, .wp-block-recipe-step, [itemprop='recipeInstructions'], "
+        ".wprm-recipe-instructions, .wprm-recipe-instruction, .preparacion, .elaboracion, #preparacion, #elaboracion, "
+        ".tasty-recipes-instructions, .tasty-recipe-instructions"
+    )
+    containers = soup.select(selector)
+    container_ids = {id(node) for node in containers}
+    # Spanish sites often publish photos in ordinary figures between preparation paragraphs.
+    root_selectors = [
+        "article",
+        "main",
+        ".entry-content",
+        ".post-content",
+        ".article-content",
+        ".article-body",
+        ".content-body",
+        ".story-body",
+        ".td-post-content",
+        ".article__body",
+        "#article-body",
+        "[itemprop='articleBody']",
+        ".et_pb_post_content",
+        ".et_builder_inner_content",
+        ".elementor-widget-theme-post-content",
+        ".elementor-post__content",
+        ".wp-block-post-content",
+        ".recipe-content",
+        ".recipe-body",
     ]
-    step_idx = 1
-    for sel in selectors:
-        nodes = soup.select(sel)
-        if len(nodes) >= 2:
-            for node in nodes:
-                img_tag = node.find("img")
-                if img_tag:
-                    src = img_tag.get("src") or img_tag.get("data-src") or img_tag.get("data-lazy-src") or ""
-                    if src and not src.startswith("http") and base_url:
-                        src = urllib.parse.urljoin(base_url, src)
-                    if src.startswith("http") and src not in seen_urls:
-                        lower_src = src.lower()
-                        if not any(
-                            bad in lower_src
-                            for bad in [
-                                "logo",
-                                "avatar",
-                                "icon",
-                                "pixel",
-                                "gravatar",
-                                "/ads/",
-                                "/ad/",
-                                "ad-banner",
-                                "advertisement",
-                            ]
-                        ):
-                            seen_urls.add(src)
-                            step_images.append(
-                                {
-                                    "step_number": step_idx,
-                                    "image_url": src,
-                                    "text": node.get_text(separator=" ", strip=True)[:200],
-                                }
-                            )
-                            step_idx += 1
-            if step_images:
-                break
-
-    return step_images
+    candidates = []
+    for sel in root_selectors:
+        candidates.extend(soup.select(sel))
+    root = max(candidates, key=lambda el: len(el.get_text()), default=None)
+    if root is None:
+        root = soup.find("article") or soup.find("main")
+    headings = root.find_all(re.compile(r"^h[1-6]$")) if root is not None else []
+    has_preparation = any(_PREPARATION_SECTION.search(_plain_section_text(h.get_text(" "))) for h in headings)
+    root_ids = {id(node) for node in root.descendants if getattr(node, "name", None)} if root else set()
+    trusted_numbers = {_image_identity(item["image_url"]): item["step_number"] for item in results}
+    used_numbers = set(trusted_numbers.values())
+    dom_number = 1
+    preparation_level = None
+    related_section = False
+    for node in soup.descendants:
+        if not getattr(node, "name", None):
+            continue
+        in_content = id(node) in root_ids
+        if in_content and re.fullmatch(r"h[1-6]", node.name):
+            heading = _plain_section_text(node.get_text(" ", strip=True))
+            level = int(node.name[1])
+            if _PREPARATION_SECTION.search(heading):
+                preparation_level = min(preparation_level, level) if preparation_level is not None else level
+                related_section = False
+            elif preparation_level is not None and level <= preparation_level:
+                preparation_level = None
+            if _RELATED_SECTION.search(heading):
+                related_section = True
+            continue
+        if node.name != "img" or _image_in_noise_container(node):
+            continue
+        container = next((parent for parent in node.parents if id(parent) in container_ids), None)
+        if container is None and (
+            not in_content or related_section or (has_preparation and preparation_level is None)
+        ):
+            continue
+        url = _tag_image_url(node, base_url)
+        identity = _image_identity(url)
+        if identity in trusted_numbers:
+            dom_number = max(dom_number, trusted_numbers[identity] + 1)
+            continue
+        while dom_number in used_numbers:
+            dom_number += 1
+        previous_count = len(results)
+        add(url, dom_number, _step_image_text(node, container))
+        if len(results) > previous_count:
+            used_numbers.add(dom_number)
+            dom_number += 1
+    return sorted(results, key=lambda item: item["step_number"])
 
 
 def _extract_hero_image(soup, base_url=""):
@@ -453,7 +622,11 @@ def extract_article(url: str) -> dict:
 
         # Use final URL (after redirects)
         url = resp.url
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        try:
+            resp.content.decode("utf-8")
+            resp.encoding = "utf-8"
+        except (UnicodeDecodeError, AttributeError):
+            resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
 
         # Extract step and hero images BEFORE stripping scripts and tags

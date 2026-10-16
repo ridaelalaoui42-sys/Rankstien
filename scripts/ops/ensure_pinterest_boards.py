@@ -95,7 +95,11 @@ async def ensure_boards_for_account(
                         }
 
                 # 2. Open Pin Creation Tool
-                await page.goto("https://www.pinterest.com/pin-creation-tool/", wait_until="domcontentloaded", timeout=45000)
+                await page.goto(
+                    "https://www.pinterest.com/pin-creation-tool/",
+                    wait_until="domcontentloaded",
+                    timeout=45000,
+                )
                 await asyncio.sleep(4)
 
                 # Clear preexisting drafts first
@@ -121,7 +125,7 @@ async def ensure_boards_for_account(
 
                         flyout = page.locator('[data-test-id="board-picker-flyout"]').first
                         if await flyout.count() > 0:
-                            search_input = flyout.locator('input').first
+                            search_input = flyout.locator("input").first
                             if await search_input.count() > 0:
                                 await search_input.fill(board_name)
                                 await asyncio.sleep(1.5)
@@ -165,9 +169,13 @@ async def ensure_boards_for_account(
                                         await submit_btn.click(force=True)
                                         await asyncio.sleep(3)
                                         created_boards.append(board_name)
-                                        logger.info(f"[{account_name}] Successfully created board: '{board_name}'")
+                                        logger.info(
+                                            f"[{account_name}] Successfully created board: '{board_name}'"
+                                        )
                     except Exception as b_err:
-                        logger.warning(f"[{account_name}] Board check/create error for '{board_name}': {b_err}")
+                        logger.warning(
+                            f"[{account_name}] Board check/create error for '{board_name}': {b_err}"
+                        )
                         try:
                             await page.keyboard.press("Escape")
                         except Exception:

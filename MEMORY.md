@@ -86,6 +86,15 @@ Do not use AgentMemory for:
 - raw scraped text
 - generated JSON payloads
 
+## OmniRoute / TokenHarbor Provider Wiring (2026-10-15)
+
+- A provider connection with `provider: "openai"` and a custom `url` is **ignored**: it routes to `api.openai.com` (401 for foreign keys). OmniRoute only honors custom URLs via **provider nodes**.
+- Correct flow:
+  1. `POST /api/provider-nodes` with `type: "openai-compatible"`, `prefix: "tokenharbor"`, `baseUrl: "https://tokenharbor.ai/v1"`, `chatPath: "/chat/completions"`, `modelsPath: "/models"`.
+  2. `POST /api/providers` with `provider` = the node id (`openai-compatible-chat-<uuid>`), the `thk_live_...` API key, `isActive: true`.
+- RankStein `.env` must use `RANKSTEIN_OMNIROUTE_MODEL=tokenharbor/deepseek-v4-flash:free` (prefixed form). Gateway management auth is `RANKSTEIN_OMNIROUTE_API_KEY` (the `sk-...` gateway key), not the upstream provider key.
+- Verified working: all four TokenHarbor models (`deepseek-v4-flash:free`, `deepseek-v4.1-flash:free`, `mimo-v2.5:free`, `mimo-v2.6-flash:free`) answer through OmniRoute, and RankStein's `_call_omniroute_for_article` produced valid Spanish recipe article JSON (6+ ingredients, 7 steps) via this path. Debug verifier: `scripts/debug/verify_omniroute_tokenharbor.py`.
+
 ## Current Verification Baseline
 
 The maintained checks are:

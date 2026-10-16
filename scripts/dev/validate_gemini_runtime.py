@@ -81,13 +81,20 @@ def main() -> int:
     if not isinstance(servers, dict) or not servers:
         _fail(".gemini/settings.json has no mcpServers")
 
-    required = {"rankstein", "playwright_firefox", "playwright_chromium", "nanobanana", "agentmemory"}
+    required = {"rankstein", "playwright_firefox", "playwright_chromium", "nanobanana"}
     missing = sorted(required - set(servers))
     if missing:
         _fail(f"Missing required MCP servers: {', '.join(missing)}")
 
     for name, server in servers.items():
         _validate_server(name, server)
+
+    from backend.services.memory_service import memory
+
+    mem_health = memory.health()
+    if not mem_health.get("ok"):
+        _fail(f"Native memory manager failed: {mem_health.get('error')}")
+    _ok(f"Native RankStein memory manager is healthy ({mem_health.get('engine')})")
 
     from backend.core.config import get_settings
     from backend.core.engine import resolve_gemini_cli
@@ -113,27 +120,6 @@ def main() -> int:
             "Current shell has Gemini/Google API key env vars set; RankStein launchers strip them "
             f"from Gemini CLI subprocesses: {', '.join(inherited_key_names)}"
         )
-
-    agentmemory_url = servers["agentmemory"].get("env", {}).get("AGENTMEMORY_URL", "http://127.0.0.1:3111")
-    try:
-        headers = {"User-Agent": "rankstein-validator"}
-        secret = os.environ.get("AGENTMEMORY_SECRET")
-        if not secret:
-            secret_path = Path.home() / ".agentmemory" / "secret"
-            if secret_path.exists():
-                try:
-                    secret = secret_path.read_text(encoding="utf-8").strip()
-                except OSError:
-                    secret = ""
-        if secret:
-            headers["Authorization"] = f"Bearer {secret}"
-        request = urllib.request.Request(f"{agentmemory_url.rstrip('/')}/agentmemory/health", headers=headers)
-        with urllib.request.urlopen(request, timeout=5) as response:
-            if response.status != 200:
-                _fail(f"AgentMemory health returned HTTP {response.status}")
-        _ok(f"AgentMemory REST health reachable: {agentmemory_url}")
-    except (urllib.error.URLError, TimeoutError) as exc:
-        _fail(f"AgentMemory REST is not reachable at {agentmemory_url}: {exc}")
 
     print("[OK] Gemini CLI + MCP runtime preflight passed")
     return 0

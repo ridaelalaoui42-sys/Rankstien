@@ -88,9 +88,12 @@ def run_launch(options: LaunchOptions) -> dict[str, Any]:
 
     report["services"].update(_collect_service_status(options))
 
-    # Verify AgentMemory is actually healthy, not just port-open
-    if not _http_probe("http://127.0.0.1:3111/agentmemory/health").get("ok"):
-        _add_issue(report, "AgentMemory port open but health check failed")
+    # Verify Native Memory Manager is healthy
+    from backend.services.memory_service import memory
+
+    mem_health = memory.health()
+    if not mem_health.get("ok"):
+        _add_issue(report, f"Native memory manager health check failed: {mem_health.get('error')}")
 
     report["processes"] = _collect_process_status()
     _dedupe_singleton_processes(report)
@@ -342,8 +345,15 @@ def _start_background(
 
 
 def _collect_service_status(options: LaunchOptions) -> dict[str, dict[str, Any]]:
+    from backend.services.memory_service import memory
+
+    mem_health = memory.health()
     statuses = {
-        "agentmemory": {"running": _port_open(3111), "port": 3111},
+        "memory": {
+            "running": mem_health.get("ok", False),
+            "engine": mem_health.get("engine", "native_sqlite_fts5"),
+            "health": mem_health,
+        },
         "hermes_codex": {
             "running": _port_open(8642),
             "port": 8642,

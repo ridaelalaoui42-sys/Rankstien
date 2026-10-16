@@ -172,6 +172,9 @@ async def test_reconcile_promotes_only_after_supabase_and_exact_campaign_proof(
     tmp_path: Path, monkeypatch, use_live_tracker
 ) -> None:
     domain, run_id, pipeline_db = _setup_needs_verification(tmp_path)
+    import backend.scripts.turbo_articles as turbo
+
+    monkeypatch.setattr(turbo, "_validate_durable_article_remaster_proof", lambda *args, **kwargs: (True, ""))
     slug = "ensalada-saludable-de-quinoa"
     pin_id = "1148488342515527632"
     report_path = tmp_path / "data" / "reports" / "campaigns" / "report.json"
@@ -368,10 +371,21 @@ def test_production_reconcile_cli_shape() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "invalidated_proof", [None, "campaign", "missing_report", "primary", "supabase", "durable"]
+)
 async def test_reconcile_replay_uses_stored_proof_without_repeating_side_effects(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, invalidated_proof: str | None
 ) -> None:
     domain, run_id, pipeline_db = _setup_needs_verification(tmp_path)
+    import backend.scripts.turbo_articles as turbo
+
+    durable_proof = {"valid": True}
+    monkeypatch.setattr(
+        turbo,
+        "_validate_durable_article_remaster_proof",
+        lambda *args, **kwargs: (durable_proof["valid"], "exact remaster job is missing"),
+    )
     slug = "ensalada-saludable-de-quinoa"
     pin_id = "1148488342515527632"
     report_path = tmp_path / "data" / "reports" / "campaigns" / "report.json"
@@ -386,6 +400,7 @@ async def test_reconcile_replay_uses_stored_proof_without_repeating_side_effects
             return domain
 
     supabase_pin = {"value": ""}
+    primary_outcome = _primary_outcome(domain, slug)
     update_count = 0
     remaster_count = 0
 
@@ -413,7 +428,7 @@ async def test_reconcile_replay_uses_stored_proof_without_repeating_side_effects
         return {"success": True, "report_path": str(report_path)}
 
     monkeypatch.setattr(reconcile, "get_registry", lambda: Registry())
-    monkeypatch.setattr(reconcile, "_get_primary_job_outcome", lambda job_id: _primary_outcome(domain, slug))
+    monkeypatch.setattr(reconcile, "_get_primary_job_outcome", lambda job_id: primary_outcome)
     monkeypatch.setattr(reconcile, "_expected_upload_account", lambda *args: "r1")
     monkeypatch.setattr(reconcile, "_get_supabase_article", get_article)
     monkeypatch.setattr(reconcile, "_update_supabase_pin", update_pin)
@@ -427,18 +442,35 @@ async def test_reconcile_replay_uses_stored_proof_without_repeating_side_effects
         primary_job_id="primary-1",
         pipeline_db_path=pipeline_db,
     )
-    second = await reconcile.reconcile_production_article(
-        project_root=tmp_path,
-        batch_id="production-test",
-        domain_handle=domain.handle,
-        pipeline_run_id=run_id,
-        primary_job_id="primary-1",
-        pipeline_db_path=pipeline_db,
-    )
-
     assert first["reconciled"] is True
-    assert second["reconciled"] is False
-    assert second["already_reconciled"] is True
+    if invalidated_proof == "campaign":
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report["success"] = False
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+    elif invalidated_proof == "missing_report":
+        report_path.unlink()
+    elif invalidated_proof == "primary":
+        primary_outcome["state"] = "held"
+    elif invalidated_proof == "supabase":
+        supabase_pin["value"] = "1148488342515527639"
+    elif invalidated_proof == "durable":
+        durable_proof["valid"] = False
+
+    replay_args = {
+        "project_root": tmp_path,
+        "batch_id": "production-test",
+        "domain_handle": domain.handle,
+        "pipeline_run_id": run_id,
+        "primary_job_id": "primary-1",
+        "pipeline_db_path": pipeline_db,
+    }
+    if invalidated_proof is None:
+        second = await reconcile.reconcile_production_article(**replay_args)
+        assert second["reconciled"] is False
+        assert second["already_reconciled"] is True
+    else:
+        with pytest.raises(reconcile.ReconciliationError):
+            await reconcile.reconcile_production_article(**replay_args)
     assert update_count == 1
     assert remaster_count == 1
 

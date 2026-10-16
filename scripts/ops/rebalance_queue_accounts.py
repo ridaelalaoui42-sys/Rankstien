@@ -1,12 +1,13 @@
 """Rebalance pending pin_upload jobs across all configured Pinterest accounts."""
 
+import hashlib
 import json
 import sqlite3
-import hashlib
 from pathlib import Path
 
 DB_FILE = Path("data/queue/jobs.db")
 ACCOUNTS = ["rida", "media", "medridaelalaoui6"]
+
 
 def rebalance():
     if not DB_FILE.exists():
@@ -42,10 +43,7 @@ def rebalance():
         counts[assigned_account] += 1
         new_payload_json = json.dumps(payload, ensure_ascii=False)
 
-        cur.execute(
-            "UPDATE jobs SET payload_json = ? WHERE id = ?",
-            (new_payload_json, job_id)
-        )
+        cur.execute("UPDATE jobs SET payload_json = ? WHERE id = ?", (new_payload_json, job_id))
         updated += 1
 
     conn.commit()
@@ -54,6 +52,7 @@ def rebalance():
     print(f"Rebalanced {updated} jobs successfully:")
     for acc, count in counts.items():
         print(f"  {acc}: {count} jobs")
+
 
 if __name__ == "__main__":
     rebalance()

@@ -170,30 +170,54 @@ class RateLimiter:
     def _proof_daily_counts(self) -> dict[str, int] | None:
         """Read a bounded, complete proof floor; unavailable is never zero."""
         connection = None
+        stage = "routes"
         try:
+            # Cold domain/routing setup can be slow on a busy Windows host. It
+            # must not consume the SQLite scan's deadline before any query runs.
+            # Configuration failures still make the budget unavailable.
+            routes = self._proof_routes()
             path = getattr(self, "_proof_db_file", None) or self._paired_proof_db()
+            uri = path.resolve().as_uri() + "?mode=ro"
+            today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+            end = today + 86400
+            stage = "open"
             deadline = time.monotonic() + _PROOF_TIMEOUT_SECONDS
-            connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0.5)
+            connection = sqlite3.connect(uri, uri=True, timeout=0.5)
             connection.execute("PRAGMA query_only=ON")
             connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, _PROOF_MAX_ROW_BYTES)
             connection.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
-            today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-            end = today + 86400
-            routes = self._proof_routes()
-            # Both tables share one read snapshot: a completion moving a job
-            # into the archive between queries cannot disappear from the floor.
+            # All tables share one snapshot. Durable evidence keeps a same-day
+            # publication in the floor after bounded completed_log retention
+            # trims it; pin sets deduplicate the same proof across the tables.
             connection.execute("BEGIN")
+            stage = "schema"
+            has_durable_evidence = connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'completion_evidence'"
+            ).fetchone()
             pins: dict[str, set[str]] = {}
             row_count = byte_count = 0
-            queries = (
-                ("SELECT job_json FROM completed_log WHERE completed_at >= ? AND completed_at < ?", False),
+            queries = [
                 (
+                    "completed_log",
+                    "SELECT job_json FROM completed_log WHERE completed_at >= ? AND completed_at < ?",
+                    False,
+                ),
+                (
+                    "jobs",
                     "SELECT type, payload_json, status, result_json FROM jobs "
                     "WHERE status = 'completed' AND completed_at >= ? AND completed_at < ?",
                     True,
                 ),
-            )
-            for query, current in queries:
+            ]
+            if has_durable_evidence:
+                queries.append(
+                    (
+                        "completion_evidence",
+                        "SELECT job_json FROM completion_evidence WHERE completed_at >= ? AND completed_at < ?",
+                        False,
+                    )
+                )
+            for stage, query, current in queries:
                 for row in connection.execute(query, (today, end)):
                     row_count += 1
                     byte_count += sum(len(value.encode("utf-8")) for value in row if isinstance(value, str))
@@ -202,7 +226,7 @@ class RateLimiter:
                         or byte_count > _PROOF_MAX_BYTES
                         or time.monotonic() > deadline
                     ):
-                        raise ValueError("proof scan incomplete")
+                        raise ValueError("proof scan incomplete: row, byte or time bound exceeded")
                     if current:
                         job = {
                             "type": row[0],
@@ -219,10 +243,15 @@ class RateLimiter:
                         operation, pin_id = identity
                         pins.setdefault(operation, set()).add(pin_id)
             if time.monotonic() > deadline:
-                raise ValueError("proof scan incomplete")
+                raise ValueError("proof scan incomplete: time bound exceeded")
             return {operation: len(values) for operation, values in pins.items()}
         except (OSError, sqlite3.Error, TypeError, ValueError, KeyError, AttributeError) as exc:
-            logger.warning("Rate limiter: verified daily proof unavailable: %s", type(exc).__name__)
+            logger.warning(
+                "Rate limiter: verified daily proof unavailable: stage=%s cause=%s: %s",
+                stage,
+                type(exc).__name__,
+                str(exc)[:200],
+            )
             return None
         finally:
             if connection is not None:

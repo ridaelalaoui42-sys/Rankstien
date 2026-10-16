@@ -19,6 +19,7 @@ _PROOF_SCHEMA = """
 CREATE TABLE completed_log (id TEXT PRIMARY KEY, job_json TEXT, completed_at REAL);
 CREATE TABLE jobs (id TEXT PRIMARY KEY, type TEXT, payload_json TEXT,
                    status TEXT, result_json TEXT, completed_at REAL);
+CREATE TABLE completion_evidence (id TEXT PRIMARY KEY, job_json TEXT, completed_at REAL);
 """
 
 
@@ -100,6 +101,169 @@ def _archive_pin(path: Path, job: dict, completed_at: float) -> None:
             "INSERT INTO completed_log VALUES (?, ?, ?)",
             (job["id"], json.dumps(job), completed_at),
         )
+
+
+def _durable_pin(path: Path, job: dict, completed_at: float) -> None:
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "INSERT INTO completion_evidence VALUES (?, ?, ?)",
+            (job["id"], json.dumps(job), completed_at),
+        )
+
+
+@pytest.mark.unit
+def test_cold_route_setup_does_not_consume_the_bounded_sqlite_scan_deadline(
+    isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    limiter = object.__new__(rate_module.RateLimiter)
+    limiter._proof_db_file = isolated_proof_queue
+    clock = [100.0]
+    original_routes = limiter._proof_routes
+
+    def slow_routes():
+        clock[0] += 10.0  # A cold import or paused CPU before SQLite work starts.
+        return original_routes()
+
+    monkeypatch.setattr(limiter, "_proof_routes", slow_routes)
+    monkeypatch.setattr(rate_module.time, "monotonic", lambda: clock[0])
+
+    assert limiter._proof_daily_counts() == {}
+
+
+@pytest.mark.unit
+def test_sqlite_scan_deadline_still_fails_closed_with_stage_and_cause(
+    isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch, caplog
+) -> None:
+    limiter = object.__new__(rate_module.RateLimiter)
+    limiter._proof_db_file = isolated_proof_queue
+    limiter._proof_routes()  # Resolve configuration before the simulated DB delay.
+    clock = [100.0]
+    original_connect = sqlite3.connect
+
+    def slow_connect(*args, **kwargs):
+        clock[0] += rate_module._PROOF_TIMEOUT_SECONDS + 1
+        return original_connect(*args, **kwargs)
+
+    monkeypatch.setattr(rate_module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(rate_module.sqlite3, "connect", slow_connect)
+
+    with caplog.at_level(logging.WARNING):
+        assert limiter._proof_daily_counts() is None
+    assert "stage=completion_evidence" in caplog.text
+    assert "cause=ValueError: proof scan incomplete: time bound exceeded" in caplog.text
+
+
+@pytest.mark.unit
+def test_durable_evidence_retains_trimmed_same_day_budget_without_database_writes(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time
+) -> None:
+    job = _pin_job("trimmed-from-archive", "10000000000000000")
+    _durable_pin(isolated_proof_queue, job, frozen_time.current.timestamp())
+    before = isolated_proof_queue.read_bytes()
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+    limiter.config.daily_pin_limit = 1
+
+    assert limiter._proof_daily_counts() == {"pin_upload:recetadolce:rida": 1}
+    assert limiter.can_execute("pin_upload:recetadolce:rida") is False
+    assert limiter.get_persisted_daily_counts() == {"pin_upload:recetadolce:rida": 1}
+    assert isolated_proof_queue.read_bytes() == before
+
+
+@pytest.mark.unit
+def test_durable_archive_and_current_proof_are_deduplicated_by_pin_and_operation(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time
+) -> None:
+    job = _pin_job("same-publication", "10000000000000000")
+    timestamp = frozen_time.current.timestamp()
+    _archive_pin(isolated_proof_queue, job, timestamp)
+    _durable_pin(isolated_proof_queue, job, timestamp)
+    another = _pin_job("different-job-same-pin", "10000000000000000")
+    _durable_pin(isolated_proof_queue, another, timestamp)
+    with sqlite3.connect(isolated_proof_queue) as connection:
+        connection.execute(
+            "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                job["id"],
+                job["type"],
+                json.dumps(job["payload"]),
+                "completed",
+                json.dumps(job["result"]),
+                timestamp,
+            ),
+        )
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() == {"pin_upload:recetadolce:rida": 1}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "change",
+    [
+        "domain",
+        "account",
+        "conflicting_account",
+        "destination",
+        "pin_url",
+        "unverified",
+        "status",
+        "yesterday",
+    ],
+)
+def test_durable_evidence_obeys_existing_domain_account_publication_and_day_gates(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time, change: str
+) -> None:
+    job = _pin_job("durable", "10000000000000000")
+    timestamp = frozen_time.current.timestamp()
+    if change == "domain":
+        job["payload"]["domain_handle"] = "unknown"
+    elif change == "account":
+        job["payload"]["account_handle"] = "media"
+    elif change == "conflicting_account":
+        job["payload"]["extra"] = {"account_handle": "media"}
+    elif change == "destination":
+        job["payload"]["link"] = "https://unrelated.example/recipe"
+    elif change == "pin_url":
+        job["result"]["pin_url"] = "https://www.pinterest.com/pin/20000000000000000/"
+    elif change == "unverified":
+        job["result"]["success"] = False
+    elif change == "status":
+        job["status"] = "processing"
+    else:
+        timestamp -= 86400
+    _durable_pin(isolated_proof_queue, job, timestamp)
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() == {}
+
+
+@pytest.mark.unit
+def test_durable_evidence_retains_the_same_row_bounds_and_unknown_budget_behavior(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _durable_pin(
+        isolated_proof_queue, _pin_job("durable", "10000000000000000"), frozen_time.current.timestamp()
+    )
+    monkeypatch.setattr(rate_module, "_PROOF_MAX_ROWS", 0)
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() is None
+    assert limiter.can_execute("pin_upload:recetadolce:rida") is False
+    assert limiter.retry_after_seconds("pin_upload:recetadolce:rida") >= 60
+
+
+@pytest.mark.unit
+def test_legacy_queue_without_durable_table_remains_readable(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time
+) -> None:
+    _archive_pin(
+        isolated_proof_queue, _pin_job("legacy", "10000000000000000"), frozen_time.current.timestamp()
+    )
+    with sqlite3.connect(isolated_proof_queue) as connection:
+        connection.execute("DROP TABLE completion_evidence")
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() == {"pin_upload:recetadolce:rida": 1}
 
 
 @pytest.mark.unit

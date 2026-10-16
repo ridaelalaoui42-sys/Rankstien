@@ -7,12 +7,14 @@ import asyncio
 import logging
 import os
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 from playwright.async_api import BrowserContext, Page, async_playwright
 
+from .account_recovery import account_profile_guard, paused_accounts
 from .browser_utils import (
     kill_browser_locks,
     user_agent_for_browser,
@@ -53,6 +55,7 @@ class SessionInfo:
     browser_type: str = "firefox"
     closed: bool = False
     in_use: bool = False  # Track if worker is using this
+    profile_guard: object | None = None
 
     @property
     def age_minutes(self) -> float:
@@ -69,9 +72,12 @@ class SessionPool:
     Supports session rotation, TTL expiry, and automatic cleanup.
     """
 
-    def __init__(self):
+    def __init__(self, *, pause_reader=None, profile_guard_factory=None):
         self.config = get_config()
+        self._pause_reader = pause_reader or paused_accounts
+        self._profile_guard_factory = profile_guard_factory or account_profile_guard
         self._sessions: dict[str, SessionInfo] = {}
+        self._creating_sessions = 0
         self._session_counter = 0
         self._dict_lock = asyncio.Lock()
         self._granular_locks: dict[str, asyncio.Lock] = {}
@@ -90,7 +96,40 @@ class SessionPool:
             acc_session = self.config.accounts[account_handle].session_name
             if acc_session:
                 session_name = acc_session
-        return SESSION_DIR / session_name
+        session_root = os.environ.get("PINTEREST_SESSION_ROOT", "").strip()
+        return (Path(session_root).expanduser() if session_root else SESSION_DIR) / session_name
+
+    def _chromium_launch_options(self, session_dir: Path, user_agent: str) -> dict:
+        """Use installed Chrome unless an operator explicitly selects another executable."""
+        options = {
+            "user_data_dir": str(session_dir),
+            "headless": True,
+            "locale": self.config.browser.locale,
+            "viewport": {
+                "width": self.config.browser.viewport_width,
+                "height": self.config.browser.viewport_height,
+            },
+            "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-blink-features=AutomationControlled",
+            ],
+            "timeout": self.config.browser.launch_timeout_ms,
+        }
+        executable_path = os.environ.get("PINTEREST_CHROMIUM_EXECUTABLE_PATH", "").strip()
+        chromium_channel = os.environ.get("PINTEREST_CHROMIUM_CHANNEL", "chrome").strip()
+        if executable_path:
+            # Playwright's channel and executable override describe alternative
+            # browser selections. Keep only the explicit override when supplied.
+            options["executable_path"] = str(Path(executable_path).expanduser())
+        elif chromium_channel:
+            options["channel"] = chromium_channel
+        else:
+            options["user_agent"] = user_agent
+        if executable_path or chromium_channel:
+            options["ignore_default_args"] = ["--enable-automation"]
+        return options
 
     async def _ensure_playwright(self):
         if self._playwright is not None:
@@ -106,15 +145,41 @@ class SessionPool:
             logger.info(f"Closed session {info.session_id}")
         except Exception as e:
             logger.warning(f"Error closing session {info.session_id}: {e}")
+        finally:
+            guard, info.profile_guard = info.profile_guard, None
+            if guard is not None:
+                guard.__exit__(None, None, None)
+
+    def _configured_account(self, account_handle: str | None) -> str:
+        if account_handle is None:
+            matches = [
+                handle
+                for handle, account in self.config.accounts.items()
+                if getattr(account, "session_name", None) == self.config.browser.session_name
+            ]
+            if len(matches) != 1:
+                raise ValueError("Default Pinterest profile must map to exactly one configured account")
+            account_handle = matches[0]
+        if account_handle not in self.config.accounts:
+            raise ValueError("A configured Pinterest account is required before profile access")
+        return account_handle
+
+    def _assert_account_available(self, account_handle: str) -> None:
+        if account_handle in self._pause_reader():
+            raise RuntimeError("Pinterest account is paused for human recovery")
 
     async def acquire(self, account_handle: str | None = None, board: str | None = None) -> SessionInfo:
         """Get or create a healthy browser session for a specific account."""
+        account_handle = self._configured_account(account_handle)
+        self._assert_account_available(account_handle)
         lock = self._get_lock(account_handle, board)
         async with lock:
+            retirements = []
             loop = asyncio.get_running_loop()
             deadline = loop.time() + SESSION_ACQUIRE_TIMEOUT_SECONDS
 
             while True:
+                self._assert_account_available(account_handle)
                 matching_session_busy = False
                 async with self._dict_lock:
                     # A Chromium persistent profile is a singleton. If another
@@ -125,7 +190,7 @@ class SessionPool:
                             continue
                         if info.closed:
                             self._sessions.pop(sid, None)
-                            asyncio.create_task(self._close_session_detached(info))
+                            retirements.append(asyncio.create_task(self._close_session_detached(info)))
                             continue
                         if info.in_use:
                             matching_session_busy = True
@@ -137,17 +202,17 @@ class SessionPool:
                         if not context_open:
                             logger.warning("Session %s has a closed browser context; retiring", sid)
                             self._sessions.pop(sid, None)
-                            asyncio.create_task(self._close_session_detached(info))
+                            retirements.append(asyncio.create_task(self._close_session_detached(info)))
                             continue
                         if info.failure_count >= 3:
                             logger.warning(f"Session {sid} has {info.failure_count} failures, retiring")
                             self._sessions.pop(sid, None)
-                            asyncio.create_task(self._close_session_detached(info))
+                            retirements.append(asyncio.create_task(self._close_session_detached(info)))
                             continue
                         if info.age_minutes > self.config.browser.session_ttl_minutes:
                             logger.info(f"Session {sid} TTL expired ({info.age_minutes:.0f}m), rotating")
                             self._sessions.pop(sid, None)
-                            asyncio.create_task(self._close_session_detached(info))
+                            retirements.append(asyncio.create_task(self._close_session_detached(info)))
                             continue
 
                         info.last_used = datetime.now(UTC)
@@ -162,6 +227,7 @@ class SessionPool:
                         # No matching lease exists, so it is safe to create the
                         # account's one persistent context.
                         await self._retire_idle_session_if_full()
+                        self._creating_sessions += 1
                         break
 
                 remaining = deadline - loop.time()
@@ -174,12 +240,18 @@ class SessionPool:
                     )
                 await asyncio.sleep(min(SESSION_ACQUIRE_POLL_SECONDS, remaining))
 
-            info = await self._create_session(account_handle)
-            info.in_use = True
-            return info
+            try:
+                if retirements:
+                    await asyncio.gather(*retirements)
+                info = await self._create_session(account_handle)
+                info.in_use = True
+                return info
+            finally:
+                async with self._dict_lock:
+                    self._creating_sessions -= 1
 
     async def _retire_idle_session_if_full(self) -> None:
-        if len(self._sessions) < self.config.browser.max_sessions:
+        if len(self._sessions) + self._creating_sessions < self.config.browser.max_sessions:
             return
         idle = sorted(
             (s for s in self._sessions.values() if not s.in_use),
@@ -197,10 +269,26 @@ class SessionPool:
         )
 
     async def _create_session(self, account_handle: str | None = None) -> SessionInfo:
+        account_handle = self._configured_account(account_handle)
+        self._assert_account_available(account_handle)
+        guard = self._profile_guard_factory(account_handle)
+        guard.__enter__()
+        try:
+            self._assert_account_available(account_handle)
+            info = await self._launch_session(account_handle)
+            info.profile_guard = guard
+            return info
+        except BaseException:
+            guard.__exit__(*sys.exc_info())
+            raise
+
+    async def _launch_session(self, account_handle: str) -> SessionInfo:
         await self._ensure_playwright()
+        self._assert_account_available(account_handle)
 
         async with self._dict_lock:
             session_id = account_handle or "default"
+
         session_dir = self._get_session_dir(session_id, account_handle)
 
         # FORCE CHROMIUM - Firefox is consistently failing on this system
@@ -212,7 +300,7 @@ class SessionPool:
                 session_name = creds.session_name
 
         user_agent = user_agent_for_browser(browser_type, self.config.browser.user_agent)
-        chromium_channel = os.environ.get("PINTEREST_CHROMIUM_CHANNEL", "chrome").strip() or None
+        chromium_options = self._chromium_launch_options(session_dir, user_agent)
 
         session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -220,34 +308,14 @@ class SessionPool:
         kill_browser_locks(session_dir, browser_type)
         await asyncio.sleep(2)
         await self._wait_for_ghost_processes_clear(session_dir, browser_type)
+        self._assert_account_available(account_handle)
 
         logger.info(f"Creating new browser session: {session_id} ({browser_type})")
 
         try:
             if browser_type == "chromium":
-                launch_options = {
-                    "user_data_dir": str(session_dir),
-                    "headless": True,
-                    "locale": self.config.browser.locale,
-                    "viewport": {
-                        "width": self.config.browser.viewport_width,
-                        "height": self.config.browser.viewport_height,
-                    },
-                    "args": [
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-blink-features=AutomationControlled",
-                    ],
-                    "timeout": self.config.browser.launch_timeout_ms,
-                }
-                if chromium_channel:
-                    launch_options["channel"] = chromium_channel
-                    launch_options["ignore_default_args"] = ["--enable-automation"]
-                else:
-                    launch_options["user_agent"] = user_agent
                 context = await self._playwright.chromium.launch_persistent_context(
-                    **launch_options,
+                    **chromium_options,
                 )
                 await context.add_init_script(
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
@@ -293,33 +361,14 @@ class SessionPool:
         except Exception as e:
             logger.error(f"Failed to create session {session_id} ({browser_type}): {e}")
             # Try one more time after aggressive cleanup
+            self._assert_account_available(account_handle)
             kill_browser_locks(session_dir, browser_type)
             await asyncio.sleep(3)
             await self._wait_for_ghost_processes_clear(session_dir, browser_type)
+            self._assert_account_available(account_handle)
 
             if browser_type == "chromium":
-                retry_options = {
-                    "user_data_dir": str(session_dir),
-                    "headless": True,
-                    "locale": self.config.browser.locale,
-                    "viewport": {
-                        "width": self.config.browser.viewport_width,
-                        "height": self.config.browser.viewport_height,
-                    },
-                    "args": [
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-blink-features=AutomationControlled",
-                    ],
-                    "timeout": self.config.browser.launch_timeout_ms,
-                }
-                if chromium_channel:
-                    retry_options["channel"] = chromium_channel
-                    retry_options["ignore_default_args"] = ["--enable-automation"]
-                else:
-                    retry_options["user_agent"] = user_agent
-                context = await self._playwright.chromium.launch_persistent_context(**retry_options)
+                context = await self._playwright.chromium.launch_persistent_context(**chromium_options)
                 await context.add_init_script(
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
                 )
@@ -412,6 +461,8 @@ class SessionPool:
                 )
             else:
                 session.failure_count = max(0, session.failure_count - 1)
+        if session.account_handle in self._pause_reader():
+            await self.retire(session)
 
     async def retire(self, session: SessionInfo) -> None:
         """Remove a poisoned session so the next acquire creates a fresh context."""
@@ -431,12 +482,7 @@ class SessionPool:
             info = self._sessions.pop(session_id, None)
         if info is None:
             return
-        info.closed = True
-        try:
-            await info.context.close()
-            logger.info(f"Closed session {session_id}")
-        except Exception as e:
-            logger.warning(f"Error closing session {session_id}: {e}")
+        await self._close_session_detached(info)
 
     async def close_all(self):
         """Close all sessions and stop playwright."""

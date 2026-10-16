@@ -3688,6 +3688,7 @@ def publish_article_to_supabase(
     pinterest_pin_id: str = "",
     domain_handle: str = "",
     auto_create_pinterest_campaign: bool = True,
+    step_images: list[dict] | str | None = None,
 ) -> dict:
     """
     Publish (upsert) an article to the Supabase posts table.
@@ -3697,6 +3698,8 @@ def publish_article_to_supabase(
     ``auto_create_pinterest_campaign`` preserves the historical default for
     general callers. Set it false when the caller owns a dedicated primary-pin
     and campaign workflow and must avoid a duplicate hero-pin enqueue.
+    ``step_images`` accepts an array of image objects or its JSON representation.
+    Omit it to preserve existing images on updates; pass [] to clear them.
     Returns: {success, action, slug, url}
     """
     domain = get_registry().get(domain_handle)
@@ -3730,6 +3733,34 @@ def publish_article_to_supabase(
 
     if not key:
         return {"success": False, "error": f"Supabase key not set for domain {domain.handle}"}
+
+    normalized_step_images = None
+    if step_images is not None:
+        try:
+            normalized_step_images = json.loads(step_images) if isinstance(step_images, str) else step_images
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid step_images: expected a valid JSON array"}
+        if not isinstance(normalized_step_images, list):
+            return {"success": False, "error": "Invalid step_images: expected an array of image objects"}
+        for index, step in enumerate(normalized_step_images, 1):
+            if (
+                not isinstance(step, dict)
+                or not isinstance(step.get("image_url"), str)
+                or not step["image_url"].strip()
+            ):
+                return {
+                    "success": False,
+                    "error": f"Invalid step_images: image {index} must be an object with a nonempty image_url",
+                }
+            if "step_number" in step and (
+                isinstance(step["step_number"], bool)
+                or not isinstance(step["step_number"], int)
+                or step["step_number"] < 1
+            ):
+                return {
+                    "success": False,
+                    "error": f"Invalid step_images: image {index} step_number must be a positive integer",
+                }
 
     # ── Content Normalization & Pre-Publish Security Gates ──
     if r"\n\n" in content:
@@ -3909,6 +3940,8 @@ def publish_article_to_supabase(
             ),
             "pinterest_pin_id": pinterest_pin_id,
         }
+        if normalized_step_images is not None:
+            payload["step_images"] = normalized_step_images
 
         # Resolve category_id for V2 compatibility
         if category and not payload["category_id"]:
@@ -3985,6 +4018,13 @@ def publish_article_to_supabase(
             missing = missing_match.group(1)
             if missing not in payload:
                 break
+            if missing == "step_images" and normalized_step_images:
+                return {
+                    "success": False,
+                    "error": "Schema mismatch: posts.step_images JSONB is required to persist the supplied step images.",
+                    "details": resp.text,
+                    "payload_sent": list(payload.keys()),
+                }
             retried_missing.append(missing)
             payload.pop(missing, None)
             logger.warning(
@@ -5180,6 +5220,7 @@ def publish_from_payload(payload_json: str) -> dict:
             else p.get("faq_schema", "[]"),
             pinterest_pin_id=p.get("pinterest_pin_id", ""),
             domain_handle=p.get("domain_handle", ""),
+            step_images=p.get("step_images"),
         )
     except Exception as e:
         logger.error(f"publish_from_payload failed: {e}")

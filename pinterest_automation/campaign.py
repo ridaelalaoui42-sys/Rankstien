@@ -18,10 +18,13 @@ Usage:
 import hashlib
 import json
 import logging
+import re
 import threading
 import time
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .config import get_config, normalize_board_name
 from .job_queue import Job, get_job_queue
@@ -283,86 +286,193 @@ def create_pinterest_campaign(
     }
 
 
+def _folder_url(value: str, *, article: bool = False):
+    value = str(value or "").strip()
+    if article and "://" not in value:
+        raise ValueError("Expected a public article URL with an explicit HTTP or HTTPS scheme")
+    parsed = urlsplit(value if "://" in value else f"https://{value}")
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or (not article and (parsed.path not in {"", "/"} or parsed.query or parsed.fragment))
+    ):
+        raise ValueError(
+            "Expected a public domain origin" if not article else "Expected a public article URL"
+        )
+    port = parsed.port
+    host = parsed.hostname.casefold().removeprefix("www.")
+    if port is not None and (parsed.scheme, port) not in {("http", 80), ("https", 443)}:
+        host = f"{host}:{port}"
+    return f"{parsed.scheme}://{parsed.netloc}", host
+
+
+def _folder_image_target(image: Path, domains: dict, explicit_domain, article_link: str):
+    """Resolve managed remaster provenance before considering legacy filenames."""
+    try:
+        parts = image.resolve().relative_to(REMASTER_DIR.resolve()).parts
+    except ValueError:
+        parts = ()
+    if len(parts) > 1:
+        path_domain = domains.get(parts[0].casefold())
+        if len(parts) >= 4 and path_domain is None:
+            raise ValueError(f"Unknown remaster domain folder {parts[0]!r}: {image}")
+        if path_domain is not None:
+            if explicit_domain is not None and explicit_domain.handle != path_domain.handle:
+                raise ValueError(
+                    f"Explicit domain {explicit_domain.handle!r} conflicts with image domain "
+                    f"{path_domain.handle!r}: {image}"
+                )
+            valid_date = False
+            if len(parts) == 4:
+                try:
+                    valid_date = date.fromisoformat(parts[1]).isoformat() == parts[1]
+                except ValueError:
+                    pass
+            if valid_date:
+                slug = parts[2]
+                if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+                    raise ValueError(f"Remaster article folder is not a canonical slug: {image}")
+                return path_domain, slug, f"{slug}:{image.stem.casefold()}", True
+            if not article_link:
+                raise ValueError(
+                    f"Remaster image needs <domain>/<YYYY-MM-DD>/<article-slug>/<image> "
+                    f"or an explicit article_link: {image}"
+                )
+            # Older domain/run/attempt folders lack article provenance. An
+            # explicit destination is required before their filename fallback.
+            explicit_domain = path_domain
+    if explicit_domain is None:
+        raise ValueError("domain_handle, configured domain_url or article_link is required for legacy images")
+    slug = extract_slug_from_filename(image.name)
+    return explicit_domain, slug, slug, False
+
+
 def enqueue_folder(
     folder: Path | None = None,
-    domain_url: str = "recetagenial.com",
+    domain_url: str = "",
     domain_handle: str = "",
     boards_default: dict | None = None,
+    *,
+    article_link: str = "",
 ) -> dict:
-    """Enqueue each unique image once using the domain account cohort.
+    """Resolve every destination/account before enqueueing a folder intake.
 
-    Returns: {total_images, jobs_enqueued, accounts, skipped}
+    Managed domain/date/article folders retain each source/variant asset and
+    derive their destination from the article folder. Ordinary legacy folders
+    retain filename-based slug deduplication and require a configured domain.
+    Explicit domain and destination constraints must match every input file.
     """
-    if folder is None:
-        folder = REMASTER_DIR
+    from rankstein.domain import get_registry
 
+    folder = Path(folder) if folder is not None else REMASTER_DIR
     if not folder.exists():
-        return {"success": False, "error": f"Folder not found: {folder}"}
+        return {"success": False, "error": f"Folder not found: {folder}", "jobs_enqueued": 0}
+    images = sorted(f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in _IMAGE_SUFFIXES)
+    if not images:
+        return {"success": False, "error": f"No images found in {folder}", "jobs_enqueued": 0}
 
     config = get_config()
+    try:
+        domains = {domain.handle.casefold(): domain for domain in get_registry().all()}
+        origins = {handle: _folder_url(domain.domain) for handle, domain in domains.items()}
+        explicit_domain = None
+        if domain_handle:
+            explicit_domain = domains.get(str(domain_handle).strip().casefold())
+            if explicit_domain is None:
+                raise ValueError(f"Unknown domain handle: {domain_handle!r}")
+        supplied_origin = _folder_url(domain_url) if domain_url else None
+        link_origin = _folder_url(article_link, article=True) if article_link else None
+        for origin in (supplied_origin, link_origin):
+            if origin is None:
+                continue
+            matching = [domain for handle, domain in domains.items() if origins[handle][1] == origin[1]]
+            if explicit_domain is not None:
+                if origins[explicit_domain.handle.casefold()][1] != origin[1]:
+                    raise ValueError(f"Explicit URL conflicts with domain {explicit_domain.handle!r}")
+            elif len(matching) == 1:
+                explicit_domain = matching[0]
+            else:
+                raise ValueError("Explicit URL must identify exactly one configured public domain")
+
+        assets = {}
+        cohorts = {}
+        for image in images:
+            domain, slug, asset_key, structured = _folder_image_target(
+                image, domains, explicit_domain, article_link
+            )
+            domain_key = domain.handle.casefold()
+            origin = origins[domain_key][0]
+            if supplied_origin is not None:
+                origin = supplied_origin[0]
+            link = article_link or f"{origin}/{slug}"
+            if domain.handle not in cohorts:
+                cohorts[domain.handle] = account_cohort(domain.handle, config=config)
+            cohort = cohorts[domain.handle]
+            if not cohort:
+                raise ValueError(f"No Pinterest accounts configured for domain {domain.handle!r}")
+            account = select_upload_account(domain.handle, asset_key, config=config)
+            if account not in cohort:
+                raise ValueError(f"No valid Pinterest upload account for domain {domain.handle!r}")
+            title = get_title_from_slug(slug)
+            key = (domain.handle, asset_key)
+            previous = assets.get(key)
+            if previous is not None and previous["image"].stat().st_size >= image.stat().st_size:
+                continue
+            assets[key] = {
+                "image": image,
+                "slug": slug,
+                "asset_key": asset_key,
+                "structured": structured,
+                "title": title,
+                "domain": domain,
+                "link": link,
+                "account": account,
+                "board": _get_board_for_slug(
+                    slug, boards_default if boards_default is not None else domain.boards_default
+                ),
+            }
+    except (KeyError, OSError, TypeError, ValueError) as exc:
+        return {"success": False, "error": str(exc), "jobs_enqueued": 0, "total_images": len(images)}
+
+    # Validation above is side-effect free: a conflicting final file cannot
+    # leave earlier files queued with the wrong global domain or destination.
     queue = get_job_queue()
-    if not domain_handle:
-        return {"success": False, "error": "domain_handle is required"}
-    account_handles = account_cohort(domain_handle, config=config)
-
-    if not account_handles:
-        return {"success": False, "error": "No Pinterest accounts configured"}
-
-    # Collect all images
-    images = sorted(
-        f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
-    )
-
-    if not images:
-        return {"success": False, "error": f"No images found in {folder}"}
-
-    # Group images by slug (deduplicate: pick the largest per slug)
-    slug_map: dict[str, Path] = {}
-    for img in images:
-        slug = extract_slug_from_filename(img.name)
-
-        if slug not in slug_map or img.stat().st_size > slug_map[slug].stat().st_size:
-            slug_map[slug] = img
-
-    logger.info(f"Found {len(images)} images -> {len(slug_map)} unique slugs")
-
     jobs_enqueued = 0
     skipped = 0
-    for slug, img in sorted(slug_map.items()):
-        # Build a title from the slug using unified utility
-        title = get_title_from_slug(slug)
-        if len(title) < 5:
+    for _key, asset in sorted(assets.items()):
+        title = asset["title"]
+        if len(title) < 5 and not asset["structured"]:
             skipped += 1
             continue
-
-        desc = f"Descubre esta deliciosa receta: {title}. Paso a paso con trucos de chef."
-        link = f"https://{domain_url}/{slug}"
-        board = _get_board_for_slug(slug, boards_default)
-
-        handle = select_upload_account(domain_handle, slug, config=config)
+        extra = {
+            "slug": asset["slug"],
+            "account_handle": asset["account"],
+            "domain_handle": asset["domain"].handle,
+            "campaign_type": "folder_batch",
+        }
+        if asset["structured"]:
+            extra["asset_key"] = asset["asset_key"]
         queue.enqueue_pin_upload(
-            image_path=str(img),
+            image_path=str(asset["image"]),
             title=title[:99],
-            description=desc[:499],
-            link=link,
+            description=f"Descubre esta deliciosa receta: {title}. Paso a paso con trucos de chef."[:499],
+            link=asset["link"],
             alt_text=_build_recipe_alt_text(title),
-            board_name=board,
+            board_name=asset["board"],
             priority=5,
-            extra={
-                "slug": slug,
-                "account_handle": handle,
-                "domain_handle": domain_handle,
-                "campaign_type": "folder_batch",
-            },
+            extra=extra,
         )
         jobs_enqueued += 1
-
     return {
         "success": True,
         "total_images": len(images),
-        "unique_slugs": len(slug_map),
+        "unique_slugs": len({(asset["domain"].handle, asset["slug"]) for asset in assets.values()}),
+        "unique_assets": len(assets),
         "jobs_enqueued": jobs_enqueued,
-        "accounts": account_handles,
+        "accounts": sorted({account for cohort in cohorts.values() for account in cohort}),
+        "domains": sorted(cohorts),
         "skipped": skipped,
         "folder": str(folder),
     }
@@ -398,16 +508,12 @@ def _validate_article_remaster_assets(
     assets = asset_metadata if isinstance(asset_metadata, list) else []
     errors: list[str] = []
 
-    effective_limit = (
-        limit
-        if (2 <= limit <= _ARTICLE_REMASTER_ASSET_TARGET and limit % 2 == 0)
-        else _ARTICLE_REMASTER_ASSET_TARGET
-    )
+    effective_limit = _ARTICLE_REMASTER_ASSET_TARGET
     expected_source_target = effective_limit // 2
 
     if limit != effective_limit:
         errors.append(
-            f"production enqueue limit must be an even number between 2 and {_ARTICLE_REMASTER_ASSET_TARGET}; received {limit}"
+            f"production enqueue limit must be exactly {_ARTICLE_REMASTER_ASSET_TARGET}; received {limit}"
         )
     if len(paths) != effective_limit:
         errors.append(

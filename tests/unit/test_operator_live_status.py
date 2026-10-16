@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 
@@ -10,6 +11,37 @@ from backend.services.operator_pipeline import (
     _new_campaign,
     _set_stage,
 )
+
+
+def test_explicit_resumed_batch_remains_visible_with_newer_history(tmp_path, monkeypatch):
+    directory = tmp_path / "data/reports/production_batches"
+    directory.mkdir(parents=True)
+    selected = "production-20261008-174143"
+    newer = "production-20261010-125148"
+    for batch_id in (selected, newer):
+        (directory / f"{batch_id}.json").write_text(json.dumps({"batch_id": batch_id}))
+    monkeypatch.setattr(routes, "RANKSTEIN_ROOT", tmp_path)
+    monkeypatch.setattr(
+        routes,
+        "_load_processes",
+        lambda: {"production": {"command": ["python", "turbo_articles.py", "--batch-id", selected]}},
+    )
+    assert routes._latest_production_batch()["batch_id"] == selected
+
+
+@pytest.mark.parametrize("selected", ["production-20261008-174143", "../../outside", ""])
+def test_missing_or_invalid_selected_batch_falls_back_to_history(tmp_path, monkeypatch, selected):
+    directory = tmp_path / "data/reports/production_batches"
+    directory.mkdir(parents=True)
+    newer = "production-20261010-125148"
+    (directory / f"{newer}.json").write_text(json.dumps({"batch_id": newer}))
+    monkeypatch.setattr(routes, "RANKSTEIN_ROOT", tmp_path)
+    monkeypatch.setattr(
+        routes,
+        "_load_processes",
+        lambda: {"production": {"command": ["python", "turbo_articles.py", "--batch-id", selected]}},
+    )
+    assert routes._latest_production_batch()["batch_id"] == newer
 
 
 def test_stopped_worker_is_current_during_a_slow_artifact_refresh(monkeypatch):

@@ -20,15 +20,19 @@ if _reexec_needed:
 import argparse
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import re
 import shutil
+import sqlite3
 import subprocess
 import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -1778,10 +1782,16 @@ def _ensure_recipe_schema(
                 break
         if not img_url and idx - 1 < len(step_images):
             s_img = step_images[idx - 1]
-            img_url = s_img.get("image_url") if isinstance(s_img, dict) else s_img
+            if isinstance(s_img, dict):
+                if not s_img.get("step_number"):
+                    img_url = s_img.get("image_url")
+            else:
+                img_url = s_img
 
         if img_url and isinstance(img_url, str) and img_url.startswith("http"):
             step_obj["image"] = img_url
+        elif "step_images" in article:
+            step_obj.pop("image", None)
 
         normalized_inst.append(step_obj)
 
@@ -2099,7 +2109,72 @@ def _embed_step_images_in_content(content: str, step_images: list, title: str) -
 
         i += 1
 
-    return "\n".join(new_lines)
+    if inserted_steps:
+        return "\n".join(new_lines)
+
+    # Fallback: if no numbered steps matched, search for the preparation section
+    # and interleave step images between preparation paragraphs.
+    prep_heading_pattern = re.compile(
+        r"^#{2,4}\s*(?:.*(?:paso\s*a\s*paso|preparaci|elaboraci|instrucci|c[oó]mo\s*(?:hacer|preparar)|gu[ií]a\s*paso))",
+        re.IGNORECASE,
+    )
+    prep_start = -1
+    prep_end = len(lines)
+    for idx, l in enumerate(lines):
+        if prep_heading_pattern.match(l):
+            prep_start = idx
+            break
+
+    if prep_start != -1:
+        for idx in range(prep_start + 1, len(lines)):
+            if lines[idx].startswith("## ") or lines[idx].startswith("### "):
+                prep_end = idx
+                break
+
+        fallback_lines = []
+        step_idx = 0
+        sorted_steps = sorted(valid_steps, key=lambda s: s.get("step_number", 0))
+
+        k = 0
+        while k < len(lines):
+            line = lines[k]
+            fallback_lines.append(line)
+            if prep_start < k < prep_end:
+                if line.strip() and not line.startswith("#"):
+                    is_paragraph_end = (k + 1 >= prep_end) or (not lines[k + 1].strip())
+                    if is_paragraph_end and step_idx < len(sorted_steps):
+                        s_data = sorted_steps[step_idx]
+                        num = s_data.get("step_number") or (step_idx + 1)
+                        img_url = s_data["image_url"]
+                        alt_text = f"Paso {num} de la receta {title}"
+                        fallback_lines.append(f"\n![{alt_text}]({img_url})\n")
+                        step_idx += 1
+            k += 1
+
+        if step_idx < len(sorted_steps):
+            remaining_images = []
+            while step_idx < len(sorted_steps):
+                s_data = sorted_steps[step_idx]
+                num = s_data.get("step_number") or (step_idx + 1)
+                img_url = s_data["image_url"]
+                alt_text = f"Paso {num} de la receta {title}"
+                remaining_images.append(f"\n![{alt_text}]({img_url})\n")
+                step_idx += 1
+            insert_pos = prep_end if prep_end < len(fallback_lines) else len(fallback_lines)
+            fallback_lines[insert_pos:insert_pos] = remaining_images
+
+        return "\n".join(fallback_lines)
+
+    # General fallback: append step images before the end
+    sorted_steps = sorted(valid_steps, key=lambda s: s.get("step_number", 0))
+    gallery_lines = ["\n## Preparación Paso a Paso en Fotos\n"]
+    for s_data in sorted_steps:
+        num = s_data.get("step_number", 1)
+        img_url = s_data["image_url"]
+        caption = s_data.get("text", "") or f"Paso {num}"
+        alt_text = f"Paso {num} de la receta {title}: {caption[:60]}"
+        gallery_lines.append(f"### Paso {num}\n\n![{alt_text}]({img_url})\n")
+    return content.rstrip() + "\n\n" + "\n".join(gallery_lines)
 
 
 def _build_from_scraped(keyword: str, cluster: str, domain: Domain, hero_url: str, scraped: dict) -> dict:
@@ -2497,10 +2572,9 @@ def _validate_article_remaster_report(
         if actual_value.casefold() != expected_value.casefold():
             return False, (f"remaster report {field}={actual_value!r}, expected {expected_value!r}")
 
-    report_target = int(report.get("target_count", 0) or 0)
-    actual_target = (
-        report_target if (2 <= report_target <= target_count and report_target % 2 == 0) else target_count
-    )
+    if target_count != 30:
+        return False, "production remaster target must be exactly 30 assets"
+    actual_target = target_count
     source_target = actual_target // 2
     if not report.get("success"):
         return False, "remaster report is marked incomplete"
@@ -2588,7 +2662,7 @@ def _validate_article_remaster_report(
             actual = int(enqueue.get(field, -1))
         except (TypeError, ValueError):
             return False, f"remaster enqueue result has invalid {field}"
-        if actual != actual_target and actual != target_count and actual < actual_target:
+        if actual != actual_target:
             return False, f"remaster enqueue {field}={actual}, expected {actual_target}"
     details = enqueue.get("details") or []
     if len(details) != actual_target or any(not item.get("job_id") for item in details):
@@ -2597,6 +2671,244 @@ def _validate_article_remaster_report(
         return False, "remaster enqueue result contains duplicate queue job IDs"
     if any(str(item.get("state") or "").casefold() in {"held", "dead", "failed"} for item in details):
         return False, "remaster enqueue result contains held or failed queue jobs"
+    return True, ""
+
+
+def _read_remaster_job_outcomes(
+    job_ids: list[str], *, project_root: Path, deadline: float
+) -> dict[str, dict]:
+    """Read exact outcomes in one bounded snapshot without initializing the queue."""
+    db_path = project_root / "data" / "queue" / "jobs.db"
+    if project_root.resolve() == PROJECT_ROOT.resolve():
+        db_path = Path(os.environ.get("PINTEREST_QUEUE_DB_FILE") or db_path)
+    placeholders = ",".join("?" for _ in job_ids)
+    outcomes: dict[str, dict] = {}
+    with sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0.25) as connection:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 1024 * 1024)
+        connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 100)
+        connection.execute("BEGIN")
+        rows = connection.execute(f"SELECT * FROM jobs WHERE id IN ({placeholders})", job_ids).fetchall()
+        for row in rows:
+            outcomes[row["id"]] = {
+                "found": True,
+                "state": row["status"],
+                "type": row["type"],
+                "payload": json.loads(row["payload_json"]),
+                "result": json.loads(row["result_json"] or "null"),
+            }
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        for table, state in (
+            ("completed_log", "completed"),
+            ("dlq", "dead"),
+            ("completion_evidence", "completed"),
+        ):
+            if table not in tables:
+                continue
+            rows = connection.execute(
+                f"SELECT id, job_json FROM {table} WHERE id IN ({placeholders})", job_ids
+            ).fetchall()
+            for row in rows:
+                if row["id"] in outcomes:
+                    continue
+                job = json.loads(row["job_json"])
+                outcomes[row["id"]] = {
+                    "found": True,
+                    "state": state,
+                    "type": job.get("type"),
+                    "payload": job.get("payload"),
+                    "result": job.get("result"),
+                }
+    return outcomes
+
+
+def _validate_durable_article_remaster_proof(
+    report: dict,
+    *,
+    project_root: Path | None = None,
+    job_outcome_lookup: Callable[[str], dict] | None = None,
+    configured_accounts: set[str] | None = None,
+    public_domain: str | None = None,
+    timeout_seconds: float = 5.0,
+) -> tuple[bool, str]:
+    """Bind all thirty persisted jobs to the actual reviewed source and render files."""
+    valid, reason = _validate_article_remaster_report(report)
+    if not valid:
+        return valid, reason
+    project_root = (project_root or PROJECT_ROOT).resolve()
+    deadline = time.monotonic() + min(5.0, max(0.01, timeout_seconds))
+    domain_handle = str(report.get("domain_handle") or "").strip()
+    run_id = str(report.get("pipeline_run_id") or "").strip()
+    slug = str(report.get("slug") or "").strip()
+    if not domain_handle or not run_id or not slug:
+        return False, "durable remaster proof is missing article/run identity"
+    try:
+        if public_domain is None:
+            public_domain = get_registry().get(domain_handle).domain
+        if configured_accounts is None:
+            from pinterest_automation.routing import account_cohort
+
+            configured_accounts = set(account_cohort(domain_handle))
+        if not configured_accounts:
+            return False, "durable remaster proof has no configured account cohort"
+        details = report["enqueue"]["details"]
+        job_ids = [str(item["job_id"]) for item in details]
+        outcomes = (
+            {job_id: job_outcome_lookup(job_id) for job_id in job_ids}
+            if job_outcome_lookup is not None
+            else _read_remaster_job_outcomes(job_ids, project_root=project_root, deadline=deadline)
+        )
+        # Reject missing/held identities before spending the bounded file budget.
+        for job_id in job_ids:
+            outcome = outcomes.get(job_id) or {}
+            if not isinstance(outcome, dict):
+                return False, f"remaster job {job_id} outcome is invalid"
+            if not outcome.get("found") or outcome.get("state") not in {
+                "pending",
+                "processing",
+                "retry",
+                "completed",
+            }:
+                return False, f"remaster job {job_id} is missing, held, or failed"
+            if outcome.get("type") != "pin_upload":
+                return False, f"remaster job {job_id} is not a pin_upload"
+        from PIL import Image
+
+        assets_by_identity = {(item["pair_id"], item["variant"]): item for item in report["assets"]}
+        raw_root = (project_root / "data" / "media" / "remaster_raw").resolve()
+        rendered_root = (project_root / "data" / "media" / "remaster_final").resolve()
+        source_hashes: dict[Path, str] = {}
+        rendered_paths: set[Path] = set()
+        total_bytes = 0
+
+        def resolve_asset(value: object, allowed_root: Path) -> Path:
+            path = Path(str(value or ""))
+            if not str(value or "").strip():
+                raise ValueError("missing asset path")
+            path = (path if path.is_absolute() else project_root / path).resolve()
+            path.relative_to(allowed_root)
+            if not path.is_file() or path.stat().st_size <= 0:
+                raise ValueError("missing or empty asset file")
+            return path
+
+        def reviewed_source_hash(path: Path) -> str:
+            nonlocal total_bytes
+            digest = hashlib.sha256()
+            if path.stat().st_size > 16 * 1024 * 1024:
+                raise ValueError("source file exceeds proof byte limit")
+            with path.open("rb") as handle:
+                while chunk := handle.read(128 * 1024):
+                    total_bytes += len(chunk)
+                    if total_bytes > 64 * 1024 * 1024 or time.monotonic() >= deadline:
+                        raise ValueError("durable remaster proof exceeded deadline or byte limit")
+                    digest.update(chunk)
+            return digest.hexdigest()
+
+        expected_url = str(report["enqueue"].get("link") or "").strip()
+        parsed_url = urlparse(expected_url)
+        report_host = str(report.get("domain_url") or "").strip().removeprefix("https://").strip("/")
+        if (
+            parsed_url.scheme != "https"
+            or not report_host
+            or report_host.casefold() != public_domain.casefold().removeprefix("www.")
+            or parsed_url.hostname != report_host
+            or parsed_url.path.rstrip("/") != f"/{slug}"
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            return False, "durable remaster proof destination does not match its domain/slug"
+        for detail in details:
+            if time.monotonic() >= deadline:
+                return False, "durable remaster proof exceeded deadline"
+            job_id = str(detail["job_id"])
+            outcome = outcomes.get(job_id) or {}
+            asset = assets_by_identity.get((detail.get("pair_id"), detail.get("variant")))
+            if asset is None:
+                return False, f"remaster job {job_id} does not identify an exact report asset"
+            source_pin = str(asset.get("original_pin_id") or "")
+            source_url = urlparse(str(asset.get("original_url") or ""))
+            if (
+                not re.fullmatch(r"\d{15,20}", source_pin)
+                or source_url.scheme != "https"
+                or not (
+                    source_url.hostname == "pinterest.com"
+                    or str(source_url.hostname or "").endswith(".pinterest.com")
+                )
+                or source_url.path.rstrip("/") != f"/pin/{source_pin}"
+            ):
+                return False, f"remaster job {job_id} source pin URL is not proven"
+            payload = outcome.get("payload") or {}
+            if not isinstance(payload, dict):
+                return False, f"remaster job {job_id} payload is invalid"
+            extra = payload.get("extra") or {}
+            if not isinstance(extra, dict):
+                return False, f"remaster job {job_id} metadata is invalid"
+            identity = {
+                "domain_handle": domain_handle,
+                "pipeline_run_id": run_id,
+                "pair_id": asset["pair_id"],
+                "variant": asset["variant"],
+                "original_pin_id": asset.get("original_pin_id"),
+                "source_hash": asset["source_hash"],
+                "source": "pinterest",
+            }
+            for field, expected in identity.items():
+                if not expected or extra.get(field) != expected:
+                    return False, f"remaster job {job_id} has mismatched {field}"
+                if payload.get(field) not in (None, "", expected):
+                    return False, f"remaster job {job_id} has conflicting {field}"
+                if field in {"pair_id", "variant", "original_pin_id", "source_hash", "source"}:
+                    if detail.get(field) != expected:
+                        return False, f"remaster report job {job_id} has mismatched {field}"
+            if extra.get("source_pin_id") != asset.get("original_pin_id") or extra.get("slug") != slug:
+                return False, f"remaster job {job_id} has mismatched source pin/slug"
+            account = str(detail.get("account") or "")
+            if (
+                account not in configured_accounts
+                or payload.get("account_handle") != account
+                or extra.get("account_handle") != account
+                or payload.get("link") != expected_url
+                or str(payload.get("board_name") or "") != str(report["enqueue"].get("board") or "")
+                or not payload.get("board_name")
+            ):
+                return False, f"remaster job {job_id} has mismatched account/destination/board"
+            if extra.get("source_quality") != asset.get("source_quality") or detail.get(
+                "source_quality"
+            ) != asset.get("source_quality"):
+                return False, f"remaster job {job_id} has mismatched source review"
+            source_path = resolve_asset(asset.get("source_path"), raw_root)
+            rendered_path = resolve_asset(asset.get("remastered_path"), rendered_root)
+            if (
+                resolve_asset(extra.get("source_path"), raw_root) != source_path
+                or resolve_asset(detail.get("source_path"), raw_root) != source_path
+                or resolve_asset(payload.get("image_path"), rendered_root) != rendered_path
+                or resolve_asset(detail.get("image"), rendered_root) != rendered_path
+                or rendered_path in rendered_paths
+            ):
+                return False, f"remaster job {job_id} does not bind a unique exact asset file"
+            if source_path not in source_hashes:
+                source_hashes[source_path] = reviewed_source_hash(source_path)
+                with Image.open(source_path) as source_image:
+                    source_image.verify()
+            if source_hashes[source_path] != asset["source_hash"]:
+                return False, f"remaster job {job_id} source file no longer matches its review hash"
+            if rendered_path.stat().st_size > 16 * 1024 * 1024:
+                return False, "remastered file exceeds proof byte limit"
+            total_bytes += rendered_path.stat().st_size
+            if total_bytes > 64 * 1024 * 1024:
+                return False, "durable remaster proof exceeded byte limit"
+            with Image.open(rendered_path) as rendered:
+                if rendered.size != (1000, 1500):
+                    return False, f"remaster job {job_id} rendered image is not 1000x1500"
+                rendered.verify()
+            rendered_paths.add(rendered_path)
+        if time.monotonic() >= deadline:
+            return False, "durable remaster proof exceeded deadline"
+        if len(source_hashes) != 15 or len(rendered_paths) != 30:
+            return False, "durable remaster proof does not bind 15 source files and 30 rendered files"
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as exc:
+        return False, f"durable remaster proof is unavailable: {str(exc)[:180]}"
     return True, ""
 
 
@@ -2631,15 +2943,17 @@ def _find_valid_article_remaster_report(
         )
         if not valid:
             continue
+        durable, reason = _validate_durable_article_remaster_proof(report)
         return {
-            "success": True,
+            "success": durable,
             "reused_existing_report": True,
             "pins_per_keyword": target_count,
             "report_path": str(report_path),
             "generated_count": report.get("generated_count", 0),
             "pair_count": report.get("pair_count", 0),
             "jobs_enqueued": (report.get("enqueue") or {}).get("jobs_enqueued", 0),
-            "error": "",
+            "error": reason,
+            "requires_evidence_recovery": not durable,
         }
     return None
 
@@ -2875,6 +3189,8 @@ async def _launch_article_remaster_campaign_unlocked(
             expected_slug=slug,
             expected_pipeline_run_id=pipeline_run_id,
         )
+        if valid:
+            valid, reason = _validate_durable_article_remaster_proof(report)
         return {
             "success": valid,
             "pid": proc.pid,
@@ -3504,8 +3820,8 @@ async def _publish_generated_article(
     steps_to_process = step_images or article.get("step_images") or []
     if steps_to_process:
         uploaded_steps = _process_and_upload_step_images(steps_to_process, slug, domain)
+        article["step_images"] = uploaded_steps
         if uploaded_steps:
-            article["step_images"] = uploaded_steps
             article["content"] = _embed_step_images_in_content(
                 article.get("content", ""), uploaded_steps, article.get("title", keyword)
             )
@@ -3578,6 +3894,7 @@ async def _publish_generated_article(
         chef_tip=payload.get("chef_tip", ""),
         recipe_schema=json.dumps(payload.get("recipe_schema", {}), ensure_ascii=False),
         faq_schema=json.dumps(payload.get("faq_schema", []), ensure_ascii=False),
+        step_images=payload.get("step_images"),
         domain_handle=domain.handle,
         auto_create_pinterest_campaign=False,
     )
@@ -3979,7 +4296,9 @@ async def process_keyword(
             existing_article.get("id"),
             existing_article.get("pinterest_pin_id"),
         )
-        return "Live" if existing_article.get("pinterest_pin_id") else "Needs Verification"
+        # A linked pin alone cannot establish the exact article-run campaign.
+        # The existing publication is preserved for the dedicated proof reconciler.
+        return "Needs Verification"
 
     pipeline_run_id = _start_pipeline_telemetry(keyword, cluster, domain, source)
     _pipeline_event(

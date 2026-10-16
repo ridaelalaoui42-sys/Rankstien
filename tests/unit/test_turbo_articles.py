@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import io
 import json
+import sqlite3
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -13,12 +17,12 @@ import rankstein.trend_intelligence as trend_intelligence
 from backend.scripts.turbo_articles import _ensure_recipe_schema, _normalize_category, _source_relevant_enough
 from rankstein.domain import Domain
 
+
 @pytest.fixture(autouse=True)
 def _reset_turbo_state():
     turbo._RECENTLY_PROCESSED.clear()
     yield
     turbo._RECENTLY_PROCESSED.clear()
-
 
 
 def _domain(categories: tuple[str, ...]) -> Domain:
@@ -1476,7 +1480,12 @@ async def test_process_keyword_uses_free_hermes_writer_only_when_codex_is_unavai
     monkeypatch.setattr(turbo, "_scrape_source_brief", source_brief)
     monkeypatch.setattr(turbo, "_call_hermes_codex_for_article_result", codex_unavailable)
     import rankstein_mcp_server as mcp
-    monkeypatch.setattr(mcp, "validate_article_quality", lambda *args, **kwargs: {"score": 95, "passed": True, "success": True})
+
+    monkeypatch.setattr(
+        mcp,
+        "validate_article_quality",
+        lambda *args, **kwargs: {"score": 95, "passed": True, "success": True},
+    )
     monkeypatch.setattr(turbo, "_call_hermes_free_for_article", free_writer)
     monkeypatch.setattr(turbo, "_openrouter_article_quality_check", lambda value: value is article)
     monkeypatch.setattr(turbo, "_publish_generated_article", publish)
@@ -2447,9 +2456,297 @@ def _complete_remaster_report() -> dict:
     }
 
 
+def _durable_remaster_fixture(tmp_path: Path) -> tuple[dict, dict[str, dict]]:
+    from PIL import Image
+
+    report = _complete_remaster_report()
+    report["domain_url"] = "recetagenial.com"
+    report["enqueue"].update(
+        link="https://recetagenial.com/tarta-de-prueba", board="ENSALADES", accounts=["r1"]
+    )
+    raw_dir = tmp_path / "data" / "media" / "remaster_raw"
+    rendered_dir = tmp_path / "data" / "media" / "remaster_final"
+    raw_dir.mkdir(parents=True)
+    rendered_dir.mkdir(parents=True)
+    buffer = io.BytesIO()
+    Image.new("RGB", (1000, 1500), "red").save(buffer, format="PNG")
+    rendered_bytes = buffer.getvalue()
+    outcomes = {}
+    for index, (asset, detail) in enumerate(zip(report["assets"], report["enqueue"]["details"], strict=True)):
+        source_index = index // 2 + 1
+        source = raw_dir / f"source-{source_index:02d}.jpg"
+        Image.new("RGB", (20, 20), (source_index, 0, 0)).save(source, quality=100)
+        rendered = rendered_dir / f"{asset['pair_id']}-{asset['variant']}.png"
+        rendered.write_bytes(rendered_bytes)
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        asset.update(
+            original_pin_id=str(100000000000000 + source_index),
+            original_url=f"https://www.pinterest.com/pin/{100000000000000 + source_index}/",
+            source_path=str(source.relative_to(tmp_path)),
+            remastered_path=str(rendered.relative_to(tmp_path)),
+            source_hash=source_hash,
+        )
+        asset["source_quality"]["source_hash"] = source_hash
+        detail.update({**asset, "account": "r1", "image": asset["remastered_path"]})
+        outcomes[detail["job_id"]] = {
+            "found": True,
+            "state": "pending",
+            "type": "pin_upload",
+            "payload": {
+                "domain_handle": report["domain_handle"],
+                "account_handle": "r1",
+                "link": report["enqueue"]["link"],
+                "board_name": report["enqueue"]["board"],
+                "image_path": asset["remastered_path"],
+                "extra": {
+                    **asset,
+                    "domain_handle": report["domain_handle"],
+                    "account_handle": "r1",
+                    "pipeline_run_id": report["pipeline_run_id"],
+                    "slug": report["slug"],
+                    "source_pin_id": asset["original_pin_id"],
+                },
+            },
+        }
+    return report, outcomes
+
+
+@pytest.mark.unit
+def test_durable_remaster_proof_requires_exact_jobs_and_actual_files(tmp_path: Path) -> None:
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+
+    assert turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="recetagenial.com",
+    ) == (True, "")
+
+
+@pytest.mark.unit
+def test_durable_remaster_proof_rejects_unconfigured_public_domain(tmp_path: Path) -> None:
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+
+    valid, reason = turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="other.example",
+    )
+
+    assert valid is False
+    assert "domain/slug" in reason
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("state", ["missing", "held", "dead", "failed"])
+def test_durable_remaster_proof_rejects_unavailable_exact_job(tmp_path: Path, state: str) -> None:
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+    job_id = report["enqueue"]["details"][-1]["job_id"]
+    outcomes[job_id]["state"] = state
+
+    valid, reason = turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="recetagenial.com",
+    )
+
+    assert valid is False
+    assert job_id in reason
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "field",
+    ["domain_handle", "pipeline_run_id", "pair_id", "variant", "original_pin_id", "source_hash", "source"],
+)
+def test_durable_remaster_proof_rejects_wrong_persisted_identity(tmp_path: Path, field: str) -> None:
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+    job_id = report["enqueue"]["details"][0]["job_id"]
+    outcomes[job_id]["payload"]["extra"][field] = "wrong"
+
+    valid, reason = turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="recetagenial.com",
+    )
+
+    assert valid is False
+    assert field in reason
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("field", ["account_handle", "link", "image_path", "board_name"])
+def test_durable_remaster_proof_rejects_wrong_persisted_routing(tmp_path: Path, field: str) -> None:
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+    job_id = report["enqueue"]["details"][0]["job_id"]
+    outcomes[job_id]["payload"][field] = "wrong"
+
+    valid, _ = turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="recetagenial.com",
+    )
+
+    assert valid is False
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "broken_file", ["source_hash", "source_missing", "render_missing", "outside_root", "render_size"]
+)
+def test_durable_remaster_proof_rejects_changed_or_missing_files(tmp_path: Path, broken_file: str) -> None:
+    from PIL import Image
+
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+    asset = report["assets"][0]
+    source = tmp_path / asset["source_path"]
+    rendered = tmp_path / asset["remastered_path"]
+    if broken_file == "source_hash":
+        source.write_bytes(b"unreviewed replacement")
+    elif broken_file == "source_missing":
+        source.unlink()
+    elif broken_file == "render_missing":
+        rendered.unlink()
+    elif broken_file == "outside_root":
+        asset["source_path"] = str(tmp_path / "outside.jpg")
+        Path(asset["source_path"]).write_bytes(b"outside")
+    else:
+        Image.new("RGB", (20, 30), "red").save(rendered)
+
+    valid, _ = turbo._validate_durable_article_remaster_proof(
+        report,
+        project_root=tmp_path,
+        job_outcome_lookup=outcomes.get,
+        configured_accounts={"r1"},
+        public_domain="recetagenial.com",
+    )
+
+    assert valid is False
+
+
+@pytest.mark.unit
+def test_durable_proof_does_not_create_a_missing_queue_database(tmp_path: Path) -> None:
+    report, _ = _durable_remaster_fixture(tmp_path)
+    db_path = tmp_path / "data" / "queue" / "jobs.db"
+
+    valid, _ = turbo._validate_durable_article_remaster_proof(
+        report, project_root=tmp_path, configured_accounts={"r1"}, public_domain="recetagenial.com"
+    )
+
+    assert valid is False
+    assert not db_path.exists()
+
+
+@pytest.mark.unit
+def test_exact_job_snapshot_preserves_held_state_and_reads_archives(tmp_path: Path) -> None:
+    db_path = tmp_path / "data" / "queue" / "jobs.db"
+    db_path.parent.mkdir(parents=True)
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            "CREATE TABLE jobs(id TEXT, status TEXT, type TEXT, payload_json TEXT, result_json TEXT);"
+            "CREATE TABLE completed_log(id TEXT, job_json TEXT);"
+            "CREATE TABLE dlq(id TEXT, job_json TEXT);"
+        )
+        connection.execute("INSERT INTO jobs VALUES('held','held','pin_upload','{}',NULL)")
+        job_json = json.dumps({"type": "pin_upload", "payload": {"exact": True}})
+        connection.executemany(
+            "INSERT INTO completed_log VALUES(?,?)", [("held", job_json), ("done", job_json)]
+        )
+        connection.execute("INSERT INTO dlq VALUES('dead',?)", (job_json,))
+
+    outcomes = turbo._read_remaster_job_outcomes(
+        ["held", "done", "dead", "missing"], project_root=tmp_path, deadline=time.monotonic() + 2
+    )
+
+    assert outcomes["held"]["state"] == "held"
+    assert outcomes["done"]["state"] == "completed"
+    assert outcomes["dead"]["state"] == "dead"
+    assert "missing" not in outcomes
+
+
 @pytest.mark.unit
 def test_complete_remaster_report_proves_15_pairs_and_30_queue_jobs() -> None:
     assert turbo._validate_article_remaster_report(_complete_remaster_report()) == (True, "")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pin_id", ["", "1148488342515527632"])
+async def test_existing_published_article_requires_full_campaign_proof(monkeypatch, pin_id: str) -> None:
+    monkeypatch.setattr(
+        turbo,
+        "has_qualified_keyword_evidence",
+        lambda *args, **kwargs: (
+            True,
+            "ok",
+            {"qualified": True, "pinterest_origin": True, "source": "Pinterest Trends"},
+        ),
+    )
+    monkeypatch.setattr(turbo, "_is_cannibalized", lambda *args: False)
+    monkeypatch.setattr(
+        turbo, "_check_existing_article", lambda *args: {"id": "published", "pinterest_pin_id": pin_id}
+    )
+    monkeypatch.setattr(
+        turbo,
+        "_start_pipeline_telemetry",
+        lambda *args: pytest.fail("Existing publications must not start another article run"),
+    )
+
+    assert (
+        await turbo.process_keyword("tarta de coco", "Postres", _domain(("Postres",))) == "Needs Verification"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("reported_target", [2, 4, 28])
+def test_reduced_complete_campaign_cannot_lower_production_target(reported_target: int) -> None:
+    report = _complete_remaster_report()
+    report.update(
+        target_count=reported_target,
+        source_target=reported_target // 2,
+        accepted_source_count=reported_target // 2,
+        pair_count=reported_target // 2,
+        generated_count=reported_target,
+    )
+    report["source_counts"]["pinterest"] = reported_target // 2
+    report["assets"] = report["assets"][:reported_target]
+    report["enqueue"].update(images_enqueued=reported_target, jobs_enqueued=reported_target)
+    report["enqueue"]["details"] = report["enqueue"]["details"][:reported_target]
+
+    valid, reason = turbo._validate_article_remaster_report(report)
+
+    assert valid is False
+    assert f"target_count={reported_target}, expected 30" in reason
+
+
+@pytest.mark.unit
+def test_production_target_cannot_be_overridden_by_caller() -> None:
+    valid, reason = turbo._validate_article_remaster_report(_complete_remaster_report(), target_count=2)
+
+    assert valid is False
+    assert "exactly 30" in reason
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("counter", ["images_enqueued", "jobs_enqueued"])
+@pytest.mark.parametrize("reported_count", [29, 31])
+def test_remaster_enqueue_counters_must_match_exact_30_jobs(counter: str, reported_count: int) -> None:
+    report = _complete_remaster_report()
+    report["enqueue"][counter] = reported_count
+
+    valid, reason = turbo._validate_article_remaster_report(report)
+
+    assert valid is False
+    assert f"{counter}={reported_count}, expected 30" in reason
 
 
 @pytest.mark.unit
@@ -2533,8 +2830,9 @@ def test_duplicate_pinterest_sources_cannot_fill_multiple_pairs() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.parametrize("missing_job", [False, True])
 async def test_remaster_launcher_reuses_valid_existing_run_report_without_requeue(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, missing_job: bool
 ) -> None:
     from dataclasses import replace
 
@@ -2546,11 +2844,18 @@ async def test_remaster_launcher_reuses_valid_existing_run_report_without_requeu
     report_dir = tmp_path / "data" / "reports" / "campaigns"
     report_dir.mkdir(parents=True)
     report_path = report_dir / "tarta-de-prueba_remaster_existing.json"
+    report, outcomes = _durable_remaster_fixture(tmp_path)
+    if missing_job:
+        outcomes.pop(report["enqueue"]["details"][0]["job_id"])
     report_path.write_text(
-        __import__("json").dumps(_complete_remaster_report()),
+        json.dumps(report),
         encoding="utf-8",
     )
     monkeypatch.setattr(turbo, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(turbo, "_read_remaster_job_outcomes", lambda *args, **kwargs: outcomes)
+    import pinterest_automation.routing as routing
+
+    monkeypatch.setattr(routing, "account_cohort", lambda *args: ["r1"])
 
     async def forbidden_subprocess(*args, **kwargs):
         raise AssertionError("a valid existing report must prevent another campaign enqueue")
@@ -2568,8 +2873,9 @@ async def test_remaster_launcher_reuses_valid_existing_run_report_without_requeu
         recipe_steps=["Mezcla y hornea."],
     )
 
-    assert result["success"] is True
+    assert result["success"] is not missing_job
     assert result["reused_existing_report"] is True
+    assert result["requires_evidence_recovery"] is missing_job
     assert Path(result["report_path"]) == report_path
 
 

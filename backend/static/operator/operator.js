@@ -721,7 +721,8 @@ async function refreshStatus() {
       0,
       Math.floor(Date.now() / 1000 - (state.data.updated_at || 0)),
     );
-    const stale = refresh.state === "stale" || age > 45;
+    const streamDelayed = ["timeout", "error"].includes(state.streamRefresh?.state);
+    const stale = refresh.state === "stale" || age > 45 || streamDelayed;
     $("freshness").textContent =
       refresh.state === "warming"
         ? "Warming up..."
@@ -729,7 +730,9 @@ async function refreshStatus() {
     $("connection-alert").hidden = !stale;
     if (stale)
       $("connection-alert").textContent =
-        "Telemetry is refreshing. Displayed values are from the last successful snapshot.";
+        streamDelayed
+          ? "Live telemetry collection is delayed. Displayed values are from the last successful snapshot."
+          : "Telemetry is refreshing. Displayed values are from the last successful snapshot.";
     if (refresh.state !== "warming") state.lastRefresh = Date.now();
     if (
       !hadDomains &&
@@ -813,22 +816,33 @@ async function loadQueueJobs() {
 function renderWorkerViewports(workers) {
   const container = $("worker-viewports");
   const sContainer = $("services-worker-viewports");
-  if (!workers || !workers.length) return;
+  if (!Array.isArray(workers) || !workers.length) {
+    const markup = empty(
+      "No current worker evidence",
+      "No processing queue leases are available. Browser session activity is not reported here.",
+      "monitor",
+    );
+    if (container) container.innerHTML = markup;
+    if (sContainer) sContainer.innerHTML = markup;
+    icons();
+    return;
+  }
   const markup = workers.map(w => `
     <article class="worker-card">
       <div class="worker-card-header">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span class="status-dot"></span>
-          <strong>Worker ${w.worker_id}</strong>
+          <span class="status-dot" style="background:var(--muted)"></span>
+          <strong>${w.worker_id == null ? "Queue lease" : `Worker ${esc(w.worker_id)}`}</strong>
         </div>
-        <span class="badge ok">${esc(w.account)}</span>
+        <span class="badge warn">${esc(w.account || "unreported")}</span>
       </div>
       <div class="worker-viewport-img-wrap">
-        ${w.snapshot_url ? `<img src="${esc(w.snapshot_url)}" alt="Worker snapshot" class="worker-snap-img" onclick="window.open('${esc(w.snapshot_url)}', '_blank')" />` : `<div class="worker-snap-placeholder"><i data-lucide="monitor"></i><span>Headless Viewport Active</span></div>`}
+        ${w.snapshot_url && w.snapshot_updated_at ? `<img src="${esc(w.snapshot_url)}" alt="Recorded account screenshot" class="worker-snap-img" onclick="window.open('${esc(w.snapshot_url)}', '_blank')" />` : `<div class="worker-snap-placeholder"><i data-lucide="monitor"></i><span>No current browser preview</span></div>`}
       </div>
       <div class="worker-card-footer">
-        <div class="worker-action-text"><i data-lucide="activity"></i> ${esc(w.action)}</div>
-        <div class="worker-lease-meta"><span class="badge ${w.lease.includes('healthy') ? 'ok' : 'warn'}">Lease: ${esc(w.lease)}</span><span class="muted">${date(w.updated_at)}</span></div>
+        <div class="worker-action-text"><i data-lucide="activity"></i> ${esc(w.action || "Worker activity unavailable")}</div>
+        <div class="worker-lease-meta"><span class="badge warn">Lease: ${esc(w.lease || "unconfirmed")}</span><span class="muted">Lease recorded: ${esc(date(w.updated_at))}</span></div>
+        ${w.snapshot_url && w.snapshot_updated_at ? `<div class="muted">Screenshot recorded: ${esc(date(w.snapshot_updated_at))}</div>` : ""}
       </div>
     </article>
   `).join('');
@@ -2559,6 +2573,14 @@ function initEventStream() {
       es.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          state.streamRefresh = data.stream_refresh || null;
+          if (["timeout", "error"].includes(state.streamRefresh?.state)) {
+            $("freshness").textContent = "Telemetry delayed";
+            $("connection-alert").hidden = false;
+            $("connection-alert").textContent =
+              "Live telemetry collection is delayed. Displayed values are from the last successful snapshot.";
+            return;
+          }
           if (data.telemetry) updateTelemetryHud(data.telemetry);
           if (data.workers) {
             state.workers = data.workers;

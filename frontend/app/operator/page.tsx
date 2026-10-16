@@ -18,6 +18,7 @@ interface OperatorStatus {
     domain: string;
     status: string;
     cred_ready: boolean;
+    niche?: string;
   }>;
   actions: Record<string, any>;
   timestamp: string;

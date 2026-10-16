@@ -89,6 +89,7 @@ HELD_SOURCE_PREFLIGHT_TIMEOUT_SECONDS = 30.0
 COLLECTION_PROGRESS_INTERVAL_SECONDS = 5.0
 SOURCE_PROGRESS_WRITE_TIMEOUT_SECONDS = 0.5
 DEFAULT_CANDIDATE_LIMIT = 90
+MAX_CANDIDATE_LIMIT = 600
 PINTEREST_PIN_CARD_SELECTOR = '[data-test-id="pin"], [data-grid-item="true"]'
 PINTEREST_LOGIN_WALL_MARKERS = (
     "has cerrado sesión",
@@ -107,16 +108,15 @@ def _bounded_seconds(name: str, default: float, maximum: float, requested=None) 
     return min(maximum, max(0.01, value))
 
 
-def _candidate_limit(requested=None) -> int:
+def _candidate_limit(requested=None, *, query_count: int = 1) -> int:
+    """Give generated query variants bounded intake without weakening source gates."""
+    configured = os.environ.get("RANKSTEIN_REMASTER_CANDIDATE_LIMIT") if requested is None else requested
+    default = min(DEFAULT_CANDIDATE_LIMIT * max(1, query_count), MAX_CANDIDATE_LIMIT)
     try:
-        value = int(
-            os.environ.get("RANKSTEIN_REMASTER_CANDIDATE_LIMIT", str(DEFAULT_CANDIDATE_LIMIT))
-            if requested is None
-            else requested
-        )
+        value = default if configured is None else int(configured)
     except (TypeError, ValueError):
-        value = DEFAULT_CANDIDATE_LIMIT
-    return max(1, min(value, 150))
+        value = default
+    return max(1, min(value, MAX_CANDIDATE_LIMIT))
 
 
 def _isolated_remaster_directories(
@@ -803,7 +803,7 @@ class PinRemasterer:
                     blocked_terms=blocked_terms,
                     excluded_pin_ids=set(excluded_pin_ids or []),
                     download_dir=download_dir or _isolated_remaster_directories("collector", "")[0],
-                    max_candidates=_candidate_limit(max_candidates),
+                    max_candidates=max_candidates,
                 ),
                 timeout=timeout,
             )
@@ -837,7 +837,7 @@ class PinRemasterer:
         blocked_terms: str | list[str] | tuple[str, ...] | set[str] | None = None,
         excluded_pin_ids: set[str] | None = None,
         download_dir: Path | None = None,
-        max_candidates: int = DEFAULT_CANDIDATE_LIMIT,
+        max_candidates: int | None = None,
     ):
         """Scrape multiple generated queries and download strongly relevant pins."""
         print(f"Collecting {count} viral pins for: {keyword}...")
@@ -869,6 +869,7 @@ class PinRemasterer:
             scroll_rounds = 10
 
         generated_queries = list(dict.fromkeys(generated_queries))[:query_limit] or [keyword]
+        max_candidates = _candidate_limit(max_candidates, query_count=len(generated_queries))
         examined_pin_ids: set[str] = set()
         diagnostics = {
             "queries_planned": len(generated_queries),
@@ -905,6 +906,14 @@ class PinRemasterer:
             for query_index, resolved_query in enumerate(generated_queries, 1):
                 if len(results) >= count or diagnostics["pins_examined"] >= max_candidates:
                     break
+                # Reserve each remaining generated variant a fair share. Queries
+                # exhausted early donate their unused allowance to later ones;
+                # broad first results cannot consume the whole campaign budget.
+                query_candidate_limit = math.ceil(
+                    (max_candidates - diagnostics["pins_examined"])
+                    / (len(generated_queries) - query_index + 1)
+                )
+                query_examined_start = diagnostics["pins_examined"]
                 print(f"   Search {query_index}/{len(generated_queries)}: {resolved_query}")
                 search_url = f"{PINTEREST_BASE}/search/pins/?q={quote_plus(resolved_query)}&rs=typed"
                 navigation_succeeded = False
@@ -972,13 +981,16 @@ class PinRemasterer:
                             if pin_id in examined_pin_ids:
                                 diagnostics["duplicates_skipped"] += 1
                                 continue
-                            examined_pin_ids.add(pin_id)
                             if pin_id in excluded_pin_ids:
+                                examined_pin_ids.add(pin_id)
                                 diagnostics["held_sources_skipped"] += 1
                                 continue
                             if diagnostics["pins_examined"] >= max_candidates:
                                 diagnostics["blocked_reason"] = "candidate_limit"
                                 break
+                            if diagnostics["pins_examined"] - query_examined_start >= query_candidate_limit:
+                                break
+                            examined_pin_ids.add(pin_id)
                             diagnostics["pins_examined"] += 1
 
                             img_url = await img_el.get_attribute("src") or ""
@@ -1084,6 +1096,8 @@ class PinRemasterer:
                         break
                     if diagnostics["pins_examined"] >= max_candidates:
                         diagnostics["blocked_reason"] = "candidate_limit"
+                        break
+                    if diagnostics["pins_examined"] - query_examined_start >= query_candidate_limit:
                         break
                     if len(examined_pin_ids) == previous_examined:
                         stagnant_rounds += 1
@@ -1700,46 +1714,34 @@ def _generate_native_fallback_sources(keyword: str, count: int) -> list[dict]:
 def validate_production_asset_set(assets: list[dict], *, target_count: int | None = None) -> dict:
     """Validate the exact scraped-only set required before queue mutation.
 
-    Accepts 1 to 15 unique Pinterest pins and exactly two deterministic variants per source.
-    Total assets must be an even count equal to 2 * unique_sources (min 2, max 30 pins).
+    Production requires 15 unique Pinterest pins and exactly two variants per source.
+    The requested target and observed assets may never reduce the 30-asset contract.
     Generated/native sources, incomplete pairs, and duplicate pin ids all fail closed.
     """
 
     pair_assets: dict[str, list[dict]] = {}
+    errors: list[str] = []
     for asset in assets:
+        if not isinstance(asset, dict):
+            errors.append("every remaster asset must be an object")
+            continue
         pair_id = str(asset.get("pair_id") or "").strip()
         if pair_id:
             pair_assets.setdefault(pair_id, []).append(asset)
+        else:
+            errors.append("every remaster asset must include pair_id")
 
     pinterest_source_count = 0
     native_source_count = 0
     original_pin_ids: set[str] = set()
-    errors: list[str] = []
+    remastered_paths: set[str] = set()
 
     actual_pairs = len(pair_assets)
-    if actual_pairs < 1:
-        errors.append("at least one source pair is required")
+    effective_target = PRODUCTION_ASSET_TARGET
+    if target_count is not None and target_count != effective_target:
+        errors.append(f"production target must be exactly {effective_target} assets, got {target_count}")
 
-    # Determine expected asset target
-    if target_count is not None:
-        try:
-            req_target = int(target_count)
-        except (TypeError, ValueError):
-            req_target = PRODUCTION_ASSET_TARGET
-        # If caller passed a higher target than available sources, allow bounded scaling
-        if 2 <= len(assets) <= req_target and len(assets) % 2 == 0 and len(assets) == actual_pairs * 2:
-            effective_target = len(assets)
-        else:
-            effective_target = req_target
-    else:
-        effective_target = actual_pairs * 2
-
-    if effective_target < 2 or effective_target > PRODUCTION_ASSET_TARGET or effective_target % 2 != 0:
-        errors.append(
-            f"production target must be an even number between 2 and {PRODUCTION_ASSET_TARGET} assets, got {effective_target}"
-        )
-
-    expected_pairs = effective_target // 2
+    expected_pairs = PRODUCTION_SOURCE_TARGET
 
     if len(assets) != effective_target:
         errors.append(f"expected {effective_target} assets, received {len(assets)}")
@@ -1777,7 +1779,11 @@ def validate_production_asset_set(assets: list[dict], *, target_count: int | Non
                 or path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}
             ):
                 errors.append(f"{pair_id} has a missing or invalid remastered asset file")
-                break
+                continue
+            path_key = os.path.normcase(str(path.resolve()))
+            if path_key in remastered_paths:
+                errors.append(f"{pair_id} reuses a remastered asset file")
+            remastered_paths.add(path_key)
 
     if pinterest_source_count != expected_pairs:
         errors.append(
@@ -1868,30 +1874,60 @@ def write_article_remaster_report(
     source_collection_diagnostics: dict | None = None,
 ) -> dict:
     generated_count = len(assets)
-    pair_ids = {str(item.get("pair_id", "")) for item in assets if item.get("pair_id")}
-    source_types_by_pair = {
-        str(item.get("pair_id")): item.get("source", "pinterest") for item in assets if item.get("pair_id")
+    asset_rows = [item for item in assets if isinstance(item, dict)]
+    pair_ids = {str(item.get("pair_id", "")).strip() for item in asset_rows if item.get("pair_id")}
+    effective_target = PRODUCTION_ASSET_TARGET
+    source_target = PRODUCTION_SOURCE_TARGET
+    production_validation = validate_production_asset_set(assets, target_count=target_count)
+    generated_contract_success = production_validation["success"]
+    queue_errors = []
+    enqueue = enqueue_result if isinstance(enqueue_result, dict) else {}
+    if enqueue.get("success") is not True:
+        queue_errors.append("Pinterest enqueue did not succeed")
+    for counter in ("images_enqueued", "jobs_enqueued"):
+        if enqueue.get(counter) != effective_target:
+            queue_errors.append(f"{counter} must be exactly {effective_target}")
+    if pipeline_run_id and enqueue.get("pipeline_run_id") != pipeline_run_id:
+        queue_errors.append("Pinterest enqueue pipeline run identity does not match")
+    queue_details = enqueue.get("details")
+    queue_details = queue_details if isinstance(queue_details, list) else []
+    if len(queue_details) != effective_target or any(not isinstance(item, dict) for item in queue_details):
+        queue_errors.append(f"Pinterest enqueue must prove exactly {effective_target} job records")
+    queue_details = [item for item in queue_details if isinstance(item, dict)]
+    job_ids = {str(item.get("job_id") or "").strip() for item in queue_details}
+    job_ids.discard("")
+    if len(job_ids) != effective_target:
+        queue_errors.append(f"Pinterest enqueue must prove {effective_target} unique job ids")
+
+    def asset_identity(item: dict, path_field: str) -> tuple[str, str, str, str]:
+        path = str(item.get(path_field) or "").strip()
+        return (
+            os.path.normcase(str(Path(path).resolve())) if path else "",
+            str(item.get("pair_id") or "").strip(),
+            str(item.get("variant") or "").strip(),
+            str(item.get("original_pin_id") or "").strip(),
+        )
+
+    asset_identities = {asset_identity(item, "remastered_path") for item in asset_rows}
+    queue_identities = {asset_identity(item, "image") for item in queue_details}
+    if len(queue_identities) != effective_target or queue_identities != asset_identities:
+        queue_errors.append("Pinterest job records do not match the exact current-run asset set")
+    enqueue_success = not queue_errors
+    enqueue_validation = {
+        "success": enqueue_success,
+        "error": "; ".join(queue_errors),
+        "job_count": len(queue_details),
+        "unique_job_id_count": len(job_ids),
     }
-    effective_target = (
-        generated_count
-        if (2 <= generated_count <= target_count and generated_count % 2 == 0)
-        else target_count
-    )
-    source_target = max(1, math.ceil(effective_target / 2))
-    enqueue_success = bool(enqueue_result.get("success")) if enqueue_result is not None else None
-    production_validation = validate_production_asset_set(assets, target_count=effective_target)
-    generated_contract_success = (
-        production_validation["success"]
-        if target_count == PRODUCTION_ASSET_TARGET
-        else generated_count >= target_count
-    )
     collection_diagnostics = _sanitized_source_diagnostics(
         source_collection_diagnostics, source_target=source_target
     )
-    success = generated_contract_success and (enqueue_success is not False)
+    success = generated_contract_success and enqueue_success
     blocked_reason = collection_diagnostics["blocked_reason"]
     if not success and not blocked_reason:
-        blocked_reason = "incomplete_asset_set" if not generated_contract_success else "queue_failed"
+        blocked_reason = (
+            "incomplete_asset_set" if not generated_contract_success else "incomplete_queue_proof"
+        )
     remaining_steps = []
     if collection_diagnostics["accepted"] < source_target and not generated_contract_success:
         remaining_steps.append("pinterest_siphon")
@@ -1917,13 +1953,13 @@ def write_article_remaster_report(
         "pipeline_run_id": pipeline_run_id,
         "target_count": effective_target,
         "source_target": source_target,
-        "accepted_source_count": len(pair_ids),
+        "accepted_source_count": production_validation["unique_pin_id_count"],
         "pair_count": len(pair_ids),
         "generated_count": generated_count,
         "missing_count": max(0, effective_target - generated_count),
         "source_counts": {
-            "pinterest": sum(1 for source in source_types_by_pair.values() if source == "pinterest"),
-            "native": sum(1 for source in source_types_by_pair.values() if source != "pinterest"),
+            "pinterest": production_validation["pinterest_source_count"],
+            "native": production_validation["native_source_count"],
         },
         "source_contract": {
             "scraped_only": True,
@@ -1931,6 +1967,7 @@ def write_article_remaster_report(
             "native_fill_allowed": False,
         },
         "production_validation": production_validation,
+        "enqueue_validation": enqueue_validation,
         "assets": assets,
         "enqueue": enqueue_result,
         "scrape_brief": scrape_brief or {},
@@ -1947,7 +1984,7 @@ def write_article_remaster_report(
     path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     report["report_path"] = str(path)
     print(f"CAMPAIGN_REPORT: {path}")
-    print(f"CAMPAIGN_STATUS: success={report['success']} generated={generated_count}/{target_count}")
+    print(f"CAMPAIGN_STATUS: success={report['success']} generated={generated_count}/{effective_target}")
     return report
 
 
@@ -2155,10 +2192,23 @@ async def run_remasterer(
             "blocked_terms": blocked_terms,
         },
     )
+    # Count only distinct Pinterest identities before any renderer is called.
+    # A legacy collector may return duplicate pins or non-Pinterest sources.
+    seen_pin_ids = set()
+    deduped_collected = []
+    for item in collected:
+        pid = str(item.get("pin_id") or "").strip()
+        if pid and pid not in seen_pin_ids and str(item.get("source") or "").strip().lower() == "pinterest":
+            seen_pin_ids.add(pid)
+            deduped_collected.append(item)
+    collected = deduped_collected[:source_target]
     scraped_count = len(collected)
     diagnostics = getattr(remasterer, "last_collection_diagnostics", {})
-    if scraped_count == 0:
-        diagnostics.setdefault("blocked_reason", "insufficient_clean_sources")
+    diagnostics["accepted"] = scraped_count
+    if scraped_count < source_target:
+        if not diagnostics.get("blocked_reason"):
+            diagnostics["blocked_reason"] = "insufficient_clean_sources"
+        diagnostics.setdefault("failure_phase", "validating_source_count")
         diagnostics["phase"] = "incomplete"
         source_collection_diagnostics.update(
             _sanitized_source_diagnostics(diagnostics, source_target=source_target)
@@ -2167,14 +2217,14 @@ async def run_remasterer(
             pipeline_run_id,
             "pinterest_siphon",
             "warning",
-            "Scraped 0 relevant Pinterest source images",
-            accepted=0,
+            f"Scraped {scraped_count}/{source_target} unique relevant Pinterest source images",
+            accepted=scraped_count,
             target=source_target,
             output_target=target_count,
             diagnostics=diagnostics,
         )
         print(
-            f"INCOMPLETE: scrape produced 0/{source_target} unique relevant "
+            f"INCOMPLETE: scrape produced {scraped_count}/{source_target} unique relevant "
             "Pinterest sources; no variants were created"
         )
         _pipeline_event(
@@ -2184,23 +2234,13 @@ async def run_remasterer(
             "Scraped-only source contract incomplete; no variants created",
             generated=0,
             target=target_count,
-            accepted_sources=0,
+            accepted_sources=scraped_count,
             source_target=source_target,
-            missing_sources=source_target,
+            missing_sources=source_target - scraped_count,
             diagnostics=diagnostics,
         )
         _pipeline_status(pipeline_run_id, "attention")
         return []
-
-    # Dedup Pinterest pin IDs
-    seen_pin_ids = set()
-    deduped_collected = []
-    for item in collected:
-        pid = str(item.get("pin_id") or "").strip()
-        if pid and pid not in seen_pin_ids and str(item.get("source") or "").strip().lower() == "pinterest":
-            seen_pin_ids.add(pid)
-            deduped_collected.append(item)
-    collected = deduped_collected[:source_target]
 
     # Verify text-free quality of selected sources
     blocked_sources = []
@@ -2232,12 +2272,7 @@ async def run_remasterer(
         _pipeline_status(pipeline_run_id, "attention")
         return []
 
-    effective_source_target = len(collected)
-    effective_asset_target = effective_source_target * 2
-    target_count = effective_asset_target
-    source_target = effective_source_target
-
-    diagnostics["accepted"] = effective_source_target
+    diagnostics["accepted"] = source_target
     source_collection_diagnostics.update(
         _sanitized_source_diagnostics(diagnostics, source_target=source_target)
     )
@@ -2245,8 +2280,8 @@ async def run_remasterer(
         pipeline_run_id,
         "pinterest_siphon",
         "complete",
-        f"Accepted {effective_source_target} relevant Pinterest source images",
-        accepted=effective_source_target,
+        f"Accepted {source_target} relevant Pinterest source images",
+        accepted=source_target,
         target=source_target,
         output_target=target_count,
         diagnostics=diagnostics,
@@ -2638,9 +2673,6 @@ if __name__ == "__main__":
         )
         enqueue_result = None
         if args.enqueue_after:
-            paired_target = (
-                len(assets) if (2 <= len(assets) <= paired_target and len(assets) % 2 == 0) else paired_target
-            )
             asset_validation = validate_production_asset_set(assets, target_count=paired_target)
             if not asset_validation["success"]:
                 enqueue_result = {

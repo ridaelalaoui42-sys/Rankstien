@@ -303,16 +303,23 @@ def _validate_remaster_report(
     domain_handle: str,
     slug: str,
     pipeline_run_id: str,
+    project_root: Path = PROJECT_ROOT,
 ) -> tuple[bool, str]:
-    from backend.scripts.turbo_articles import _validate_article_remaster_report
+    from backend.scripts.turbo_articles import (
+        _validate_article_remaster_report,
+        _validate_durable_article_remaster_proof,
+    )
 
-    return _validate_article_remaster_report(
+    valid, reason = _validate_article_remaster_report(
         report,
         target_count=30,
         expected_domain_handle=domain_handle,
         expected_slug=slug,
         expected_pipeline_run_id=pipeline_run_id,
     )
+    if not valid:
+        return valid, reason
+    return _validate_durable_article_remaster_proof(report, project_root=project_root)
 
 
 def _load_and_validate_campaign_report(
@@ -338,6 +345,7 @@ def _load_and_validate_campaign_report(
         domain_handle=domain_handle,
         slug=slug,
         pipeline_run_id=pipeline_run_id,
+        project_root=project_root,
     )
     if not valid:
         raise ReconciliationError(f"Campaign report failed the 15x2 proof contract: {reason}")
@@ -399,9 +407,7 @@ async def reconcile_production_article(
         pipeline_run_id=pipeline_run_id,
         primary_job_id=primary_job_id,
     )
-    if already_reconciled is not None:
-        return already_reconciled
-    if context.state != "needs verification":
+    if context.state not in {"needs verification", "verified"}:
         raise ReconciliationError(f"Batch article state is {context.state!r}, expected 'needs verification'")
 
     db_path = Path(pipeline_db_path or PIPELINE_DB)
@@ -420,6 +426,18 @@ async def reconcile_production_article(
     existing_pin_id = str(before.get("pinterest_pin_id") or "").strip()
     if existing_pin_id and existing_pin_id != proof.pin_id:
         raise ReconciliationError("Supabase already contains a different Pinterest pin ID")
+    if already_reconciled is not None:
+        stored_proof = context.article.get("reconciliation_proof") or {}
+        if existing_pin_id != proof.pin_id or stored_proof.get("pin_id") != proof.pin_id:
+            raise ReconciliationError("Stored verification no longer matches the exact primary pin proof")
+        _load_and_validate_campaign_report(
+            project_root=project_root,
+            report_path_value=stored_proof.get("campaign_report"),
+            domain_handle=domain.handle,
+            slug=run.slug,
+            pipeline_run_id=pipeline_run_id,
+        )
+        return already_reconciled
     update = _update_supabase_pin(run.slug, proof.pin_id, domain.handle)
     if not update.get("success"):
         raise ReconciliationError(f"Supabase pin linkage failed: {update.get('error', 'unknown error')}")

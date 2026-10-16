@@ -35,6 +35,11 @@ Roadmap `Live` counts describe persisted roadmap state, not a new audit of every
 historical article. Recipe pin IDs and browser profile presence are labeled as
 recorded evidence, not proof of current platform authentication.
 
+Live event streams share one background observation refresh. A slow collector
+cannot block the operator's health endpoint or create an accumulating refresh
+pool. Delayed collection keeps the last snapshot visible with an explicit
+telemetry warning.
+
 ## Controls And Security
 
 The dashboard offers bounded domain-scoped article batches, maintained
@@ -46,6 +51,12 @@ jobs running. A failed stop does not overwrite the process registry, and a
 finished process retains its recorded outcome.
 Starting services does not start a production batch. Supervisor startup may
 publish already-pending queue jobs.
+
+`POST /api/rankstein/control/production-batch/select?batch_id=<existing-id>`
+selects an existing batch for display without starting any production work.
+The selection is stored in `data/runtime/operator_preferences.json`; production
+reports and process ownership records remain unchanged. A genuinely running
+production batch takes precedence so active work remains visible.
 
 The app binds to loopback only. It rejects remote peers, invalid Host headers,
 cross-origin/cross-site requests, and mutations without the per-process operator

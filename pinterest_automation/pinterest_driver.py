@@ -7,11 +7,18 @@ import asyncio
 import contextlib
 import json
 import logging
+import math
 import os
 import re
 import time
-from collections.abc import Callable
+import unicodedata
+from collections.abc import Callable, Mapping
+from datetime import UTC
+from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
+from xml.etree import ElementTree
 
 from playwright.async_api import Page, Response
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
@@ -24,6 +31,170 @@ from .self_healing import fallback_heal, robust_fill
 from .session_pool import SessionInfo, get_session_pool
 
 logger = logging.getLogger("rankstein.driver")
+
+
+def _pinterest_public_url(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme == "https"
+            and (parsed.hostname == "pinterest.com" or (parsed.hostname or "").endswith(".pinterest.com"))
+            and parsed.port in (None, 443)
+            and parsed.username is None
+            and parsed.password is None
+            and not parsed.query
+            and not parsed.fragment
+        ):
+            return parsed
+    except ValueError:
+        pass
+    return None
+
+
+def _public_pin_url_id(value):
+    parsed = _pinterest_public_url(value)
+    match = re.fullmatch(r"/pin/(\d{15,22})/?", parsed.path) if parsed else None
+    return match.group(1) if match else None
+
+
+def _story_pin_publication_request(request):
+    """Identify only the observed story-pin create route inside ApiResource."""
+    try:
+        raw = request.post_data
+        if not isinstance(raw, str):
+            return False
+        try:
+            payload = json.loads(raw)
+        except (TypeError, ValueError):
+            encoded = parse_qs(raw).get("data", [])
+            if len(encoded) != 1:
+                return False
+            payload = json.loads(encoded[0])
+        if not isinstance(payload, dict) or not isinstance(payload.get("options"), dict):
+            return False
+        options = payload["options"]
+        route = urlsplit(options.get("url", ""))
+        if (
+            route.scheme
+            or route.netloc
+            or route.query
+            or route.fragment
+            or route.path not in {"/v3/storypins", "/v3/storypins/"}
+        ):
+            return False
+        for flags in (options, options.get("data")):
+            if isinstance(flags, dict) and (
+                flags.get("is_draft") is True
+                or flags.get("draft") is True
+                or flags.get("is_published") is False
+                or str(flags.get("status", "")).casefold() in {"draft", "failed", "error"}
+            ):
+                return False
+        return True
+    except (AttributeError, TypeError, ValueError):
+        return False
+
+
+class _PublishedPinMetadata(HTMLParser):
+    """Collect exact tags, including Pinterest's streamed public metadata."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.in_head = False
+        self.head_seen = False
+        self.body_seen = False
+        self.values = {}
+        self.ambiguous = False
+        self.streamed = False
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.casefold()
+        if tag == "head":
+            if not self.head_seen and not self.body_seen:
+                self.in_head = True
+                self.head_seen = True
+            else:
+                self.ambiguous = True
+            return
+        if tag == "body":
+            self.in_head = False
+            self.body_seen = True
+        attributes = {name.casefold(): value for name, value in attrs}
+        key = ""
+        value = None
+        if tag == "meta":
+            key = str(attributes.get("property") or attributes.get("name") or "").casefold()
+            if key not in {"og:url", "og:title", "pinterestapp:source", "pinterestapp:pinner"}:
+                return
+            value = attributes.get("content")
+        elif tag == "link" and "canonical" in str(attributes.get("rel") or "").casefold().split():
+            key = "canonical"
+            value = attributes.get("href")
+        if key:
+            self.streamed = self.streamed or not self.in_head
+            if len(attributes) != len(attrs):
+                self.ambiguous = True
+            self.values.setdefault(key, set()).add(value)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag):
+        if tag.casefold() == "head":
+            self.in_head = False
+
+    def exact(self, key):
+        values = self.values.get(key, set())
+        if self.ambiguous or len(values) != 1:
+            return None
+        return next(iter(values))
+
+
+def _rss_candidate_receipt(body, candidate, title, description, started_at, observed_at):
+    """Require an exact ID and fresh publication receipt from an owned feed."""
+    checks = {
+        "candidate_item_found": False,
+        "link_matches": False,
+        "guid_matches": False,
+        "publication_time_matches": False,
+        "title_or_description_matches": False,
+    }
+    try:
+        root = ElementTree.fromstring(body)
+    except (ElementTree.ParseError, TypeError, ValueError):
+        return False, checks
+    for item in root.findall("./channel/item"):
+        link_matches = _public_pin_url_id(item.findtext("link")) == candidate
+        guid_matches = _public_pin_url_id(item.findtext("guid")) == candidate
+        if not link_matches and not guid_matches:
+            continue
+        publication_time_matches = False
+        try:
+            published = parsedate_to_datetime(item.findtext("pubDate") or "")
+            if published.utcoffset() is not None:
+                publication_time_matches = started_at - 5 <= published.timestamp() <= observed_at + 5
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            pass
+
+        def normalize(value):
+            return unicodedata.normalize("NFC", " ".join(value.split())).casefold()
+
+        receipt_title = normalize(item.findtext("title") or "")
+        expected = {normalize(title[:100])}
+        if description and description.strip():
+            expected.add(normalize(description))
+        checks = {
+            "candidate_item_found": True,
+            "link_matches": link_matches,
+            "guid_matches": guid_matches,
+            "publication_time_matches": publication_time_matches,
+            "title_or_description_matches": bool(receipt_title) and receipt_title in expected,
+        }
+        if all(checks.values()):
+            return True, checks
+    return False, checks
 
 
 def _int_env(name: str, default: int) -> int:
@@ -43,6 +214,41 @@ def _bool_env(name: str, default: bool = False) -> bool:
 PIN_CONFIRM_TIMEOUT_SECONDS = max(3, _int_env("PINTEREST_PIN_CONFIRM_TIMEOUT_SECONDS", 8))
 PUBLISH_LLM_HEALING_ENABLED = _bool_env("PINTEREST_PUBLISH_LLM_HEALING", False)
 MCP_FALLBACK_ENABLED = _bool_env("PINTEREST_ENABLE_MCP_FALLBACK", False)
+DRAFT_CAPACITY_RECOVERY_TIMEOUT_SECONDS = 90
+
+
+class PinterestNavigationUnavailableError(RuntimeError):
+    """Pinterest could not be reached before authentication was checked."""
+
+    def __init__(self, network_code: str, retry_after_seconds: float = 0):
+        self.network_code = network_code
+        try:
+            retry_delay = float(retry_after_seconds)
+        except (TypeError, ValueError, OverflowError):
+            retry_delay = 0.0
+        self.retry_after_seconds = retry_delay if math.isfinite(retry_delay) and retry_delay > 0 else 0.0
+        super().__init__(f"Pinterest navigation unavailable ({network_code})")
+
+
+def _parse_retry_after_seconds(value: object) -> float:
+    """Honor a server's delay or HTTP date without retaining its raw header."""
+    if not isinstance(value, str) or not value.strip():
+        return 0.0
+    value = value.strip()
+    if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value):
+        try:
+            delay = float(value)
+        except (ValueError, OverflowError):
+            return 0.0
+    else:
+        try:
+            retry_at = parsedate_to_datetime(value)
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=UTC)
+            delay = retry_at.timestamp() - time.time()
+        except (TypeError, ValueError, OverflowError):
+            return 0.0
+    return delay if math.isfinite(delay) and delay > 0 else 0.0
 
 
 class PinterestDriver:
@@ -130,63 +336,72 @@ class PinterestDriver:
         if self._response_handler is not None:
             with contextlib.suppress(Exception):
                 page.remove_listener("response", self._response_handler)
-        self._pin_create_data = {"pin_id": None, "pin_url": None}
+        self._pin_create_data = {
+            "pin_id": None,
+            "pin_url": None,
+            "generation_started_at": time.time(),
+        }
+        self._pin_candidate_verification = None
         self._pin_create_event = asyncio.Event()
+        candidate_data = self._pin_create_data
+        candidate_event = self._pin_create_event
 
         async def _on_response(response: Response):
-            if response.request.method != "POST":
+            if self._pin_create_event is not candidate_event or response.request.method != "POST":
                 return
-            url = response.url.lower()
-            if not any(
-                p in url
-                for p in ["/v3/pins", "pinresource/create", "pin-builder", "/resource/pin", "graphql"]
+            parsed = urlsplit(response.url)
+            wrapper_create = parsed.path.lower().rstrip("/") == "/resource/apiresource/create"
+            if (
+                parsed.scheme != "https"
+                or not (
+                    parsed.hostname == "pinterest.com" or (parsed.hostname or "").endswith(".pinterest.com")
+                )
+                or (
+                    parsed.path.lower().rstrip("/") not in {"/v3/pins", "/resource/pinresource/create"}
+                    and not wrapper_create
+                )
+                or not 200 <= response.status < 300
+                or (wrapper_create and not _story_pin_publication_request(response.request))
             ):
                 return
-            if "graphql" in url and response.request.post_data:
-                post_data = response.request.post_data.lower()
-                if not any(
-                    marker in post_data
-                    for marker in (
-                        "pinresourcecreate",
-                        "createpin",
-                        "pin_create",
-                        "pinbuilder",
-                        "storyboard",
-                        "story_pin",
-                        "pin",
-                        "creation",
-                    )
-                ):
-                    return
             try:
                 data = await response.json()
-
-                # Recursive search for a Pin ID (15-22 digit string or integer)
-                import re
-
-                def find_pin_id(obj):
-                    if isinstance(obj, dict):
-                        if "id" in obj:
-                            val = str(obj["id"])
-                            if re.match(r"^\d{15,22}$", val):
-                                return val
-                        for k, v in obj.items():
-                            res = find_pin_id(v)
-                            if res:
-                                return res
-                    elif isinstance(obj, list):
-                        for item in obj:
-                            res = find_pin_id(item)
-                            if res:
-                                return res
-                    return None
-
-                pin_id = find_pin_id(data)
-                if pin_id:
-                    self._pin_create_data["pin_id"] = str(pin_id)
-                    self._pin_create_data["pin_url"] = f"https://www.pinterest.com/pin/{pin_id}/"
-                    self._pin_create_event.set()
-                    self.info(f"Intercepted pin creation: {pin_id}")
+                if not isinstance(data, dict):
+                    return
+                resource = data.get("resource_response", data)
+                if not isinstance(resource, dict) or (
+                    (wrapper_create and resource.get("status") != "success")
+                    or (wrapper_create and not isinstance(data.get("resource_response"), dict))
+                    or (
+                        resource.get("http_status") is not None
+                        and (
+                            type(resource["http_status"]) is not int
+                            or not 200 <= resource["http_status"] < 300
+                        )
+                    )
+                    or resource.get("status") not in (None, "success")
+                    or resource.get("error")
+                    or resource.get("errors")
+                ):
+                    return
+                pin = resource.get("data", resource)
+                if not isinstance(pin, dict) or (
+                    pin.get("is_draft") is True
+                    or pin.get("draft") is True
+                    or pin.get("is_published") is False
+                    or str(pin.get("status", "")).lower() in {"draft", "failed", "error"}
+                ):
+                    return
+                pin_id = str(pin.get("id") or "")
+                if re.fullmatch(r"\d{15,22}", pin_id) and self._pin_create_event is candidate_event:
+                    # A successful create response is a candidate, not proof of
+                    # publication. Draft creation and published creation can
+                    # share API shapes; callers still need publication proof.
+                    candidate_data["pin_id"] = pin_id
+                    candidate_data["pin_url"] = f"https://www.pinterest.com/pin/{pin_id}/"
+                    candidate_data["observed_at"] = time.time()
+                    candidate_event.set()
+                    self.info(f"Intercepted pin creation candidate: {pin_id}")
             except Exception:
                 pass
 
@@ -212,11 +427,55 @@ class PinterestDriver:
         url = page.url.lower()
         return "login" in url or "oauth" in url or "signin" in url
 
-    async def ensure_logged_in(self, account_handle: str | None = None) -> bool:
-        if not self.circuit.can_execute("pinterest_login"):
-            raise CircuitBreakerOpenError("Pinterest login circuit is OPEN")
+    async def _navigate_for_login(self, page, url: str, **kwargs):
+        """Keep explicit transport failures separate from rejected authentication."""
+        try:
+            response = await page.goto(url, **kwargs)
+        except (PlaywrightTimeoutError, TimeoutError):
+            # A navigation timeout says nothing about the supplied credentials.
+            # Do not count it against the account's authentication circuit.
+            raise PinterestNavigationUnavailableError("NAVIGATION_TIMEOUT") from None
+        except Exception as exc:
+            match = re.search(r"\bnet::(ERR_[A-Z_]+)\b", str(exc))
+            if match and match.group(1) in {
+                "ERR_NAME_NOT_RESOLVED",
+                "ERR_INTERNET_DISCONNECTED",
+                "ERR_NETWORK_CHANGED",
+                "ERR_CONNECTION_CLOSED",
+                "ERR_CONNECTION_RESET",
+                "ERR_CONNECTION_REFUSED",
+                "ERR_CONNECTION_ABORTED",
+                "ERR_CONNECTION_TIMED_OUT",
+                "ERR_TIMED_OUT",
+                "ERR_EMPTY_RESPONSE",
+                "ERR_ADDRESS_UNREACHABLE",
+                "ERR_PROXY_CONNECTION_FAILED",
+                "ERR_TUNNEL_CONNECTION_FAILED",
+                "ERR_DNS_TIMED_OUT",
+            }:
+                # The raw browser error may contain a URL or user information.
+                raise PinterestNavigationUnavailableError(match.group(1)) from None
+            raise
+        status = getattr(response, "status", None)
+        if type(status) is int and (status == 429 or 500 <= status <= 599):
+            # goto returns a response for HTTP errors, so merely landing on a
+            # creator URL must not treat an outage/throttle as a valid login.
+            headers = getattr(response, "headers", {})
+            retry_after = None
+            if isinstance(headers, Mapping):
+                retry_after = next(
+                    (value for key, value in headers.items() if str(key).lower() == "retry-after"), None
+                )
+            raise PinterestNavigationUnavailableError(
+                f"HTTP_{status}", retry_after_seconds=_parse_retry_after_seconds(retry_after)
+            )
+        return response
 
+    async def ensure_logged_in(self, account_handle: str | None = None) -> bool:
         handle = account_handle or self.account_handle
+        login_operation = f"pinterest_login:{handle or 'default'}"
+        if not self.circuit.can_execute(login_operation):
+            raise CircuitBreakerOpenError(f"Pinterest login circuit is OPEN for {handle or 'default'}")
         session = await self._acquire_session(handle)
         page = session.page
 
@@ -226,7 +485,7 @@ class PinterestDriver:
             current_url = page.url.lower()
             if "pin-creation-tool" in current_url or "pin-builder" in current_url:
                 self.info(f"Already on creation tool — logged in as {handle or 'default'}")
-                self.circuit.record_success("pinterest_login")
+                self.circuit.record_success(login_operation)
                 return True
 
             # Check auth cookies — if present, session should be valid
@@ -234,7 +493,8 @@ class PinterestDriver:
             if has_cookies and not await self._is_login_page(page):
                 # Have cookies and not on login page — navigate to pin-creation-tool
                 self.info(f"Auth cookies present, navigating to creation tool for {handle or 'default'}...")
-                await page.goto(
+                await self._navigate_for_login(
+                    page,
                     "https://www.pinterest.com/pin-creation-tool/",
                     timeout=self.config.browser.navigation_timeout_ms,
                     wait_until="domcontentloaded",
@@ -242,11 +502,13 @@ class PinterestDriver:
                 await asyncio.sleep(2)
                 if "pin-creation-tool" in page.url or "pin-builder" in page.url:
                     self.info(f"Already logged in and ready as {handle or 'default'}")
-                    self.circuit.record_success("pinterest_login")
+                    self.circuit.record_success(login_operation)
                     return True
                 if not await self._is_login_page(page):
                     # Weird landing page — try one more navigation
-                    await page.goto("https://www.pinterest.com/pin-creation-tool/", timeout=30000)
+                    await self._navigate_for_login(
+                        page, "https://www.pinterest.com/pin-creation-tool/", timeout=30000
+                    )
                     await asyncio.sleep(2)
                     if "pin-creation-tool" in page.url or "pin-builder" in page.url:
                         return True
@@ -256,8 +518,10 @@ class PinterestDriver:
                 f"Session invalid for creation tool, attempting Pinterest login for {handle or 'default'}..."
             )
             if not await self._is_login_page(page):
-                await page.goto(
-                    "https://www.pinterest.com/login/", timeout=self.config.browser.navigation_timeout_ms
+                await self._navigate_for_login(
+                    page,
+                    "https://www.pinterest.com/login/",
+                    timeout=self.config.browser.navigation_timeout_ms,
                 )
             await page.wait_for_timeout(2000)
 
@@ -335,7 +599,7 @@ class PinterestDriver:
             )
             if not email_sel:
                 await self._save_debug_artifact(page, "login_no_email")
-                self.circuit.record_failure("pinterest_login")
+                self.circuit.record_failure(login_operation)
                 session.failure_count += 1
                 return False
             self.info(f"Using email selector: {email_sel}")
@@ -402,7 +666,7 @@ class PinterestDriver:
                 )
                 if not pwd_sel:
                     await self._save_debug_artifact(page, "login_no_password")
-                    self.circuit.record_failure("pinterest_login")
+                    self.circuit.record_failure(login_operation)
                     session.failure_count += 1
                     return False
                 self.info(f"Using password selector: {pwd_sel}")
@@ -418,127 +682,187 @@ class PinterestDriver:
             logged_in = "login" not in page.url and "pinterest.com" in page.url
             if logged_in:
                 self.info("Login successful")
-                self.circuit.record_success("pinterest_login")
+                self.circuit.record_success(login_operation)
                 return True
             else:
                 # Check if a 2FA / security challenge page appeared
-                self.error(f"Login failed for {email}, current URL: {page.url}")
+                self.error(f"Login failed for account {handle or 'default'}")
                 await self._save_debug_artifact(page, "login_fail")
-                self.circuit.record_failure("pinterest_login", retryable=False)
+                self.circuit.record_failure(login_operation, retryable=False)
                 return False
 
+        except PinterestNavigationUnavailableError:
+            raise
         except Exception as e:
             self.error(f"Login error: {e}")
-            self.circuit.record_failure("pinterest_login")
+            self.circuit.record_failure(login_operation)
             session.failure_count += 1
             return False
 
-    async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 50) -> int:
-        """Purge drafts ONLY when Pinterest creator is blocked by drafts or reaches limit.
+    async def _recover_draft_capacity(self, page: Page, account_handle: str | None) -> dict:
+        """Empty the blocked account's drafts and require verified creator recovery.
 
-        Returns 0 immediately during normal uploads when no draft limit is present.
+        The caller retains its existing account lock and session throughout. Draft
+        deletion requests must not be mistaken for a newly published pin.
         """
+        handler = getattr(self, "_response_handler", None)
+        if handler is not None:
+            with contextlib.suppress(Exception):
+                page.remove_listener("response", handler)
+        self._pin_create_data = {"pin_id": None, "pin_url": None}
+        if self._pin_create_event is not None:
+            self._pin_create_event.clear()
         try:
-            body_text = await page.locator("body").inner_text(timeout=1500)
-        except Exception:
-            body_text = ""
+            from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page_verified
 
-        draft_count_match = re.search(r"(?:Pin drafts|Drafts|Borradores)\s*\((\d+)\)", body_text, re.I)
-        draft_count = int(draft_count_match.group(1)) if draft_count_match else None
-
-        # Check if editor is disabled or draft limit warning is shown
-        is_editor_disabled = False
-        try:
-            disabled_el = page.locator(
-                '[data-test-id="creation-form"][aria-disabled="true"], [disabled][data-test-id*="upload"]'
-            ).first
-            is_editor_disabled = await disabled_el.count() > 0 and await disabled_el.is_visible(timeout=300)
-        except Exception:
-            pass
-
-        at_draft_limit = (
-            (draft_count is not None and draft_count >= 50)
-            or "50 drafts" in body_text
-            or ("limit" in body_text.lower() and "draft" in body_text.lower())
-            or ("límite" in body_text.lower() and "borrador" in body_text.lower())
-            or is_editor_disabled
-        )
-        if not at_draft_limit:
-            return 0
-
-        self.warning(
-            f"Pinterest creator draft limit/block detected (count={draft_count}, disabled={is_editor_disabled}); "
-            "purging drafts to unlock upload."
-        )
-
-        try:
-            from scripts.ops.clear_pinterest_drafts import clear_drafts_for_page
-
-            deleted = await clear_drafts_for_page(page, account_name=self.account_handle or "driver")
-            if deleted > 0:
-                self.info(f"Successfully purged {deleted} draft(s) using bulk purge engine.")
-                return deleted
-        except Exception as purge_err:
-            self.warning(
-                f"Bulk draft purge engine encountered error: {purge_err}; attempting direct DOM purge."
+            report = await asyncio.wait_for(
+                clear_drafts_for_page_verified(
+                    page,
+                    account_name=account_handle or self.account_handle or "driver",
+                    timeout_seconds=DRAFT_CAPACITY_RECOVERY_TIMEOUT_SECONDS,
+                ),
+                timeout=DRAFT_CAPACITY_RECOVERY_TIMEOUT_SECONDS + 5,
             )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            from backend.scripts.pinterest_batch_core import BrowserSessionLost
 
-        # Try bulk select first
+            if isinstance(exc, BrowserSessionLost):
+                raise
+            self.warning(f"Draft capacity repair could not be verified: {exc}")
+            return {"ok": False, "creator_ready": False, "error": str(exc)[:500]}
+        verified = (
+            isinstance(report, dict)
+            and report.get("ok") is True
+            and report.get("creator_ready") is True
+            and type(report.get("remaining_count")) is int
+            and report.get("remaining_count") == 0
+            and type(report.get("deleted")) is int
+            and report["deleted"] >= 0
+        )
+        if not verified:
+            error = report.get("error") if isinstance(report, dict) else None
+            self.warning(f"Draft capacity repair did not restore an empty creator: {error or report}")
+            return {**(report if isinstance(report, dict) else {}), "ok": False}
+        self.info(f"Draft capacity repaired: {report['deleted']} drafts deleted; creator ready.")
+        return report
+
+    async def _clear_draft_limit_if_needed(self, page: Page, max_delete: int = 50) -> int:
+        """Repair a confirmed capacity warning; ordinary loading never deletes drafts.
+
+        ``max_delete`` remains accepted for legacy callers. A full creator needs
+        verified empty-draft recovery rather than an unverified partial purge.
+        """
+        from backend.scripts.pinterest_batch_core import (
+            PinterestDraftCapacityError,
+            ensure_creator_draft_capacity_available,
+        )
+
         try:
-            bulk = page.locator(
-                '[data-test-id="bulk-select-drafts-checkbox"], input[type="checkbox"][aria-label*="Select all" i], button:has-text("Select all")'
-            ).first
-            if await bulk.count() > 0 and await bulk.is_visible(timeout=1000):
-                await bulk.click(force=True)
-                await page.wait_for_timeout(1000)
-                delete_btn = page.locator(
-                    '[data-test-id="bulk-delete-drafts-button"], button:has-text("Delete"), button:has-text("Eliminar")'
-                ).first
-                if await delete_btn.count() > 0 and await delete_btn.is_visible(timeout=1500):
-                    await delete_btn.click(force=True)
-                    await page.wait_for_timeout(1000)
-                    confirm_btn = page.locator(
-                        'div[role="dialog"] button:has-text("Delete"), div[role="dialog"] button:has-text("Eliminar")'
-                    ).first
-                    if await confirm_btn.count() > 0 and await confirm_btn.is_visible(timeout=2000):
-                        await confirm_btn.click(force=True)
-                        await page.wait_for_timeout(3000)
-                        self.info("Bulk deleted all drafts via modal confirm.")
-                        return 1
-                    else:
-                        await page.keyboard.press("Enter")
-                        return 1
-        except Exception as b_err:
-            self.warning(f"Direct bulk select failed: {b_err}")
+            await ensure_creator_draft_capacity_available(page, f"driver-{self.account_handle or 'default'}")
+        except PinterestDraftCapacityError as exc:
+            report = await self._recover_draft_capacity(page, self.account_handle)
+            if report.get("ok") is not True:
+                exc.draft_cleanup = report
+                raise
+            self._setup_pin_interception(page)
+            return report["deleted"]
+        return 0
 
-        # Fallback to single actions
-        deleted = 0
-        for _ in range(min(max_delete, 10)):
+    async def _shared_pin_upload_attempt(
+        self,
+        upload_call,
+        page: Page,
+        local: Path,
+        title: str,
+        link: str,
+        description: str,
+        board_name: str,
+        worker_id: str,
+    ) -> str | None:
+        """Wait for publication; an API candidate must never cancel the uploader."""
+        shared_task = asyncio.create_task(
+            upload_call(page, local, title, link, description, board_name, worker_id)
+        )
+        response_task = asyncio.create_task(self._pin_create_event.wait())
+        try:
+            await asyncio.wait({shared_task, response_task}, return_when=asyncio.FIRST_COMPLETED)
+            pin_id = await shared_task
+            return str(pin_id) if re.fullmatch(r"\d{15,22}", str(pin_id or "")) else None
+        finally:
+            # Neither child may outlive the account session on outer cancellation.
+            for task in (shared_task, response_task):
+                if not task.done():
+                    task.cancel()
+            for task in (shared_task, response_task):
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
+
+    async def _shared_pin_upload_with_capacity_recovery(
+        self,
+        upload_call,
+        page: Page,
+        local: Path,
+        title: str,
+        link: str,
+        description: str,
+        board_name: str,
+        account_handle: str | None,
+    ) -> tuple[str | None, dict | None]:
+        """Recover capacity once on the same page, then retry the identical payload."""
+        from backend.scripts.pinterest_batch_core import PinCreationError
+
+        worker_id = f"driver-{account_handle or 'default'}"
+        recovery = None
+        for attempt in range(2):
             try:
-                actions = page.locator(
-                    'button[aria-label*="Pin draft actions" i], [data-test-id="draft-actions-button"]'
+                pin_id = await self._shared_pin_upload_attempt(
+                    upload_call, page, local, title, link, description, board_name, worker_id
                 )
-                if await actions.count() == 0:
-                    break
-                await actions.first.click(force=True)
-                await page.wait_for_timeout(500)
-
-                delete_action = page.locator(
-                    '[data-test-id="delete-draft-action"], button:has-text("Delete")'
-                ).first
-                await delete_action.wait_for(state="visible", timeout=3000)
-                await delete_action.click(force=True)
-                await page.wait_for_timeout(500)
-
-                confirm = page.locator('button:has-text("Delete"), button:has-text("Eliminar")').last
-                await confirm.wait_for(state="visible", timeout=3000)
-                await confirm.click(force=True)
-                deleted += 1
-                await page.wait_for_timeout(1500)
-            except Exception as delete_err:
-                self.warning(f"Pinterest draft cleanup stopped after {deleted} deletion(s): {delete_err}")
-                break
-        return deleted
+                if not pin_id and recovery is not None:
+                    exc = PinCreationError(f"{worker_id}: repaired creator returned no verified Pin ID")
+                    exc.draft_cleanup = recovery
+                    raise exc
+                if not pin_id and self._pin_create_data.get("pin_id"):
+                    exc = PinCreationError(f"{worker_id}: creation candidate has no verified publication")
+                    exc.uncertain = True
+                    raise exc
+                return pin_id, recovery
+            except PinCreationError as exc:
+                # A candidate can accompany a failed/draft creation. Only an
+                # exact public match can override the uploader's exception.
+                verified = await self._verify_intercepted_public_pin(
+                    page,
+                    title=title,
+                    link=link,
+                    account_handle=account_handle,
+                    description=description[:500],
+                )
+                if verified:
+                    return verified, recovery
+                if getattr(exc, "error_code", None) != "pinterest_draft_capacity":
+                    if recovery is not None:
+                        exc.draft_cleanup = recovery
+                    if self._pin_create_data.get("pin_id"):
+                        exc.uncertain = True
+                    raise
+                if attempt:
+                    exc.draft_cleanup = recovery
+                    raise
+                self.warning("Creator draft capacity reached; repairing the account before retrying its pin.")
+                recovery = await self._recover_draft_capacity(page, account_handle)
+                if recovery.get("ok") is not True:
+                    exc.draft_cleanup = recovery
+                    raise
+                # Cleanup may send PinResource POSTs for existing drafts. Only
+                # fresh creation responses from the retry may establish proof.
+                self._setup_pin_interception(page)
+            except Exception as exc:
+                if recovery is not None:
+                    exc.draft_cleanup = recovery
+                raise
+        return None, recovery
 
     async def _first_visible_selector(
         self, page: Page, selectors: list[str], timeout_ms: int = 10000
@@ -585,14 +909,15 @@ class PinterestDriver:
         """
         operation = "pin_upload"
         handle = account_handle or self.account_handle
+        circuit_operation = f"{operation}:{handle or 'default'}"
         rate_operation = f"{operation}:{domain_handle or 'direct'}:{handle or 'unknown'}"
         limiter = get_rate_limiter(domain_handle=domain_handle)
         board_name = resolve_account_board_name(
             board_name or self.config.default_board,
             handle,
         )
-        if not self.circuit.can_execute(operation):
-            raise CircuitBreakerOpenError(f"Circuit '{operation}' is OPEN")
+        if not self.circuit.can_execute(circuit_operation):
+            raise CircuitBreakerOpenError(f"Circuit '{circuit_operation}' is OPEN")
 
         if not limiter.can_execute(rate_operation):
             return {"success": False, "error": "Rate limit exceeded"}
@@ -609,53 +934,26 @@ class PinterestDriver:
         from backend.scripts.pinterest_batch_core import (
             BrowserSessionLost,
             PinCreationError,
+            ensure_creator_draft_capacity_available,
         )
 
         try:
             from backend.scripts.pinterest_batch_core import create_pin_from_fields
 
             self.info("Using shared Pinterest uploader core...")
-            shared_task = asyncio.create_task(
-                create_pin_from_fields(
-                    page,
-                    local,
-                    title,
-                    link,
-                    description,
-                    board_name,
-                    f"driver-{handle or 'default'}",
-                )
+            pin_id, recovery = await self._shared_pin_upload_with_capacity_recovery(
+                create_pin_from_fields, page, local, title, link, description, board_name, handle
             )
-            response_task = asyncio.create_task(self._pin_create_event.wait())
-            try:
-                done, _ = await asyncio.wait(
-                    {shared_task, response_task},
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                if response_task in done and self._pin_create_data.get("pin_id"):
-                    pin_id = self._pin_create_data["pin_id"]
-                else:
-                    pin_id = await shared_task
-            finally:
-                # The supervisor wraps create_pin in wait_for(). If that outer
-                # timeout cancels us while both children are pending, neither
-                # child may outlive the page/session that it is operating on.
-                # Drain completed exceptions as well so cleanup never masks the
-                # primary result, exception, or cancellation.
-                for task in (shared_task, response_task):
-                    if not task.done():
-                        task.cancel()
-                for task in (shared_task, response_task):
-                    with contextlib.suppress(asyncio.CancelledError, Exception):
-                        await task
             if pin_id:
                 limiter.record_execution(rate_operation)
-                self.circuit.record_success(operation)
+                self.circuit.record_success(circuit_operation)
                 return {
                     "success": True,
                     "pin_id": pin_id,
                     "pin_url": f"https://www.pinterest.com/pin/{pin_id}/",
                     "method": "shared-core",
+                    **self._candidate_verification_details(),
+                    **({"draft_cleanup": recovery} if recovery is not None else {}),
                 }
             self.warning("Shared Pinterest uploader returned no pin id; continuing with legacy fallback.")
         except BrowserSessionLost:
@@ -666,6 +964,41 @@ class PinterestDriver:
             if isinstance(shared_exc, PinCreationError):
                 msg = str(shared_exc)
                 self.warning(f"Shared uploader aborted: {msg}.")
+                if getattr(shared_exc, "error_code", None) in {
+                    "pinterest_publish_unavailable",
+                    "pinterest_publish_uncertain",
+                }:
+                    # A disabled editor never justifies a second publisher;
+                    # an uncertain click must retain its exact failure state.
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "error_code": shared_exc.error_code,
+                        "uncertain": bool(getattr(shared_exc, "uncertain", False)),
+                        "publish_diagnostics": getattr(shared_exc, "publish_diagnostics", None),
+                        **self._candidate_verification_details(),
+                        **(
+                            {"draft_cleanup": shared_exc.draft_cleanup}
+                            if getattr(shared_exc, "draft_cleanup", None) is not None
+                            else {}
+                        ),
+                    }
+                if getattr(shared_exc, "error_code", None) == "pinterest_draft_capacity":
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "error_code": "pinterest_draft_capacity",
+                        "draft_cleanup": getattr(shared_exc, "draft_cleanup", None),
+                    }
+                if getattr(shared_exc, "draft_cleanup", None) is not None:
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "uncertain": True,
+                        "draft_cleanup": shared_exc.draft_cleanup,
+                    }
+                if getattr(shared_exc, "uncertain", False):
+                    return {"success": False, "error": msg, "uncertain": True}
                 if "publish clicked but no Pin ID" in msg:
                     pin_id = await self._verify_recent_public_pin(
                         page,
@@ -675,7 +1008,7 @@ class PinterestDriver:
                     )
                     if pin_id:
                         limiter.record_execution(rate_operation)
-                        self.circuit.record_success(operation)
+                        self.circuit.record_success(circuit_operation)
                         return {
                             "success": True,
                             "pin_id": pin_id,
@@ -691,6 +1024,13 @@ class PinterestDriver:
                     # Specific case where we might want to record failure but still try fallback
                     pass
             else:
+                if getattr(shared_exc, "draft_cleanup", None) is not None:
+                    return {
+                        "success": False,
+                        "error": str(shared_exc)[:500],
+                        "uncertain": True,
+                        "draft_cleanup": shared_exc.draft_cleanup,
+                    }
                 self.warning(f"Shared Pinterest uploader failed before legacy fallback: {shared_exc}")
 
         try:
@@ -766,6 +1106,8 @@ class PinterestDriver:
             except Exception:
                 await page.wait_for_timeout(2500)
 
+            await ensure_creator_draft_capacity_available(page, f"driver-{handle or 'default'}")
+
             # Scroll for visibility
             self.info("Scrolling page for form field visibility...")
             await page.evaluate("window.scrollTo(0, 300)")
@@ -817,6 +1159,7 @@ class PinterestDriver:
                 await page.wait_for_timeout(750)
 
             # Board selection
+            await ensure_creator_draft_capacity_available(page, f"driver-{handle or 'default'}")
             if board_name:
                 self.info(f"Selecting board: {board_name}")
                 board_selected = await self._select_board(page, board_name)
@@ -830,6 +1173,7 @@ class PinterestDriver:
             await page.wait_for_timeout(500)
 
             # Publish
+            await ensure_creator_draft_capacity_available(page, f"driver-{handle or 'default'}")
             self.info("Clicking Publish...")
             publish_ok = await self._click_publish(page)
             self.info(f"Publish click outcome: {publish_ok}")
@@ -858,7 +1202,11 @@ class PinterestDriver:
                 if pin_match:
                     pin_id = pin_match.group(1)
 
-            if not pin_id:
+            if pin_id:
+                pin_id = await self._verify_intercepted_public_pin(
+                    page, title=title, link=link, account_handle=handle, candidate_id=pin_id
+                )
+            else:
                 pin_id = await self._verify_recent_public_pin(
                     page,
                     title=title,
@@ -868,7 +1216,7 @@ class PinterestDriver:
 
             if pin_id:
                 limiter.record_execution(rate_operation)
-                self.circuit.record_success(operation)
+                self.circuit.record_success(circuit_operation)
                 return {
                     "success": True,
                     "pin_id": pin_id,
@@ -877,7 +1225,7 @@ class PinterestDriver:
             else:
                 self.warning("Pin creation could not be verified; no pin id/url found")
                 limiter.record_failure(rate_operation)
-                self.circuit.record_failure(operation)
+                self.circuit.record_failure(circuit_operation)
                 session.failure_count += 1
                 return {
                     "success": False,
@@ -886,10 +1234,17 @@ class PinterestDriver:
                 }
 
         except Exception as e:
+            if getattr(e, "error_code", None) == "pinterest_draft_capacity":
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "error_code": "pinterest_draft_capacity",
+                    "draft_cleanup": getattr(e, "draft_cleanup", None),
+                }
             self.error(f"Manual Pin creation failed: {e}")
             if not MCP_FALLBACK_ENABLED:
                 limiter.record_failure(rate_operation)
-                self.circuit.record_failure(operation)
+                self.circuit.record_failure(circuit_operation)
                 session.failure_count += 1
                 return {"success": False, "error": str(e)[:500]}
 
@@ -905,7 +1260,7 @@ class PinterestDriver:
                 )
                 if direct_res.get("success"):
                     limiter.record_execution(rate_operation)
-                    self.circuit.record_success(operation)
+                    self.circuit.record_success(circuit_operation)
                     return direct_res
                 else:
                     self.warning(
@@ -926,7 +1281,7 @@ class PinterestDriver:
                 )
                 if agent_res.get("success"):
                     limiter.record_execution(rate_operation)
-                    self.circuit.record_success(operation)
+                    self.circuit.record_success(circuit_operation)
                     pin_url = agent_res["pin_url"]
                     pin_id = pin_url.split("/pin/")[-1].strip("/")
                     return {"success": True, "pin_id": pin_id, "pin_url": pin_url, "method": "agentic"}
@@ -936,7 +1291,7 @@ class PinterestDriver:
                 self.error(f"Agentic fallback crashed: {agent_e}")
 
             limiter.record_failure(rate_operation)
-            self.circuit.record_failure(operation)
+            self.circuit.record_failure(circuit_operation)
             session.failure_count += 1
             return {"success": False, "error": str(e)[:500]}
 
@@ -955,14 +1310,15 @@ class PinterestDriver:
         """
         operation = "pin_save"
         handle = account_handle or self.account_handle
+        circuit_operation = f"{operation}:{handle or 'default'}"
         rate_operation = f"{operation}:{domain_handle or 'direct'}:{handle or 'unknown'}"
         limiter = get_rate_limiter(domain_handle=domain_handle)
         board_name = resolve_account_board_name(
             board_name or self.config.default_board,
             handle,
         )
-        if not self.circuit.can_execute(operation):
-            raise CircuitBreakerOpenError(f"Circuit '{operation}' is OPEN")
+        if not self.circuit.can_execute(circuit_operation):
+            raise CircuitBreakerOpenError(f"Circuit '{circuit_operation}' is OPEN")
         if not limiter.can_execute(rate_operation):
             return {"success": False, "error": "Rate limit exceeded"}
 
@@ -1026,7 +1382,7 @@ class PinterestDriver:
             if save_ok:
                 self.info("Pin saved successfully")
                 limiter.record_execution(rate_operation)
-                self.circuit.record_success(operation)
+                self.circuit.record_success(circuit_operation)
                 # Extract pin ID from URL
                 pin_id = None
                 m = re.search(r"/pin/(\d+)", pin_url)
@@ -1039,7 +1395,7 @@ class PinterestDriver:
         except Exception as e:
             self.error(f"Save pin failed: {e}")
             limiter.record_failure(rate_operation)
-            self.circuit.record_failure(operation)
+            self.circuit.record_failure(circuit_operation)
             session.failure_count += 1
             return {"success": False, "error": str(e)}
 
@@ -1351,6 +1707,138 @@ class PinterestDriver:
         if creds and creds.email:
             return creds.email.partition("@")[0].strip()
         return ""
+
+    def _candidate_verification_details(self):
+        diagnostic = getattr(self, "_pin_candidate_verification", None)
+        if isinstance(diagnostic, dict) and diagnostic.get("candidate_present") is True:
+            return {"candidate_verification": dict(diagnostic)}
+        return {}
+
+    async def _verify_intercepted_public_pin(
+        self,
+        page: Page,
+        *,
+        title: str,
+        link: str,
+        account_handle: str | None,
+        candidate_id: object = None,
+        description: str = "",
+    ) -> str | None:
+        """Require the candidate to be public with this title and destination."""
+        creation_data = self._pin_create_data
+        candidate = str(candidate_id or creation_data.get("pin_id") or "")
+        valid_candidate = bool(re.fullmatch(r"\d{15,22}", candidate))
+        diagnostic = {"candidate_present": valid_candidate, "reason": "checking"}
+        if valid_candidate:
+            diagnostic["candidate_id"] = candidate
+        self._pin_candidate_verification = diagnostic
+
+        def finish(reason, verified=False, **details):
+            diagnostic.update(reason=reason, **details)
+            if valid_candidate:
+                self.info(f"Public candidate verification: {json.dumps(diagnostic, sort_keys=True)}")
+            return candidate if verified else None
+
+        username = self._public_username(account_handle)
+        if not valid_candidate:
+            return finish("candidate_missing")
+        if not re.fullmatch(r"[A-Za-z0-9_]+", username):
+            return finish("public_username_unavailable")
+        if not title or not link:
+            return finish("expected_metadata_missing")
+        candidate_event = self._pin_create_event
+        try:
+            async with asyncio.timeout(35):
+                response = await page.context.request.get(
+                    f"https://www.pinterest.com/pin/{candidate}/",
+                    timeout=30000,
+                    fail_on_status_code=False,
+                )
+                diagnostic["http_status"] = response.status if type(response.status) is int else None
+                if response.status != 200:
+                    return finish("public_http_status")
+                if _public_pin_url_id(response.url) != candidate:
+                    return finish("public_response_id_mismatch")
+                metadata = _PublishedPinMetadata()
+                metadata.feed(await response.text())
+                metadata.close()
+                if (
+                    self._pin_create_event is not candidate_event
+                    or self._pin_create_data is not creation_data
+                ):
+                    return finish("stale_interception")
+
+                def normalize(value):
+                    return unicodedata.normalize("NFC", " ".join(value.split())).casefold()
+
+                public_title = metadata.exact("og:title")
+                pinner = _pinterest_public_url(metadata.exact("pinterestapp:pinner"))
+                pinner_name = re.fullmatch(r"/([^/]+)/?", pinner.path) if pinner else None
+                checks = {
+                    "og_id_matches": _public_pin_url_id(metadata.exact("og:url")) == candidate,
+                    "canonical_id_matches": _public_pin_url_id(metadata.exact("canonical")) == candidate,
+                    "title_matches": isinstance(public_title, str)
+                    and normalize(public_title) == normalize(title[:100]),
+                    "source_matches": metadata.exact("pinterestapp:source") == link,
+                    "pinner_matches": pinner_name is not None
+                    and pinner_name.group(1).casefold() == username.casefold(),
+                }
+                diagnostic.update(metadata_checks=checks, streamed_metadata=metadata.streamed)
+                if all(checks.values()):
+                    return finish("verified", verified=True, method="public-metadata")
+                if not checks["source_matches"] or not checks["pinner_matches"]:
+                    return finish("public_owner_or_source_mismatch")
+                started_at, observed_at = (
+                    creation_data.get("generation_started_at"),
+                    creation_data.get("observed_at"),
+                )
+                if (
+                    str(creation_data.get("pin_id")) != candidate
+                    or type(started_at) not in (int, float)
+                    or type(observed_at) not in (int, float)
+                    or not math.isfinite(started_at)
+                    or not math.isfinite(observed_at)
+                    or not started_at <= observed_at <= time.time() + 5
+                    or time.time() - observed_at > 600
+                ):
+                    return finish("fresh_create_window_unavailable")
+                diagnostic["create_window"] = {
+                    "started_at": started_at,
+                    "observed_at": observed_at,
+                }
+                feed = await page.context.request.get(
+                    f"https://www.pinterest.com/{username}/feed.rss",
+                    timeout=15000,
+                    fail_on_status_code=False,
+                )
+                feed_url = _pinterest_public_url(feed.url)
+                if (
+                    feed.status != 200
+                    or feed_url is None
+                    or feed_url.path.casefold() != f"/{username}/feed.rss".casefold()
+                ):
+                    return finish("owned_rss_unavailable")
+                rss_body = await feed.text()
+                if (
+                    self._pin_create_event is not candidate_event
+                    or self._pin_create_data is not creation_data
+                ):
+                    return finish("stale_interception")
+                if len(rss_body) > 2_000_000:
+                    return finish("rss_receipt_too_large")
+                verified, receipt_checks = _rss_candidate_receipt(
+                    rss_body, candidate, title, description, started_at, observed_at
+                )
+                return finish(
+                    "verified" if verified else "rss_receipt_unverified",
+                    verified=verified,
+                    method="rss-create-receipt",
+                    receipt_checks=receipt_checks,
+                )
+        except Exception as exc:
+            # A failed or unavailable public fetch cannot become publication
+            # proof or fall back to another pin with the same title/link.
+            return finish("public_fetch_unavailable", error_type=type(exc).__name__[:64])
 
     async def _verify_recent_public_pin(
         self,

@@ -5,6 +5,7 @@ Entry point for 24/7 self-healing Pinterest automation.
 Usage:
     python run_autonomous.py                  ← starts supervisor (default, no args needed)
     python run_autonomous.py run              ← explicit run
+    python run_autonomous.py run --queue-only ← process existing jobs without campaign boot work
     python run_autonomous.py enqueue-batch   ← queue all unpinned posts from all domains
     python run_autonomous.py enqueue-backlog ← process memory/pinterest_backlog.md into queue
     python run_autonomous.py status          ← show queue/health status
@@ -411,7 +412,14 @@ def normalize_queue_boards(args):
 
 
 async def run_supervisor(args):
-    """Full autonomous boot: enqueue backlog + enqueue unpinned posts + enqueue remaster folder + start supervisor."""
+    """Start Pinterest workers, optionally without enqueueing or campaign boot work."""
+    workers = _configure_pinterest_workers(args)
+    if getattr(args, "queue_only", False) or _env_enabled("RANKSTEIN_QUEUE_ONLY", False):
+        logger.info("[boot] Queue-only startup: processing existing Pinterest jobs (%s workers)", workers)
+        supervisor = AutonomousSupervisor(worker_count=workers)
+        await supervisor.run(startup_draft_maintenance=False)
+        return
+
     agent_memory.log_event("startup", "Starting Autonomous Pinterest Supervisor", {"pid": os.getpid()})
 
     # ── Step 1: Process Pinterest backlog (no prompting) ──────────────────────
@@ -448,10 +456,8 @@ async def run_supervisor(args):
         def _bg_enqueue_remaster():
             try:
                 from pinterest_automation.campaign import enqueue_folder as _enqueue_folder
-                from rankstein.domain import get_registry
 
-                default_domain = get_registry().default.domain
-                result = _enqueue_folder(domain_url=default_domain)
+                result = _enqueue_folder()
                 agent_memory.log_event("startup", "Remaster folder enqueue complete", result)
             except Exception as e:
                 logger.warning("[bg] Remaster folder enqueue failed (non-fatal): %s", e)
@@ -545,17 +551,40 @@ async def run_supervisor(args):
 
     # ── Step 3: Start Pinterest supervisor ────────────────────────────────────
     try:
-        workers = getattr(args, "workers", None)
-        if workers is None or int(workers) <= 0:
-            workers = int(os.environ.get("PINTEREST_WORKER_COUNT", "10"))
-        os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
-        os.environ["PINTEREST_MAX_WORKERS"] = str(max(10, int(workers)))
-        os.environ["PINTEREST_MAX_SESSIONS"] = str(max(10, int(workers)))
         supervisor = AutonomousSupervisor(worker_count=workers)
         await supervisor.run()
     except Exception as e:
         agent_memory.log_event("failure", f"Supervisor crashed: {str(e)}", {"error": str(e)})
         raise e
+
+
+def _configure_pinterest_workers(args) -> int:
+    """Apply CLI concurrency before boot helpers can cache config or sessions.
+
+    Update an already cached config in place as well: queue/session singletons
+    may retain its reference. Explicit safety caps are never raised by startup.
+    """
+    requested = getattr(args, "workers", None)
+    if requested is not None:
+        if int(requested) <= 0:
+            raise ValueError("Pinterest worker count must be positive")
+        os.environ["PINTEREST_WORKER_COUNT"] = str(requested)
+    workers = _bounded_int_env("PINTEREST_WORKER_COUNT", 2, "PINTEREST_MAX_WORKERS", 10)
+    sessions = _bounded_int_env("PINTEREST_MAX_SESSIONS", workers, "PINTEREST_MAX_WORKERS", 10)
+    os.environ["PINTEREST_WORKER_COUNT"] = str(workers)
+    os.environ["PINTEREST_MAX_SESSIONS"] = str(sessions)
+
+    config = get_config()
+    if isinstance(config.supervisor, dict):
+        config.supervisor["worker_count"] = workers
+    else:
+        config.supervisor.worker_count = workers
+    if isinstance(config.browser, dict):
+        config.browser["max_sessions"] = sessions
+    else:
+        config.browser.max_sessions = sessions
+    logger.info("[boot] Pinterest concurrency: workers=%s max_sessions=%s", workers, sessions)
+    return workers
 
 
 def main():
@@ -577,8 +606,14 @@ def main():
     run_parser.add_argument(
         "--workers",
         type=int,
-        default=None,
+        default=argparse.SUPPRESS,
         help="Number of concurrent supervisor queue workers (e.g. 2, 4, 6, 8)",
+    )
+    run_parser.add_argument(
+        "--queue-only",
+        action="store_true",
+        default=_env_enabled("RANKSTEIN_QUEUE_ONLY", False),
+        help="Process existing queue jobs; skip boot enqueues, articles, siphon, and startup draft cleanup",
     )
 
     # enqueue-pin
@@ -636,12 +671,19 @@ def main():
 
         folder_path = Path(args.folder) if args.folder else None
         reg = get_registry()
-        domain_obj = reg.get(args.domain) if args.domain else reg.default
+        domain_obj = reg.get(args.domain) if args.domain else None
+        domain_options = (
+            {
+                "domain_url": domain_obj.domain,
+                "domain_handle": domain_obj.handle,
+                "boards_default": domain_obj.boards_default,
+            }
+            if domain_obj is not None
+            else {}
+        )
         result = _enqueue_folder(
             folder=folder_path,
-            domain_url=domain_obj.domain,
-            domain_handle=domain_obj.handle,
-            boards_default=domain_obj.boards_default,
+            **domain_options,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
     elif args.command == "siphon":

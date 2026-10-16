@@ -13,6 +13,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import tempfile
 import threading
 import time
 import tomllib
@@ -37,11 +38,19 @@ OPENCODE_CONFIG = Path.home() / ".config" / "opencode" / "opencode.json"
 RUN_START_PATTERN = re.compile(r"(?m)^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] START ")
 PROCESS_LOCK = threading.RLock()
 STATUS_CACHE_LOCK = threading.Lock()
+PREFERENCES_LOCK = threading.Lock()
+_DISPLAY_CACHE_GENERATION = 0
 STATUS_CACHE_TTL_SECONDS = max(
     1.0,
     float(os.getenv("RANKSTEIN_STATUS_CACHE_TTL_SECONDS", "10")),
 )
 _STATUS_CACHE: tuple[float, dict[str, Any]] | None = None
+STREAM_REFRESH_LOCK = threading.Lock()
+STREAM_REFRESH_INTERVAL_SECONDS = 1.5
+STREAM_REFRESH_TIMEOUT_SECONDS = 5.0
+_STREAM_CACHE: tuple[float, dict[str, Any]] | None = None
+_STREAM_REFRESH_STARTED_AT = 0.0
+_STREAM_REFRESH_ERROR = ""
 PREVIEW_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 ACTION_LABELS = {
@@ -315,6 +324,11 @@ def setup_rankstein_routes() -> APIRouter:
     def control_status(request: Request) -> dict[str, Any]:
         require_admin(request)
         return _control_payload()
+
+    @router.post("/control/production-batch/select")
+    def select_production_batch(batch_id: str, request: Request) -> dict[str, Any]:
+        require_admin(request)
+        return _select_production_batch(batch_id)
 
     @router.post("/control/start/rankstein/{mode}")
     def control_start_rankstein(
@@ -1176,10 +1190,13 @@ def _refresh_status_cache() -> None:
 
     global _STATUS_CACHE
 
+    generation = _DISPLAY_CACHE_GENERATION
     try:
         payload = _status_payload()
         payload["status_refresh"] = {"state": "ready", "stale": False}
-        _STATUS_CACHE = (time.monotonic(), payload)
+        with PREFERENCES_LOCK:
+            if generation == _DISPLAY_CACHE_GENERATION:
+                _STATUS_CACHE = (time.monotonic(), payload)
     except Exception:
         # Keep serving the last good/warming snapshot.  The next stale poll can
         # schedule a fresh attempt without leaking a daemon-thread traceback.
@@ -1491,6 +1508,75 @@ def _production_batch_presentation(batch: dict[str, Any] | None) -> dict[str, An
     return {**batch, "domains": domains, "presentation_counts": totals}
 
 
+def _operator_preferences_path() -> Path:
+    return RANKSTEIN_ROOT / "data/runtime/operator_preferences.json"
+
+
+def _load_operator_preferences() -> dict[str, Any]:
+    try:
+        value = json.loads(_operator_preferences_path().read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _selected_batch_report(batch_id: str) -> dict[str, Any]:
+    """Validate a display target without resuming or mutating its report."""
+    if not isinstance(batch_id, str) or not re.fullmatch(r"production-\d{8}-\d{6}", batch_id):
+        raise HTTPException(400, "Invalid production batch ID")
+    path = RANKSTEIN_ROOT / "data/reports/production_batches" / f"{batch_id}.json"
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "Production batch report not found") from exc
+    except (OSError, ValueError, TypeError) as exc:
+        raise HTTPException(409, "Production batch report is unreadable") from exc
+    if not isinstance(report, dict) or report.get("batch_id") != batch_id:
+        raise HTTPException(409, "Production batch identity mismatch")
+    target = report.get("target_per_domain")
+    if isinstance(target, bool) or not isinstance(target, int) or not 1 <= target <= 20:
+        raise HTTPException(409, "Production batch target is invalid")
+    return {**report, "report_path": str(path)}
+
+
+def _select_production_batch(batch_id: str) -> dict[str, Any]:
+    """Persist dashboard selection separately from process ownership and work."""
+    global _STATUS_CACHE, _STREAM_CACHE, _STREAM_REFRESH_ERROR, _DISPLAY_CACHE_GENERATION
+
+    report = _selected_batch_report(batch_id)
+    path = _operator_preferences_path()
+    temporary_path = None
+    with PREFERENCES_LOCK:
+        try:
+            preferences = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            if not isinstance(preferences, dict):
+                raise ValueError("Invalid preferences")
+            preferences["production_batch_id"] = batch_id
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=path.parent,
+                prefix=path.stem + "-",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary_path = Path(temporary.name)
+                json.dump(preferences, temporary, indent=2)
+                temporary.write("\n")
+            temporary_path.replace(path)
+        except (OSError, ValueError, TypeError) as exc:
+            raise HTTPException(409, "Dashboard selection could not be saved") from exc
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+        _DISPLAY_CACHE_GENERATION += 1
+        _STATUS_CACHE = None
+        _STREAM_CACHE = None
+        _STREAM_REFRESH_ERROR = ""
+    return {"ok": True, "selected_batch_id": batch_id, "target_per_domain": report["target_per_domain"]}
+
+
 def _latest_production_batch() -> dict[str, Any] | None:
     report_dir = RANKSTEIN_ROOT / "data" / "reports" / "production_batches"
     if not report_dir.exists():
@@ -1502,6 +1588,36 @@ def _latest_production_batch() -> dict[str, Any] | None:
     )
     if not reports:
         return None
+    production = _load_processes().get("production") or {}
+    command = production.get("command") or []
+    tracked_id = ""
+    if "--batch-id" in command:
+        index = command.index("--batch-id") + 1
+        candidate = str(command[index]) if index < len(command) else ""
+        if re.fullmatch(r"production-\d{8}-\d{6}", candidate):
+            tracked_id = candidate
+    preference = _load_operator_preferences().get("production_batch_id")
+    selected_report = None
+    if preference:
+        try:
+            selected_report = _selected_batch_report(preference)
+        except HTTPException:
+            pass
+    if selected_report and tracked_id != preference:
+        if not tracked_id or not _pid_alive(production.get("pid"), command, production.get("started_at")):
+            return selected_report
+    if tracked_id:
+        # Keep genuinely active production visible ahead of display preferences.
+        for path in (path for path in reports if path.stem == tracked_id):
+            try:
+                report = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(report, dict) and report.get("batch_id") == tracked_id:
+                    report["report_path"] = str(path)
+                    return report
+            except (OSError, json.JSONDecodeError):
+                continue
+    if selected_report:
+        return selected_report
     latest_stem = reports[0].stem
     for path in reports:
         if path.stem != latest_stem:
@@ -1596,7 +1712,9 @@ def _start_background(
                 info = processes.get(name) or {}
                 if _pid_alive(info.get("pid"), info.get("command"), info.get("started_at")):
                     raise HTTPException(409, "A production launcher or batch is already running")
-        if not allow_parallel and _pid_alive(existing.get("pid"), existing.get("command"), existing.get("started_at")):
+        if not allow_parallel and _pid_alive(
+            existing.get("pid"), existing.get("command"), existing.get("started_at")
+        ):
             raise HTTPException(409, f"{ACTION_LABELS.get(mode, mode)} is already running")
 
         LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -1739,8 +1857,7 @@ def _get_accounts_management_payload() -> dict[str, Any]:
 
     registry = DomainRegistry(RANKSTEIN_ROOT)
     domains = [
-        {"handle": d.handle, "display_name": d.display_name, "domain": d.domain}
-        for d in registry.all()
+        {"handle": d.handle, "display_name": d.display_name, "domain": d.domain} for d in registry.all()
     ]
 
     data = _load_accounts_file_data()
@@ -1807,7 +1924,9 @@ def _save_account(body: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(400, "Account handle is required")
     handle = re.sub(r"[^a-z0-9_\-]", "", handle)
     if not handle:
-        raise HTTPException(400, "Invalid account handle: use lowercase letters, numbers, hyphens or underscores")
+        raise HTTPException(
+            400, "Invalid account handle: use lowercase letters, numbers, hyphens or underscores"
+        )
 
     email = str(body.get("email") or "").strip()
     password = str(body.get("password") or "").strip()
@@ -2751,24 +2870,93 @@ def _launch_seo_single_turbo(body: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _refresh_stream_snapshot() -> None:
+    """Keep all synchronous observation work away from the ASGI event loop."""
+    global _STREAM_CACHE, _STREAM_REFRESH_ERROR
+
+    generation = _DISPLAY_CACHE_GENERATION
+    try:
+        payload = {
+            "timestamp": time.time(),
+            "status": _cached_status_payload(),
+            "telemetry": _collect_telemetry_gauges(),
+            "workers": _collect_workers_snapshots(),
+        }
+        with PREFERENCES_LOCK:
+            if generation == _DISPLAY_CACHE_GENERATION:
+                _STREAM_CACHE = (time.monotonic(), payload)
+                _STREAM_REFRESH_ERROR = ""
+    except Exception:
+        with PREFERENCES_LOCK:
+            if generation == _DISPLAY_CACHE_GENERATION:
+                _STREAM_REFRESH_ERROR = "Snapshot collection failed"
+    finally:
+        STREAM_REFRESH_LOCK.release()
+
+
+def _stream_snapshot_payload() -> dict[str, Any]:
+    """Share one bounded refresh across streams, even when a collector stalls.
+
+    A timed-out synchronous collector cannot safely be cancelled. Keep its one
+    daemon thread and report stale evidence instead of creating more workers.
+    """
+    global _STREAM_REFRESH_STARTED_AT, _STREAM_REFRESH_ERROR
+
+    now = time.monotonic()
+    cached = _STREAM_CACHE
+    fresh = cached is not None and now - cached[0] < STREAM_REFRESH_INTERVAL_SECONDS
+    if not fresh and STREAM_REFRESH_LOCK.acquire(blocking=False):
+        _STREAM_REFRESH_STARTED_AT = now
+        _STREAM_REFRESH_ERROR = ""
+        try:
+            threading.Thread(
+                target=_refresh_stream_snapshot,
+                name="rankstein-stream-refresh",
+                daemon=True,
+            ).start()
+        except Exception:
+            _STREAM_REFRESH_ERROR = "Snapshot refresh could not start"
+            STREAM_REFRESH_LOCK.release()
+    cached = _STREAM_CACHE
+    refreshing = STREAM_REFRESH_LOCK.locked()
+    timed_out = refreshing and now - _STREAM_REFRESH_STARTED_AT >= STREAM_REFRESH_TIMEOUT_SECONDS
+    payload = (
+        dict(cached[1])
+        if cached
+        else {
+            "timestamp": None,
+            "status": _warming_status_payload(),
+            "telemetry": {},
+            "workers": [],
+        }
+    )
+    payload["stream_refresh"] = {
+        "state": (
+            "timeout"
+            if timed_out
+            else "refreshing"
+            if refreshing
+            else "error"
+            if _STREAM_REFRESH_ERROR
+            else "ready"
+        ),
+        "stale": cached is None or now - cached[0] >= STREAM_REFRESH_INTERVAL_SECONDS,
+        "age_seconds": round(max(0.0, now - cached[0]), 1) if cached else None,
+        **({"error": _STREAM_REFRESH_ERROR} if _STREAM_REFRESH_ERROR else {}),
+    }
+    return payload
+
+
 async def _event_stream_generator(request: Request):
     while True:
         if await request.is_disconnected():
             break
         try:
-            status_data = _cached_status_payload()
-            telemetry = _collect_telemetry_gauges()
-            workers = _collect_workers_snapshots()
-            payload = {
-                "timestamp": time.time(),
-                "status": status_data,
-                "telemetry": telemetry,
-                "workers": workers,
-            }
+            payload = _stream_snapshot_payload()
             yield f"data: {json.dumps(payload)}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'error': str(exc)})}\n\n"
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(STREAM_REFRESH_INTERVAL_SECONDS)
 
 
 def _collect_telemetry_gauges() -> dict[str, Any]:
@@ -2796,7 +2984,7 @@ def _collect_telemetry_gauges() -> dict[str, Any]:
 
         h = memory.health()
         mem_ok = bool(h.get("ok"))
-        mem_detail = "Healthy (Port 3111)" if mem_ok else "Degraded"
+        mem_detail = f"Healthy ({h.get('engine', 'SQLite FTS5')})" if mem_ok else "Degraded"
     except Exception as exc:
         mem_detail = str(exc)[:30]
 
@@ -2843,46 +3031,135 @@ def _collect_telemetry_gauges() -> dict[str, Any]:
     }
 
 
-def _collect_workers_snapshots() -> list[dict[str, Any]]:
-    worker_specs = [
-        {"id": 0, "account": "rida", "default_action": "Chromium worker active • Board target 'Chocolate'"},
-        {
-            "id": 1,
-            "account": "media",
-            "default_action": "Chromium worker active • Upload pipeline operational",
-        },
-    ]
-    results = []
-    data_dir = RANKSTEIN_ROOT / "data"
-    for spec in worker_specs:
-        acc = spec["account"]
-        latest_png = None
-        latest_mtime = 0.0
-        candidates = list(data_dir.glob(f"*{acc}*.png")) + list((data_dir / "logs").glob(f"*{acc}*.png"))
-        for p in candidates:
+def _worker_evidence_json(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _worker_supervisor_evidence(now: float) -> dict[str, Any]:
+    """Read the owning supervisor without instantiating a separate session pool."""
+    import psutil
+
+    state = _worker_evidence_json(RANKSTEIN_ROOT / "data/runtime/supervisor.json")
+    state["running"] = False
+    try:
+        heartbeat = float(state.get("heartbeat_at") or 0)
+        started = float(state.get("started_at") or 0)
+        if not 0 < started <= heartbeat <= now + 5 or now - heartbeat > 120:
+            return state
+        process = psutil.Process(int(state.get("pid") or 0))
+        command = process.cmdline()
+        expected = (RANKSTEIN_ROOT / "run_autonomous.py").resolve()
+        owns_command = any(
+            Path(arg).resolve() == expected and command[index + 1 : index + 2] == ["run"]
+            for index, arg in enumerate(command)
+        )
+        state["running"] = owns_command and process.create_time() <= started + 1
+    except (OSError, ValueError, TypeError, psutil.Error):
+        pass
+    return state
+
+
+def _worker_snapshot_preview(account: str, started_at: float, now: float) -> dict[str, Any]:
+    """Only associate an exact account's recent screenshot with its current lease."""
+    latest_path = ""
+    latest_mtime = 0.0
+    pattern = re.compile(rf"(?:^|_)driver-{re.escape(account)}_\d+\.png$")
+    root = RANKSTEIN_ROOT.resolve()
+    for directory in (root / "data", root / "data/logs"):
+        for candidate in directory.glob("*.png"):
+            if not pattern.search(candidate.name):
+                continue
             try:
-                mtime = p.stat().st_mtime
-                if mtime > latest_mtime:
+                resolved = candidate.resolve()
+                mtime = candidate.stat().st_mtime
+                if (
+                    resolved.is_relative_to(root)
+                    and started_at <= mtime <= now + 5
+                    and now - mtime <= 120
+                    and mtime > latest_mtime
+                ):
+                    latest_path = resolved.relative_to(root).as_posix()
                     latest_mtime = mtime
-                    latest_png = p
-            except Exception:
-                pass
+            except OSError:
+                continue
+    return {
+        "snapshot_path": latest_path,
+        "snapshot_url": f"/api/rankstein/asset-preview?path={latest_path}" if latest_path else "",
+        "snapshot_updated_at": latest_mtime or None,
+    }
 
-        snap_url = ""
-        if latest_png and latest_png.exists():
-            rel_path = latest_png.relative_to(RANKSTEIN_ROOT).as_posix()
-            snap_url = f"/api/rankstein/asset-preview?path={rel_path}"
 
+def _collect_workers_snapshots() -> list[dict[str, Any]]:
+    """Queue leases are observable across processes; browser health and worker IDs are not."""
+    now = time.time()
+    supervisor = _worker_supervisor_evidence(now)
+    accounts = _worker_evidence_json(RANKSTEIN_ROOT / "data/pinterest_accounts.json")
+    account_rows = accounts.get("accounts")
+    configured = {
+        str(account.get("handle") or "")
+        for account in (account_rows if isinstance(account_rows, list) else [])
+        if isinstance(account, dict)
+    }
+    db_file = RANKSTEIN_ROOT / "data/queue/jobs.db"
+    if not db_file.is_file():
+        return []
+    try:
+        connection = sqlite3.connect(db_file.resolve().as_uri() + "?mode=ro", uri=True, timeout=1)
+        try:
+            deadline = time.monotonic() + 2
+            connection.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+            rows = connection.execute(
+                "SELECT id, type, payload_json, started_at FROM jobs "
+                "WHERE status = 'processing' AND type IN ('pin_upload', 'pin_save') "
+                "ORDER BY started_at DESC LIMIT 100"
+            ).fetchall()
+        finally:
+            connection.close()
+    except sqlite3.Error:
+        return []
+    results = []
+    for job_id, job_type, raw_payload, started_at in rows:
+        try:
+            payload = json.loads(raw_payload)
+            if not isinstance(payload, dict):
+                continue
+            extra = payload.get("extra")
+            extra = extra if isinstance(extra, dict) else {}
+            account = str(payload.get("account_handle") or extra.get("account_handle") or "").strip()
+            started_at = float(started_at or 0)
+        except (ValueError, TypeError):
+            continue
+        if not account or account not in configured:
+            lease = "account is not configured"
+        elif not 0 < started_at <= now + 5 or now - started_at > 600:
+            lease = "stale processing lease"
+        elif not supervisor.get("running"):
+            lease = "supervisor ownership unconfirmed"
+        elif started_at < float(supervisor.get("started_at") or 0):
+            lease = "lease belongs to an earlier supervisor"
+        else:
+            lease = "current queue lease"
+        current = lease == "current queue lease"
+        preview = (
+            _worker_snapshot_preview(account, started_at, now)
+            if current
+            else {"snapshot_path": "", "snapshot_url": "", "snapshot_updated_at": None}
+        )
         results.append(
             {
-                "worker_id": spec["id"],
-                "account": acc,
-                "status": "active",
-                "action": spec["default_action"],
-                "snapshot_path": str(latest_png.relative_to(RANKSTEIN_ROOT)) if latest_png else "",
-                "snapshot_url": snap_url,
-                "lease": "active (healthy)",
-                "updated_at": latest_mtime or time.time(),
+                "worker_id": None,
+                "job_id": job_id,
+                "account": account or "unreported",
+                "status": "leased" if current else "unconfirmed",
+                "action": f"{job_type} queue lease; browser activity unavailable",
+                "lease": lease,
+                "updated_at": started_at if 0 < started_at <= now + 5 else None,
+                "observed_at": now,
+                **preview,
             }
         )
     return results
@@ -2914,42 +3191,16 @@ def _stop_process(name: str) -> bool:
 def _manage_service_action(service_name: str, action: str, workers: int | None = None) -> dict[str, Any]:
     svc = service_name.lower().strip()
     act = action.lower().strip()
-    if svc == "agentmemory":
-        if act in ("stop", "kill"):
-            import psutil
+    if svc in ("agentmemory", "memory"):
+        from backend.services.memory_service import memory
 
-            killed = False
-            for proc in psutil.process_iter(["pid"]):
-                try:
-                    for conn in proc.connections():
-                        if conn.laddr.port == 3111:
-                            _kill_pid_tree(proc.pid)
-                            killed = True
-                except Exception:
-                    pass
-            return {
-                "ok": True,
-                "service": "agentmemory",
-                "action": act,
-                "message": "AgentMemory stopped." if killed else "No process was running on port 3111.",
-            }
-        elif act in ("start", "restart"):
-            if act == "restart":
-                _manage_service_action("agentmemory", "kill")
-                time.sleep(1)
-            ps_script = RANKSTEIN_ROOT / "scripts" / "dev" / "start_agentmemory.ps1"
-            cmd = ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", str(ps_script)]
-            proc = subprocess.Popen(
-                cmd,
-                cwd=str(RANKSTEIN_ROOT),
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-            )
-            return {
-                "ok": True,
-                "service": "agentmemory",
-                "action": act,
-                "message": f"AgentMemory start command launched (PID {proc.pid}).",
-            }
+        h = memory.health()
+        return {
+            "ok": True,
+            "service": "memory",
+            "action": act,
+            "message": f"Native Memory Manager is active ({h.get('engine', 'SQLite FTS5')}, {h.get('total_memories', 0)} memories).",
+        }
 
     elif svc in ("supervisor", "autonomous_supervisor"):
         if act in ("stop", "kill"):
@@ -3105,7 +3356,11 @@ def _run_clear_drafts_script() -> dict[str, Any]:
             timeout=180,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
-        msg = "Pinterest drafts cleared successfully across all accounts." if proc.returncode == 0 else f"Draft clearing exited with code {proc.returncode}."
+        msg = (
+            "Pinterest drafts cleared successfully across all accounts."
+            if proc.returncode == 0
+            else f"Draft clearing exited with code {proc.returncode}."
+        )
         if proc.stdout:
             last_lines = [line.strip() for line in proc.stdout.strip().splitlines() if line.strip()]
             if last_lines:
@@ -3169,11 +3424,15 @@ def _launch_campaign(body: dict[str, Any]) -> dict[str, Any]:
                 except Exception:
                     pass
 
-    cmd.extend([
-        "--limit", str(article_count),
-        "--workers", str(workers),
-        "--once",
-    ])
+    cmd.extend(
+        [
+            "--limit",
+            str(article_count),
+            "--workers",
+            str(workers),
+            "--once",
+        ]
+    )
     if bypass_admission:
         cmd.append("--force")
 

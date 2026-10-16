@@ -19,6 +19,7 @@ interface RecipeDetailsProps {
   cookTime?: string;
   yields?: string | number;
   title?: string;
+  stepImages?: any[];
 }
 
 // Helper to format ISO 8601 durations (e.g., PT20M -> 20 min)
@@ -34,14 +35,44 @@ const formatDuration = (duration?: string) => {
   return `${hours}${minutes}`.trim() || '0 min';
 };
 
-// Helper to normalize instructions (handle string[] or HowToStep[])
-const normalizeInstructions = (steps: any[]): string[] => {
+interface StepItem {
+  text: string;
+  imageUrl?: string;
+}
+
+// Helper to normalize instructions (handle string[] or HowToStep[]) and attach step images
+const normalizeInstructions = (steps: any[], stepImages?: any[]): StepItem[] => {
   if (!Array.isArray(steps)) return [];
-  return steps.map(step => {
-    if (typeof step === 'string') return step;
-    if (step && typeof step === 'object' && step.text) return step.text;
-    return '';
-  }).filter(Boolean);
+
+  // Build lookup map from stepImages prop: step_number / step -> image_url
+  const imageMap = new Map<number, string>();
+  if (Array.isArray(stepImages)) {
+    stepImages.forEach((img, idx) => {
+      if (!img) return;
+      const num = img.step_number || img.step || idx + 1;
+      const url = img.image_url || img.url;
+      if (url && typeof url === 'string') {
+        imageMap.set(Number(num), url);
+      }
+    });
+  }
+
+  return steps.map((step, idx) => {
+    const stepNum = idx + 1;
+    let text = '';
+    let imageUrl = imageMap.get(stepNum);
+
+    if (typeof step === 'string') {
+      text = step;
+    } else if (step && typeof step === 'object') {
+      text = step.text || step.name || '';
+      if (!imageUrl && step.image) {
+        imageUrl = typeof step.image === 'string' ? step.image : (step.image.url || '');
+      }
+    }
+
+    return { text: text.trim(), imageUrl };
+  }).filter(s => Boolean(s.text));
 };
 
 export default function RecipeDetails({ 
@@ -51,7 +82,8 @@ export default function RecipeDetails({
   prepTime, 
   cookTime, 
   yields,
-  title
+  title,
+  stepImages = []
 }: RecipeDetailsProps) {
   const [servings, setServings] = React.useState(Number(yields) || 4);
   const [isCookMode, setIsCookMode] = React.useState(false);
@@ -76,7 +108,7 @@ export default function RecipeDetails({
     );
   };
 
-  const normalizedSteps = normalizeInstructions(instructions);
+  const normalizedSteps = normalizeInstructions(instructions, stepImages);
 
   // Simple ingredient scaling logic
   const scaleIngredient = (ingredient: any) => {
@@ -271,13 +303,23 @@ export default function RecipeDetails({
                             {checkedSteps.includes(idx) ? '✓' : idx + 1}
                           </div>
                         </div>
-                        <div className="pt-0.5 md:pt-1">
+                        <div className="pt-0.5 md:pt-1 flex-1">
                           <span className="hidden print:inline font-serif font-bold text-base mr-3">{idx + 1}.</span>
                           <p className={`text-ink text-sm md:text-base leading-relaxed font-serif transition-all duration-500 ${
                             checkedSteps.includes(idx) ? 'line-through opacity-50' : ''
                           }`}>
-                            {step}
+                            {step.text}
                           </p>
+                          {step.imageUrl && (
+                            <div className="mt-4 mb-2 overflow-hidden rounded-2xl shadow-md border border-brand-fresa/10 max-w-xl group/img">
+                              <img 
+                                src={step.imageUrl} 
+                                alt={`Paso ${idx + 1}: ${step.text.slice(0, 80)}`}
+                                loading="lazy"
+                                className="w-full h-auto max-h-[380px] object-cover transition-transform duration-500 group-hover/img:scale-105"
+                              />
+                            </div>
+                          )}
                         </div>
                         {idx !== normalizedSteps.length - 1 && (
                           <div className={`absolute left-7 md:left-8 top-14 md:top-16 w-px h-[calc(100%+3rem)] transition-all duration-700 print:hidden ${

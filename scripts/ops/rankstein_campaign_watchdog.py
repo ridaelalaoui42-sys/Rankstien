@@ -4,10 +4,8 @@ import json
 import os
 import socket
 import subprocess
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 RANKSTEIN = Path(r"C:\Users\REDX420\Desktop\Rankstein")
 PYTHON = Path(r"C:\Program Files\Python312\python.exe")
@@ -121,7 +119,7 @@ def _latest_report() -> dict:
 
 def _file_age_minutes(path: Path) -> float | None:
     try:
-        return (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 60
+        return (datetime.now(UTC).timestamp() - path.stat().st_mtime) / 60
     except OSError:
         return None
 
@@ -129,6 +127,31 @@ def _file_age_minutes(path: Path) -> float | None:
 def _health_json() -> dict:
     code, out = _run([str(PYTHON), "run_autonomous.py", "status"], timeout=90)
     return {"ok": code == 0, "summary": "\n".join(out.splitlines()[:16])}
+
+
+def _pinterest_admission() -> dict:
+    code, out = _run(
+        [
+            str(PYTHON),
+            "-c",
+            "import json; from pinterest_automation.runtime_state import supervisor_admission_status; "
+            "print(json.dumps(supervisor_admission_status()))",
+        ],
+        timeout=30,
+    )
+    if code == 0:
+        try:
+            status = json.loads(out)
+            if (
+                isinstance(status, dict)
+                and isinstance(status.get("can_start"), bool)
+                and isinstance(status.get("reason"), str)
+                and status["reason"]
+            ):
+                return status
+        except (ValueError, TypeError):
+            pass
+    return {"can_start": False, "reason": "ownership_unverified"}
 
 
 def main() -> int:
@@ -153,9 +176,17 @@ def main() -> int:
     if not ports["whatsapp_bridge"]:
         warnings.append("WhatsApp bridge is not listening on 3000 (session inactive).")
 
-    supervisor_running = _ps_contains("run_autonomous.py")
-    remaster_running = _ps_contains("backend\\services\\remasterer.py") or _ps_contains("backend/services/remasterer.py")
-    articles_running = _ps_contains("backend\\scripts\\turbo_articles.py") or _ps_contains("backend/scripts/turbo_articles.py")
+    supervisor_admission = _pinterest_admission()
+    supervisor_state = {
+        "live_owner": "running",
+        "maintenance": "maintenance",
+    }.get(supervisor_admission["reason"], "blocked")
+    remaster_running = _ps_contains("backend\\services\\remasterer.py") or _ps_contains(
+        "backend/services/remasterer.py"
+    )
+    articles_running = _ps_contains("backend\\scripts\\turbo_articles.py") or _ps_contains(
+        "backend/scripts/turbo_articles.py"
+    )
     article_log_age = min(
         [
             age
@@ -169,9 +200,14 @@ def main() -> int:
     )
     article_idle = articles_running and (article_log_age is None or article_log_age > 90)
 
-    if not supervisor_running:
-        pid = _start_background([str(PYTHON), "-u", str(RANKSTEIN / "run_autonomous.py"), "run"], "automation.log")
+    if supervisor_admission["can_start"]:
+        pid = _start_background(
+            [str(PYTHON), "-u", str(RANKSTEIN / "run_autonomous.py"), "run"], "automation.log"
+        )
         actions.append(f"started Pinterest supervisor pid={pid}")
+        supervisor_state = "started"
+    elif supervisor_admission["reason"] in {"ownership_unverified", "conflicting_owners"}:
+        blockers.append("Pinterest supervisor startup deferred: lease ownership could not be verified.")
 
     if not remaster_running:
         pid = _start_background(
@@ -222,7 +258,7 @@ def main() -> int:
         "Workers: "
         + ", ".join(
             [
-                f"pinterest_supervisor={'running' if supervisor_running else 'started'}",
+                f"pinterest_supervisor={supervisor_state}",
                 f"remasterer={'running' if remaster_running else 'started'}",
                 f"article_worker={'running' if articles_running and not article_idle else 'started'}",
             ]

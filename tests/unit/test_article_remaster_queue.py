@@ -72,6 +72,7 @@ def _enqueue(
     *,
     image_paths: list[str] | None = None,
     assets: list[dict] | None = None,
+    limit: int = 30,
 ) -> dict:
     if image_paths is None or assets is None:
         image_paths, assets = _production_assets(tmp_path)
@@ -84,7 +85,7 @@ def _enqueue(
         image_paths=image_paths,
         asset_metadata=assets,
         pipeline_run_id="run-123",
-        limit=30,
+        limit=limit,
     )
 
 
@@ -140,6 +141,25 @@ def test_article_remaster_queue_rejects_partial_batch_before_mutation(
 
     assert result["success"] is False
     assert "exactly 30" in result["error"]
+    assert result["jobs_enqueued"] == 0
+    assert queue.get_stats()["total"] == 0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("asset_count", [2, 14, 28])
+def test_article_remaster_queue_rejects_explicit_partial_limit_before_mutation(
+    queue: JobQueue, tmp_path: Path, asset_count: int
+) -> None:
+    image_paths, assets = _production_assets(tmp_path)
+    result = _enqueue(
+        tmp_path,
+        image_paths=image_paths[:asset_count],
+        assets=assets[:asset_count],
+        limit=asset_count,
+    )
+
+    assert result["success"] is False
+    assert "limit must be exactly 30" in result["error"]
     assert result["jobs_enqueued"] == 0
     assert queue.get_stats()["total"] == 0
 

@@ -284,7 +284,7 @@ def test_pinterest_search_timeouts_retry_each_query_and_report_diagnostics(monke
         "text_unavailable": 0,
         "held_sources_skipped": 0,
         "excluded_source_count": 0,
-        "candidate_limit": 90,
+        "candidate_limit": 270,
         "deadline_exceeded": 0,
         "ocr_checks_started": 0,
         "ocr_checks_completed": 0,

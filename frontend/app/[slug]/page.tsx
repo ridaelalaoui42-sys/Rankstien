@@ -448,6 +448,7 @@ export default async function RecipePage({ params }: PageProps) {
                   cookTime={recipeSchema.cookTime}
                   yields={recipeSchema.recipeYield || recipeSchema.yields}
                   title={post.title}
+                  stepImages={post.step_images || recipeSchema.step_images || []}
                 />
               </div>
             )}

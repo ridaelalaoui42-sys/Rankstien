@@ -30,10 +30,10 @@ if (Test-Path $EnvFile) {
     }
 }
 
-# 2. Start AgentMemory (Foundational)
+# 2. Native Memory Manager (Foundational)
 $agentMemoryScript = Join-Path $PSScriptRoot "start_agentmemory.ps1"
 if (Test-Path $agentMemoryScript) {
-    Write-Host "[boot] Starting AgentMemory server..."
+    Write-Host "[boot] Verifying Native RankStein Memory Manager..."
     & $agentMemoryScript
 } else {
     Write-Error "[boot] CRITICAL: start_agentmemory.ps1 not found in $PSScriptRoot"

@@ -10,16 +10,17 @@ import re
 import signal
 import time
 from datetime import datetime
-from pathlib import Path
 
+from .account_recovery import paused_accounts
 from .circuit_breaker import CircuitBreakerOpenError, get_circuit_breaker
 from .config import get_config, normalize_board_name
 from .health_monitor import get_health_monitor
 from .job_queue import Job, get_job_queue
-from .pinterest_driver import PinterestDriver
+from .media_validation import validate_pin_upload_image
+from .pinterest_driver import PinterestDriver, PinterestNavigationUnavailableError
 from .rate_limiter import get_rate_limiter
 from .routing import cross_save_targets
-from .runtime_state import SupervisorLease
+from .runtime_state import SupervisorLease, SupervisorOwnershipLostError
 from .session_pool import get_session_pool
 
 logger = logging.getLogger("rankstein.supervisor")
@@ -32,7 +33,9 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
-PIN_UPLOAD_JOB_TIMEOUT_SECONDS = max(60, _int_env("PINTEREST_PIN_UPLOAD_JOB_TIMEOUT_SECONDS", 210))
+# Allow one bounded draft cleanup and a fresh publish attempt in the same account
+# flow. An explicit shorter operator timeout still applies when configured.
+PIN_UPLOAD_JOB_TIMEOUT_SECONDS = max(60, _int_env("PINTEREST_PIN_UPLOAD_JOB_TIMEOUT_SECONDS", 420))
 PIN_SAVE_JOB_TIMEOUT_SECONDS = max(45, _int_env("PINTEREST_PIN_SAVE_JOB_TIMEOUT_SECONDS", 120))
 STALE_REQUEUE_INTERVAL_SECONDS = max(30, _int_env("PINTEREST_STALE_REQUEUE_INTERVAL_SECONDS", 60))
 ACCOUNT_LOCK_TIMEOUT_SECONDS = max(
@@ -42,6 +45,8 @@ ACCOUNT_LOCK_TIMEOUT_SECONDS = max(
         _int_env("PINTEREST_ACCOUNT_BOARD_LOCK_TIMEOUT_SECONDS", 180),
     ),
 )
+DRAFT_CAPACITY_COOLDOWN_SECONDS = 15 * 60
+NAVIGATION_UNAVAILABLE_COOLDOWN_SECONDS = 5 * 60
 
 
 class AutonomousSupervisor:
@@ -57,15 +62,26 @@ class AutonomousSupervisor:
     @staticmethod
     def is_verified_upload(result: dict) -> bool:
         """Return True only if upload result has an attested Pinterest pin_id (>=15 digits) or valid pin_url."""
-        if not isinstance(result, dict) or not result.get("success"):
+        if not isinstance(result, dict) or result.get("success") is not True:
             return False
         pin_id = str(result.get("pin_id") or "").strip()
         pin_url = str(result.get("pin_url") or "").strip()
-        if pin_id and re.match(r"^\d{15,22}$", pin_id):
+        if re.fullmatch(r"\d{15,22}", pin_id):
             return True
-        if pin_url and "/pin/" in pin_url:
-            return True
-        return False
+        from urllib.parse import urlparse
+
+        try:
+            parsed = urlparse(pin_url)
+            parts = parsed.path.strip("/").split("/")
+            return bool(
+                parsed.scheme == "https"
+                and parsed.hostname in {"pinterest.com", "www.pinterest.com"}
+                and len(parts) == 2
+                and parts[0] == "pin"
+                and re.fullmatch(r"\d{15,22}", parts[1])
+            )
+        except ValueError:
+            return False
 
     def __init__(self, worker_count: int | None = None):
         config_obj = get_config()
@@ -77,7 +93,7 @@ class AutonomousSupervisor:
             self.config = SupervisorConfig(**self.config)
 
         if worker_count is not None and int(worker_count) > 0:
-            self.config.worker_count = int(worker_count)
+            self.config.worker_count = min(int(worker_count), max(1, _int_env("PINTEREST_MAX_WORKERS", 10)))
 
         self.health = get_health_monitor()
         self.queue = get_job_queue()
@@ -245,8 +261,33 @@ class AutonomousSupervisor:
             if not check.get("ok") and check.get("severity") == "critical"
         }
 
+    async def _validate_upload_media(self, job: Job) -> bool:
+        """Reject this source file before it can block an account's browser lane."""
+        if job.type != "pin_upload":
+            return True
+        validation = await asyncio.to_thread(validate_pin_upload_image, job.payload.get("image_path"))
+        if validation["ok"]:
+            return True
+        reason = validation["reason"]
+        if reason == "invalid_quality_configuration":
+            logger.error("Upload media quality configuration is invalid; retaining job %s", job.id)
+            await self.queue.release_async(
+                job.id, delay_seconds=max(60.0, (job.next_retry_at or 0) - time.time())
+            )
+            return False
+        error = (
+            f"Invalid Pinterest upload image: {reason} "
+            f"(format={validation['actual_format']}; "
+            f"dimensions={validation['width']}x{validation['height']})"
+        )
+        logger.warning("Job %s retained in DLQ: %s", job.id, error)
+        await self.queue.fail_async(job.id, error)
+        return False
+
     async def _process_job(self, job: Job) -> bool:
         """Process a single job. Returns True if successful."""
+        if not await self._validate_upload_media(job):
+            return False
         driver = await self._get_driver()
         start = time.time()
 
@@ -255,7 +296,9 @@ class AutonomousSupervisor:
                 payload = job.payload
                 # Ensure logged in
                 if not await driver.ensure_logged_in():
-                    await self.queue.retry_or_fail_async(job.id, "Login failed")
+                    await self._defer_account_unavailable_job(
+                        job, self._account_handle_for_job(job), "Pinterest authentication unavailable"
+                    )
                     return False
 
                 # Create pin
@@ -268,7 +311,7 @@ class AutonomousSupervisor:
                     board_name=normalize_board_name(payload.get("board_name") or get_config().default_board),
                 )
 
-                if result.get("success"):
+                if self.is_verified_upload(result):
                     elapsed = time.time() - start
                     logger.info(f"Job {job.id} succeeded in {elapsed:.1f}s")
                     await self.queue.complete_async(job.id, result)
@@ -293,13 +336,27 @@ class AutonomousSupervisor:
 
                     return True
                 else:
-                    error = result.get("error", "Unknown error")
-                    await self.queue.retry_or_fail_async(job.id, error)
+                    error = (
+                        "Unverified Pinterest upload: success result has no valid pin_id or pin_url"
+                        if result.get("success")
+                        else result.get("error", "Unknown error")
+                    )
+                    if result.get("error_code") == "pinterest_draft_capacity":
+                        await self._defer_draft_capacity_job(job, self._account_handle_for_job(job), error)
+                    elif result.get("error_code") == "pinterest_publish_unavailable":
+                        await self._defer_account_unavailable_job(
+                            job, self._account_handle_for_job(job), error
+                        )
+                    else:
+                        await self.queue.retry_or_fail_async(job.id, error)
                     return False
             else:
                 await self.queue.retry_or_fail_async(job.id, f"Unknown job type: {job.type}")
                 return False
 
+        except PinterestNavigationUnavailableError as e:
+            await self._defer_navigation_unavailable_job(job, self._account_handle_for_job(job), e)
+            return False
         except CircuitBreakerOpenError as e:
             logger.warning(f"Job {job.id} blocked by circuit breaker: {e}")
             # Put back in queue for retry later
@@ -309,6 +366,58 @@ class AutonomousSupervisor:
             logger.exception(f"Job {job.id} crashed: {e}")
             await self.queue.retry_or_fail_async(job.id, str(e))
             return False
+
+    async def _defer_navigation_unavailable_job(
+        self, job: Job, account_handle: str | None, error: PinterestNavigationUnavailableError
+    ) -> None:
+        await self._defer_account_unavailable_job(
+            job, account_handle, str(error), retry_after_seconds=getattr(error, "retry_after_seconds", 0)
+        )
+
+    async def _defer_account_unavailable_job(
+        self, job: Job, account_handle: str | None, error: str, *, retry_after_seconds: float = 0
+    ) -> None:
+        """Account dependencies never exhaust the queued content's retry budget."""
+        now = time.time()
+        if not hasattr(self, "_account_cooldowns"):
+            self._account_cooldowns = {}
+        key = account_handle or "default"
+        retry_at = max(
+            now + NAVIGATION_UNAVAILABLE_COOLDOWN_SECONDS,
+            now + max(0, retry_after_seconds),
+            self._account_cooldowns.get(key, 0.0),
+            job.next_retry_at or 0.0,
+        )
+        self._account_cooldowns[key] = retry_at
+        logger.warning(
+            "Deferring job %s for account %s for at least %.1fs: %s",
+            job.id,
+            key,
+            retry_at - now,
+            error,
+        )
+        await self.queue.release_async(job.id, delay_seconds=retry_at - now)
+
+    async def _defer_draft_capacity_job(self, job: Job, account_handle: str | None, error: str):
+        """Keep an account's blocked upload pending without consuming an attempt."""
+        now = time.time()
+        if not hasattr(self, "_account_cooldowns"):
+            self._account_cooldowns = {}
+        key = account_handle or "default"
+        retry_at = max(
+            now + DRAFT_CAPACITY_COOLDOWN_SECONDS,
+            self._account_cooldowns.get(key, 0.0),
+            job.next_retry_at or 0.0,
+        )
+        self._account_cooldowns[key] = retry_at
+        logger.warning(
+            "Deferring job %s for account %s until %s: %s",
+            job.id,
+            key,
+            datetime.fromtimestamp(retry_at).isoformat(),
+            error,
+        )
+        await self.queue.release_async(job.id, delay_seconds=retry_at - now)
 
     async def _queue_worker(self, worker_id: int):
         """Continuously process jobs from the queue."""
@@ -342,12 +451,32 @@ class AutonomousSupervisor:
 
                     # 2. Dequeue
                     locked_keys = {k for k, l in self._account_locks.items() if l.locked()}
+                    locked_keys.update(paused_accounts())
+                    cooldowns = getattr(self, "_account_cooldowns", {})
+                    locked_keys.update(key for key, until in cooldowns.items() if until > time.time())
                     default_account = self._default_account_handle() or "rida"
+                    lease_started_at = getattr(getattr(self, "_lease", None), "started_at", None)
                     job = await self.queue.dequeue_async(
-                        locked_keys=locked_keys, default_account=default_account
+                        locked_keys=locked_keys,
+                        default_account=default_account,
+                        active_processing_since=lease_started_at,
                     )
                     if job is None:
                         await asyncio.sleep(self.config.watch_interval_seconds)
+                        continue
+
+                    # A stop or lost ownership may arrive while SQLite is
+                    # claiming a job. Return that lease before opening another
+                    # account session; release preserves its retry budget.
+                    if self._shutdown_event.is_set():
+                        await self.queue.release_async(job.id, delay_seconds=0)
+                        break
+
+                    if self._account_handle_for_job(job) in paused_accounts():
+                        await self.queue.release_async(
+                            job.id,
+                            delay_seconds=max(60.0, (job.next_retry_at or 0) - time.time()),
+                        )
                         continue
 
                     logger.info(f"Worker {worker_id} processing job {job.id}")
@@ -365,6 +494,9 @@ class AutonomousSupervisor:
                             await self.queue.retry_or_fail_async(
                                 job.id, "Missing domain_handle; production jobs fail closed"
                             )
+                            continue
+
+                        if not await self._validate_upload_media(job):
                             continue
 
                         board_name = normalize_board_name(
@@ -425,16 +557,9 @@ class AutonomousSupervisor:
                                 if not await driver.ensure_logged_in(account_handle):
                                     await driver.close(healthy=False)
                                     driver = PinterestDriver()
-                                    await self.queue.retry_or_fail_async(job.id, "Login failed")
-                                    continue
-
-                                # Validate image file existence
-                                img_path = payload.get("image_path", "")
-                                if not img_path or not Path(img_path).exists():
-                                    logger.warning(
-                                        f"Worker {worker_id}: Image file not found: {img_path}. Moving job {job.id} to DLQ."
+                                    await self._defer_account_unavailable_job(
+                                        job, account_handle, "Pinterest authentication unavailable"
                                     )
-                                    await self.queue.fail_async(job.id, f"Image file not found: {img_path}")
                                     continue
 
                                 # Create pin
@@ -455,7 +580,7 @@ class AutonomousSupervisor:
                                     timeout=PIN_UPLOAD_JOB_TIMEOUT_SECONDS,
                                 )
 
-                                if result.get("success"):
+                                if self.is_verified_upload(result):
                                     elapsed = time.time() - start
                                     logger.info(
                                         f"Worker {worker_id}: Job {job.id} succeeded in {elapsed:.1f}s"
@@ -472,11 +597,7 @@ class AutonomousSupervisor:
                                     # Delete local image only after verified upload with real pin_id / pin_url
                                     image_path = payload.get("image_path")
                                     if image_path:
-                                        if not self.is_verified_upload(result):
-                                            logger.warning(
-                                                f"Worker {worker_id}: Preserving image {image_path}: Upload result is not verified with a valid pin_id or pin_url."
-                                            )
-                                        elif await self.queue.image_path_already_queued_async(image_path):
+                                        if await self.queue.image_path_already_queued_async(image_path):
                                             logger.info(
                                                 f"Worker {worker_id}: Preserving image {image_path} because other jobs are still queued or in DLQ"
                                             )
@@ -491,8 +612,25 @@ class AutonomousSupervisor:
                                                     f"Worker {worker_id}: Failed to delete {image_path}: {e}"
                                                 )
                                 else:
-                                    error = result.get("error", "Unknown error")
-                                    if error == "Rate limit exceeded":
+                                    error = (
+                                        "Unverified Pinterest upload: success result has no valid pin_id or pin_url"
+                                        if result.get("success")
+                                        else result.get("error", "Unknown error")
+                                    )
+                                    if result.get("error_code") == "pinterest_draft_capacity":
+                                        cleanup = result.get("draft_cleanup")
+                                        if isinstance(cleanup, dict):
+                                            logger.warning(
+                                                "Worker %s: Draft recovery remains blocked for %s: remaining=%s error=%s",
+                                                worker_id,
+                                                account_handle,
+                                                cleanup.get("remaining_count"),
+                                                cleanup.get("error"),
+                                            )
+                                        await self._defer_draft_capacity_job(job, account_handle, error)
+                                    elif result.get("error_code") == "pinterest_publish_unavailable":
+                                        await self._defer_account_unavailable_job(job, account_handle, error)
+                                    elif error == "Rate limit exceeded":
                                         await self.queue.release_async(
                                             job.id,
                                             delay_seconds=max(
@@ -501,57 +639,26 @@ class AutonomousSupervisor:
                                             ),
                                         )
                                     else:
-                                        # Self-healing: if draft limit / upload editor unlock failed, trigger draft purge
-                                        if any(
-                                            m in error.lower()
-                                            for m in (
-                                                "draft",
-                                                "limit",
-                                                "unlock within timeout",
-                                                "50 drafts",
-                                                "creator",
-                                            )
-                                        ):
-                                            logger.warning(
-                                                f"Worker {worker_id}: Draft/upload limit detected ({error}). Triggering self-healing draft purge for account '{account_handle}'..."
-                                            )
-                                            try:
-                                                from types import SimpleNamespace
-
-                                                from scripts.ops.clear_pinterest_drafts import (
-                                                    aggressive_clear,
-                                                )
-
-                                                acc_session = get_config().accounts.get(account_handle)
-                                                if acc_session:
-                                                    acc_obj = SimpleNamespace(
-                                                        name=account_handle,
-                                                        session_dir=get_config().session_dir_for(
-                                                            account_handle
-                                                        )
-                                                        if hasattr(get_config(), "session_dir_for")
-                                                        else (
-                                                            Path("data/sessions")
-                                                            / (acc_session.session_name or account_handle)
-                                                        ),
-                                                        browser=acc_session.browser or "chromium",
-                                                    )
-                                                    await aggressive_clear(acc_obj)
-                                            except Exception as heal_exc:
-                                                logger.warning(
-                                                    f"Worker {worker_id}: Self-healing draft purge failed: {heal_exc}"
-                                                )
-
+                                        # Draft recovery stays inside the driver's leased account
+                                        # session; a second browser here would race that profile.
                                         # Self-healing: if board selection failed, run board normalization and queue recovery
-                                        if "board" in error.lower() and ("selection failed" in error.lower() or "not found" in error.lower()):
+                                        if "board" in error.lower() and (
+                                            "selection failed" in error.lower()
+                                            or "not found" in error.lower()
+                                        ):
                                             logger.warning(
                                                 f"Worker {worker_id}: Board selection failure detected ({error}). Running self-healing board normalization and recovery..."
                                             )
                                             try:
-                                                from pinterest_automation.board_normalizer import normalize_queue_boards
+                                                from pinterest_automation.board_normalizer import (
+                                                    normalize_queue_boards,
+                                                )
+
                                                 normalize_queue_boards()
                                             except Exception as board_heal_exc:
-                                                logger.debug(f"Worker {worker_id}: Board normalization helper notice: {board_heal_exc}")
+                                                logger.debug(
+                                                    f"Worker {worker_id}: Board normalization helper notice: {board_heal_exc}"
+                                                )
 
                                         await driver.close(healthy=False)
                                         driver = PinterestDriver()
@@ -562,7 +669,9 @@ class AutonomousSupervisor:
                                 if not await driver.ensure_logged_in(account_handle):
                                     await driver.close(healthy=False)
                                     driver = PinterestDriver()
-                                    await self.queue.retry_or_fail_async(job.id, "Login failed")
+                                    await self._defer_account_unavailable_job(
+                                        job, account_handle, "Pinterest authentication unavailable"
+                                    )
                                     continue
 
                                 # Save pin
@@ -617,9 +726,20 @@ class AutonomousSupervisor:
                             if not released:
                                 driver = PinterestDriver()
 
+                    except PinterestNavigationUnavailableError as e:
+                        await self._defer_navigation_unavailable_job(job, account_handle, e)
                     except CircuitBreakerOpenError as e:
                         logger.warning(f"Worker {worker_id}: Job {job.id} blocked by circuit breaker: {e}")
-                        await self.queue.retry_or_fail_async(job.id, str(e))
+                        recovery_seconds = getattr(
+                            getattr(getattr(driver, "circuit", None), "config", None),
+                            "recovery_timeout_seconds",
+                            60,
+                        )
+                        retry_after = max(60.0, float(recovery_seconds) + 5.0)
+                        if not hasattr(self, "_account_cooldowns"):
+                            self._account_cooldowns = {}
+                        self._account_cooldowns[account_handle or "default"] = time.time() + retry_after
+                        await self.queue.release_async(job.id, delay_seconds=retry_after)
                     except TimeoutError as e:
                         logger.warning(
                             "Worker %s: Job %s timed out after %ss; rotating session and retrying",
@@ -777,16 +897,20 @@ class AutonomousSupervisor:
     async def _control_loop(self):
         while not self._shutdown_event.is_set():
             try:
-                self._lease.heartbeat()
                 if self._lease.stop_requested():
                     logger.info("External shutdown request received")
                     self._shutdown_event.set()
                     return
+                self._lease.heartbeat()
+            except SupervisorOwnershipLostError as exc:
+                logger.error("Supervisor ownership lost; draining workers: %s", exc)
+                self._shutdown_event.set()
+                return
             except Exception as exc:
                 logger.warning("Supervisor control heartbeat failed; retrying: %s", exc)
             await asyncio.sleep(1)
 
-    async def run(self):
+    async def run(self, *, startup_draft_maintenance: bool = True):
         """Start the autonomous supervisor."""
         logger.info("=" * 60)
         logger.info(
@@ -806,22 +930,24 @@ class AutonomousSupervisor:
             pass  # Windows or no signals
 
         tasks: list[asyncio.Task] = []
+        worker_tasks: list[asyncio.Task] = []
         try:
             snap = self.health.heartbeat()
             if not snap.all_ok:
                 logger.warning("Initial health check found issues, starting anyway...")
 
-            # Startup Draft Maintenance: monitor and clear drafts on all accounts to prevent blockers
-            logger.info("Running pre-session draft purge across configured Pinterest accounts...")
-            try:
-                from scripts.ops.clear_pinterest_drafts import clear_all_accounts_drafts
+            if startup_draft_maintenance:
+                # Legacy full startup retains its account maintenance behavior.
+                logger.info("Running pre-session draft purge across configured Pinterest accounts...")
+                try:
+                    from scripts.ops.clear_pinterest_drafts import clear_all_accounts_drafts
 
-                purge_results = await clear_all_accounts_drafts()
-                logger.info(
-                    f"Startup draft purge completed for {len(purge_results)} account(s): {purge_results}"
-                )
-            except Exception as draft_exc:
-                logger.warning(f"Startup draft purge non-fatal error: {draft_exc}")
+                    purge_results = await clear_all_accounts_drafts()
+                    logger.info(
+                        f"Startup draft purge completed for {len(purge_results)} account(s): {purge_results}"
+                    )
+                except Exception as draft_exc:
+                    logger.warning(f"Startup draft purge non-fatal error: {draft_exc}")
 
             tasks = [
                 asyncio.create_task(self._control_loop()),
@@ -832,12 +958,34 @@ class AutonomousSupervisor:
             ]
 
             for i in range(self.config.worker_count):
-                tasks.append(asyncio.create_task(self._queue_worker(i)))
+                task = asyncio.create_task(self._queue_worker(i))
+                worker_tasks.append(task)
+                tasks.append(task)
                 await asyncio.sleep(2)
 
             await self._shutdown_event.wait()
         finally:
-            logger.info("Shutdown requested, stopping workers...")
+            logger.info("Shutdown requested, draining active workers before closing sessions...")
+            drain_seconds = max(
+                getattr(self.config, "graceful_shutdown_seconds", 30),
+                PIN_UPLOAD_JOB_TIMEOUT_SECONDS + 30,
+                PIN_SAVE_JOB_TIMEOUT_SECONDS + 30,
+            )
+            pending = set(worker_tasks)
+            deadline = time.monotonic() + drain_seconds
+            heartbeat_owned = True
+            while pending and time.monotonic() < deadline:
+                if heartbeat_owned:
+                    try:
+                        self._lease.heartbeat()
+                    except SupervisorOwnershipLostError as exc:
+                        heartbeat_owned = False
+                        logger.error("Draining without overwriting the current supervisor owner: %s", exc)
+                    except OSError as exc:
+                        logger.warning("Drain heartbeat unavailable; continuing worker cleanup: %s", exc)
+                _, pending = await asyncio.wait(pending, timeout=1.0)
+            if pending:
+                logger.warning("Drain deadline reached; preserving %s unfinished queue leases", len(pending))
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
