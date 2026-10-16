@@ -250,8 +250,7 @@ def build_pipeline_payload(
     visible = ordered[: max(1, limit)]
     ongoing = [item for item in ordered if item["is_ongoing"]]
     history = [item for item in ordered if not item["is_ongoing"]]
-    if live_only:
-        history.sort(key=lambda item: -float(item.get("updated_at") or 0))
+    history.sort(key=lambda item: -float(item.get("updated_at") or 0))
     recent_history = history[: max(0, history_limit if history_limit is not None else limit)]
     if deferred_queues:
         for index, item in enumerate(recent_history):

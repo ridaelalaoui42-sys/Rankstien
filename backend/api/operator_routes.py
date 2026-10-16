@@ -3012,13 +3012,10 @@ def _collect_telemetry_gauges() -> dict[str, Any]:
                         if any(row[0].startswith(vd) for vd in valid_dates):
                             pins_today += 1
             pins_total = sum(all_dates_count.values())
-            if pins_today == 0 and all_dates_count:
-                latest_date = sorted(all_dates_count.keys())[-1]
-                pins_today = all_dates_count[latest_date]
         except Exception:
             pass
 
-    daily_cap = 500
+    daily_cap = int(_rankstein_setting("PINTEREST_DAILY_PIN_BUDGET", "5000") or 5000)
     daily_pct = round((pins_today / daily_cap) * 100, 1)
 
     return {

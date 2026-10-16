@@ -862,7 +862,7 @@ function updateTelemetryHud(t) {
   if ($("hud-mem-dot")) {
     $("hud-mem-dot").className = `hud-status-indicator ${t.memory_healthy ? "ok" : "bad"}`;
   }
-  if ($("hud-pins-val")) $("hud-pins-val").textContent = `${t.pins_today || 0} / ${t.pins_daily_cap || 500}`;
+  if ($("hud-pins-val")) $("hud-pins-val").textContent = `${t.pins_today || 0} / ${(t.pins_daily_cap || 5000).toLocaleString()}`;
   if ($("hud-pins-bar")) $("hud-pins-bar").style.width = `${Math.min(100, t.pins_daily_percent || 0)}%`;
 }
 
