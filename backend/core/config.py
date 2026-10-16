@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     google_api_key: str = Field(
         default="", description="Gemini API key (legacy - not needed for CLI pipeline)"
     )
-    adk_model: str = Field(default="gemini-3.1-flash-lite-preview")
-    adk_fallback_model: str = Field(default="gemini-3.1-pro-preview", alias="RANKSTEIN_FALLBACK_MODEL")
+    adk_model: str = Field(default="gemini-3.5-flash")
+    adk_fallback_model: str = Field(default="gemini-3.1-flash-lite", alias="RANKSTEIN_FALLBACK_MODEL")
     adk_temperature: float = Field(default=0.7, ge=0, le=2)
     gemini_cli_path: str = Field(default="", alias="GEMINI_CLI_PATH")
     gemini_cli_timeout_seconds: int = Field(default=300, alias="GEMINI_CLI_TIMEOUT_SECONDS")

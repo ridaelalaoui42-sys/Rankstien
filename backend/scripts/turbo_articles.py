@@ -1226,13 +1226,13 @@ async def _call_gemini_api_for_article(
         keyword, domain, source_material=source_material, revision_feedback=revision_feedback
     )
     system_instruction = "You are a professional recipe article generator for RankStein. Output ONLY valid, complete JSON matching the requested schema."
-    preferred_model = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+    preferred_model = os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash"
     candidate_models = [
         preferred_model,
-        "gemini-2.5-flash",
         "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-        "gemini-flash-latest",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite-preview",
     ]
     models = list(dict.fromkeys(m for m in candidate_models if m))
     session = _get_session()
