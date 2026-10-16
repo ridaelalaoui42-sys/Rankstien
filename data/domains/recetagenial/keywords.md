@@ -249,7 +249,7 @@
 | tarta de queso al horno tradicional | Postres | Pinterest Trends + Google News | Receta Genial | High | Failed |
 | Huevos rellenos de atún con arañas de aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
 | lentejas frías estilo ensalada | General | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Crema de calabaza asada con telaraña de nata | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Crema de calabaza asada con telaraña de nata | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Live |
 | Dedos de bruja salados con salchichas y almendras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Croquetas caseras de calabaza y queso para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Needs Verification |
 | mejillones en escabeche casero | Pescados | Pinterest Trends + Google News | Receta Genial | Medium | Live |
