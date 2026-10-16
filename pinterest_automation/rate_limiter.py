@@ -530,6 +530,10 @@ class RateLimiter:
     def get_status(self) -> dict:
         with self._lock:
             self._reset_if_needed()
+            self._daily_counts.clear()
+            self._hourly_counts.clear()
+            self._load_persisted()
+            self._refresh_budget_evidence(force=True)
             return {
                 "daily_counts": dict(self._daily_counts),
                 "hourly_counts": dict(self._hourly_counts),
