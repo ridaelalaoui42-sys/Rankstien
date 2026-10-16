@@ -62,6 +62,7 @@ const nextConfig: NextConfig = {
   // Redirects for common URL variants
   async redirects() {
     return [
+      { source: '/recetas/:slug', destination: '/:slug', permanent: true },
       { source: '/sobre-nosotros', destination: '/about', permanent: true },
       { source: '/nuestra-historia', destination: '/about', permanent: true },
       { source: '/sobre%20nosotros', destination: '/about', permanent: true },

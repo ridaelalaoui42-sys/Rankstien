@@ -556,14 +556,14 @@ def _get_cluster_internal_links_context(domain: Domain, current_keyword: str) ->
             return ""
 
         links_bullets = "\n".join(
-            f'- "{kw}" -> /recetas/{slug}' for _, kw, _cluster, slug in selected
+            f'- "{kw}" -> /{slug}' for _, kw, _cluster, slug in selected
         )
         return (
             "\n\nINTERNAL LINKING REQUIREMENT (Mandatory for SEO Cluster Authority):\n"
             "You MUST naturally embed 2 to 3 internal markdown links in the content pointing to existing recipes on our blog:\n"
             f"{links_bullets}\n"
             "Rules for internal links:\n"
-            "- Weave links naturally into paragraphs using descriptive Spanish anchor text (e.g. 'si buscas otra opción deliciosa, prueba nuestras [galletas de calabaza](/recetas/galletas-de-calabaza)...').\n"
+            "- Weave links naturally into paragraphs using descriptive Spanish anchor text (e.g. 'si buscas otra opción deliciosa, prueba nuestras [galletas de calabaza](/galletas-de-calabaza)...').\n"
             "- NEVER use generic anchors like 'aquí', 'enlace', or 'haz clic'.\n"
         )
     except Exception as exc:
@@ -600,7 +600,7 @@ def _build_generation_prompt(
         f"{revision_feedback}\n\n"
         f"MANDATORY SEO & QUALITY REQUIREMENTS FOR THIS REVISION:\n"
         f"- Word count MUST be between 1200 and 1500 words of thorough, helpful Spanish recipe text.\n"
-        f"- Internal linking: include 2-3 natural internal links (/recetas/<slug>) pointing to related published recipes from the same or related clusters.\n"
+        f"- Internal linking: include 2-3 natural internal links (/<slug>) pointing to related published recipes from the same or related clusters.\n"
         f"- Authority citations: prominently cite official food safety guidelines from AESAN (Agencia Española de Seguridad Alimentaria) or EFSA (Autoridad Europea de Seguridad Alimentaria).\n"
         f"- Experiential / Humanization: include first-person markers ('en mi experiencia...', 'en mi cocina...', 'el truco del chef que siempre aplico...', 'he probado diferentes variaciones...').\n"
         f"- Meta Title: strictly between 35 and 60 characters with the target keyword and brand.\n"
@@ -3657,6 +3657,14 @@ async def _publish_generated_article(
 
     slug = article.get("slug") or _slugify(keyword)
     article["slug"] = slug
+    if "content" in article and isinstance(article["content"], str):
+        article["content"] = re.sub(
+            r'https?://(?:www\.)?receta(?:dolce|genial)\.com/recetas/([a-zA-Z0-9_-]+)',
+            r'https://' + domain.public_domain + r'/\1',
+            article["content"],
+        )
+        article["content"] = re.sub(r'\]\(/recetas/([a-zA-Z0-9_-]+)\)', r'](/\1)', article["content"])
+        article["content"] = re.sub(r'href=["\']/recetas/([^"\']+)["\']', r'href="/\1"', article["content"])
     try:
         category_guess = _normalize_category(
             article.get("category") or cluster,
