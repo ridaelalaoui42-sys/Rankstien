@@ -601,7 +601,7 @@
 | Piruletas de galleta Oreo momificadas con chocolate blanco | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
 | Cake pops de momia con chocolate blanco | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | galletas nutella | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
-| Bizcocho de chocolate negro y glaseado naranja de Halloween | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
+| Bizcocho de chocolate negro y glaseado naranja de Halloween | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Tartaletas de manzana y hojaldre momia | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Galletas de murciélago de chocolate negro crujiente | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
 | Ensaladas, brochetas y batido helado de chocolate | Chocolates | Google News | Receta Dolce | Medium | Needs Verification |
@@ -610,7 +610,7 @@
 | ideas pasteles cumpleaños | Pasteles | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Failed |
 | Fresas fantasma bañadas en chocolate blanco | fresas-y-nata | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Galletas de calavera mexicana con glaseado de colores | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
-| Tarta de queso japonesa con sirope de frutos rojos sangriento | fresas-y-nata | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
+| Tarta de queso japonesa con sirope de frutos rojos sangriento | fresas-y-nata | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Donas de monstruo con ojos de azúcar y chocolate | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | ideas galletas de arroz | Galletas | Google News + Google Suggestions | Receta Dolce | Medium | Failed |
 | Día Mundial de la Tarta de Queso | fresas-y-nata | Google Autocomplete Demand + Google News | Receta Dolce | Low | Failed |
@@ -621,15 +621,15 @@
 | Brazo de gitano terrorífico de chocolate y nata | fresas-y-nata | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | galletas de Navidad de María Pombo | Galletas | Google Autocomplete Demand + Google News | Receta Dolce | Medium | Failed |
 | Flan de calabaza casero con caramelo oscuro | dulces-saludables | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
-| Cupcakes de chocolate con cerebros de crema de mantequilla | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
-| Galletas de araña con bombón de chocolate y patas de pretzel | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
+| Cupcakes de chocolate con cerebros de crema de mantequilla | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
+| Galletas de araña con bombón de chocolate y patas de pretzel | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | galletas de chocolate | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | galletas recetas sin mantequilla | Galletas | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | High | Failed |
 | Hojaldres de manzana y canela con caras de monstruo | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Galletas de avena | Galletas | Google Autocomplete Demand + Google News + Google Suggestions + Pinterest Trends | Receta Dolce | High | Failed |
 | Panna cotta de vainilla con sirope sangriento de frambuesa | fresas-y-nata | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Bizcocho de zanahoria y nueces decorado de Halloween | tartas-y-pasteles | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
-| Tartaletas de chocolate y ganache con lápidas de galleta | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Failed |
+| Tartaletas de chocolate y ganache con lápidas de galleta | chocolates | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Bocaditos de calabaza y coco sin azúcar para Halloween | dulces-saludables | Pinterest Trends + Google News + Google Autocomplete | Receta Dolce | High | Pending |
 | Galletas de mantequilla | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |
 | Galletas de jengibre | Galletas | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | Medium | Failed |

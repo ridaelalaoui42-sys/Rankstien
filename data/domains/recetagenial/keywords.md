@@ -253,7 +253,7 @@
 | Dedos de bruja salados con salchichas y almendras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Croquetas caseras de calabaza y queso para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Needs Verification |
 | mejillones en escabeche casero | Pescados | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Pimientos naranjas rellenos tallados como calabazas de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Pimientos naranjas rellenos tallados como calabazas de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | ensalada de garbanzos y aguacate | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | aperitivos salados saludables | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | ideas de mesa de postre | Postres | Pinterest Trends + Google News | Receta Genial | Low | Live |
@@ -265,11 +265,11 @@
 | Gourmet recetas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | Cocina Vital | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | Descubre la Receta Perfecta | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Albóndigas terroríficas con salsa de tomate sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Albóndigas terroríficas con salsa de tomate sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Recetas con un toque picante | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Recetas para quien ama el picante | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Mini pizzas momia con queso fundido y aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
-| Arroz negro con calamares y ojos de huevo de codorniz | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Mini pizzas momia con queso fundido y aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Arroz negro con calamares y ojos de huevo de codorniz | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Empanada gallega con diseño de calabaza de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Huesos de santo tradicionales rellenos de dulce de yema | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Aperitivos Fáciles con Masa de Hojaldre para Antojos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
