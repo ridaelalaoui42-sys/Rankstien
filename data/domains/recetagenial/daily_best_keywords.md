@@ -1,6 +1,6 @@
 # Daily Best Keywords - Receta Genial
 
-Generated: 2026-10-16T17:08:25.083478+00:00
+Generated: 2026-10-16T20:47:09.185347+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|

@@ -66,8 +66,41 @@ def check_resource_budget() -> dict[str, Any]:
             issues.append("Memory pressure: production waits for available capacity")
         memory_status = {"percent": memory.percent, "available_gb": available_gb}
     except (ImportError, OSError, ValueError):
-        memory_status = {"percent": None, "available_gb": None}
-        issues.append("Memory availability could not be measured")
+        measured = False
+        if os.name == "nt":
+            try:
+                import ctypes
+                from ctypes import wintypes
+
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", wintypes.DWORD),
+                        ("dwMemoryLoad", wintypes.DWORD),
+                        ("ullTotalPhys", ctypes.c_uint64),
+                        ("ullAvailPhys", ctypes.c_uint64),
+                        ("ullTotalPageFile", ctypes.c_uint64),
+                        ("ullAvailPageFile", ctypes.c_uint64),
+                        ("ullTotalVirtual", ctypes.c_uint64),
+                        ("ullAvailVirtual", ctypes.c_uint64),
+                        ("ullAvailExtendedVirtual", ctypes.c_uint64),
+                    ]
+
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                    avail_gb = round(stat.ullAvailPhys / (1024 ** 3), 2)
+                    percent = float(stat.dwMemoryLoad)
+                    min_available_gb = float(os.environ.get("RANKSTEIN_MIN_MEMORY_GB", "1"))
+                    max_percent = float(os.environ.get("RANKSTEIN_MAX_MEMORY_PERCENT", "95"))
+                    if percent >= max_percent or avail_gb < min_available_gb:
+                        issues.append("Memory pressure: production waits for available capacity")
+                    memory_status = {"percent": percent, "available_gb": avail_gb}
+                    measured = True
+            except Exception:
+                pass
+        if not measured:
+            memory_status = {"percent": None, "available_gb": None}
+            issues.append("Memory availability could not be measured")
     return {"ok": not issues, "disk": disk, "memory": memory_status, "issues": issues}
 
 

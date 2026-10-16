@@ -19,8 +19,11 @@ from scripts.dev.observe_pinterest_workers import verified_pin
 @pytest.fixture(autouse=True)
 def _isolated_manual_recovery_state(monkeypatch, tmp_path):
     import pinterest_automation.account_recovery as recovery_module
+    import pinterest_automation.supervisor as supervisor_module
 
     monkeypatch.setattr(recovery_module, "RECOVERY_STATE_FILE", tmp_path / "account_recovery.json")
+    # Proof scenarios start after image acceptance and use placeholder bytes.
+    monkeypatch.setattr(supervisor_module, "validate_pin_upload_image", lambda *_: {"ok": True})
 
 
 @pytest.mark.asyncio
@@ -171,9 +174,11 @@ async def test_single_job_path_retries_unverified_success_and_keeps_image(tmp_pa
 
 
 @pytest.fixture
-def interception():
+def interception(monkeypatch):
+    import pinterest_automation.pinterest_driver as driver_module
     from pinterest_automation.pinterest_driver import PinterestDriver
 
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", AsyncMock(return_value=None))
     driver = object.__new__(PinterestDriver)
     driver._response_handler = None
     driver.info = Mock()

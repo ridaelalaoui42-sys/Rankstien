@@ -509,6 +509,62 @@ def _mark_processed(keyword: str, domain_handle: str) -> None:
     _RECENTLY_PROCESSED.append((keyword.strip(), domain_handle, time.time()))
 
 
+def _slugify(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+
+
+def _get_cluster_internal_links_context(domain: Domain, current_keyword: str) -> str:
+    """Find relevant published (Live) articles in the domain for SEO internal linking."""
+    try:
+        roadmap_path = domain.keywords_file
+        if not roadmap_path.exists():
+            return ""
+
+        live_articles: list[tuple[str, str, str]] = []
+        with open(roadmap_path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if "| Live |" in line:
+                    parts = [p.strip() for p in line.split("|") if p.strip()]
+                    if len(parts) >= 2:
+                        kw = parts[0]
+                        cluster = parts[1] if len(parts) > 1 else "General"
+                        if kw.lower() != current_keyword.lower():
+                            slug = _slugify(kw)
+                            live_articles.append((kw, cluster, slug))
+
+        if not live_articles:
+            return ""
+
+        current_words = set(re.findall(r"\w+", current_keyword.lower()))
+        scored = []
+        for kw, cluster, slug in live_articles:
+            kw_words = set(re.findall(r"\w+", kw.lower()))
+            overlap = len(current_words & kw_words)
+            scored.append((overlap, kw, cluster, slug))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        selected = scored[:4]
+        if not selected:
+            return ""
+
+        links_bullets = "\n".join(
+            f'- "{kw}" -> /recetas/{slug}' for _, kw, _cluster, slug in selected
+        )
+        return (
+            "\n\nINTERNAL LINKING REQUIREMENT (Mandatory for SEO Cluster Authority):\n"
+            "You MUST naturally embed 2 to 3 internal markdown links in the content pointing to existing recipes on our blog:\n"
+            f"{links_bullets}\n"
+            "Rules for internal links:\n"
+            "- Weave links naturally into paragraphs using descriptive Spanish anchor text (e.g. 'si buscas otra opción deliciosa, prueba nuestras [galletas de calabaza](/recetas/galletas-de-calabaza)...').\n"
+            "- NEVER use generic anchors like 'aquí', 'enlace', or 'haz clic'.\n"
+        )
+    except Exception as exc:
+        logger.debug("Failed to build cluster internal links: %s", exc)
+        return ""
+
+
 def _build_generation_prompt(
     keyword: str,
     domain: Domain,
@@ -519,6 +575,7 @@ def _build_generation_prompt(
     author = (
         "Atelier editorial de RecetaDolce" if "dolce" in domain.handle else "Equipo editorial de RecetaGenial"
     )
+    internal_links_instruction = _get_cluster_internal_links_context(domain, keyword)
     source_instruction = (
         "\n\nCRITICAL SOURCE RULES:\n"
         "You have been given real scraped recipe articles above. You MUST:\n"
@@ -537,6 +594,7 @@ def _build_generation_prompt(
         f"{revision_feedback}\n\n"
         f"MANDATORY SEO & QUALITY REQUIREMENTS FOR THIS REVISION:\n"
         f"- Word count MUST be between 1200 and 1500 words of thorough, helpful Spanish recipe text.\n"
+        f"- Internal linking: include 2-3 natural internal links (/recetas/<slug>) pointing to related published recipes from the same or related clusters.\n"
         f"- Authority citations: prominently cite official food safety guidelines from AESAN (Agencia Española de Seguridad Alimentaria) or EFSA (Autoridad Europea de Seguridad Alimentaria).\n"
         f"- Experiential / Humanization: include first-person markers ('en mi experiencia...', 'en mi cocina...', 'el truco del chef que siempre aplico...', 'he probado diferentes variaciones...').\n"
         f"- Meta Title: strictly between 35 and 60 characters with the target keyword and brand.\n"
@@ -585,6 +643,7 @@ def _build_generation_prompt(
         "  faq_schema (list[dict]): AT LEAST 3 to 4 detailed entries, each with 'question' and 'answer' in Spanish\n\n"
         f"BRAND VOICE: The article is for {domain.display_name} (niche: {domain.niche}).\n"
         f"{recipe_generation_visual_requirements(keyword, domain)}\n"
+        f"{internal_links_instruction}\n"
         f"{source_material}\n"
         f"{source_instruction}"
         f"{revision_block}"
@@ -873,12 +932,33 @@ async def _call_hermes_codex_for_article_result(
     if not article:
         content_lower = (content or "").lower()
         if any(
-            marker in content_lower for marker in ("429", "usage limit", "rate limit", "capacity", "quota")
+            marker in content_lower
+            for marker in (
+                "429",
+                "usage limit",
+                "rate limit",
+                "capacity",
+                "quota",
+                "401",
+                "rejected your sign-in",
+                "can't be reached",
+                "invalidated oauth token",
+                "unauthorized",
+                "sign in again",
+                "auth failed",
+                "oauth",
+                "session is no longer valid",
+            )
         ):
             logger.warning(
-                "Hermes Codex gateway returned rate limit payload for %s: %r", keyword, (content or "")[:150]
+                "Hermes Codex gateway returned availability/auth failure payload for %s: %r", keyword, (content or "")[:150]
             )
-            return _HermesArticleResult(None, "availability_failure", "rate limit payload", 429)
+            return _HermesArticleResult(
+                None,
+                "availability_failure",
+                "provider availability/auth failure",
+                401 if ("401" in content_lower or "auth" in content_lower) else 429,
+            )
         logger.warning(
             "Hermes Codex returned incomplete article JSON for %s (len=%d, start=%r, end=%r)",
             keyword,
@@ -927,10 +1007,21 @@ async def _call_hermes_free_for_article(
         return None
     provider, model = target_detail
     hermes_home = Path(os.environ.get("HERMES_HOME", "C:/ProgramData/hermes"))
-    hermes_cli = os.environ.get(
-        "RANKSTEIN_HERMES_CLI_PATH",
-        str(hermes_home / "hermes-agent" / "venv" / "Scripts" / "hermes.exe"),
-    )
+    hermes_python = hermes_home / "hermes-agent" / "venv" / "Scripts" / "python.exe"
+    explicit_cli = os.environ.get("RANKSTEIN_HERMES_CLI_PATH")
+
+    if explicit_cli:
+        base_cmd = [explicit_cli]
+    elif hermes_python.exists():
+        base_cmd = [str(hermes_python), "-m", "hermes_cli.main"]
+    else:
+        hermes_cli = (
+            shutil.which("hermes")
+            or str(hermes_home / "bin" / "hermes.exe")
+            or str(hermes_home / "hermes-agent" / "venv" / "Scripts" / "hermes.exe")
+        )
+        base_cmd = [str(hermes_cli)]
+
     system_prompt = (
         "You are RankStein's article generator. Return only the requested JSON object. "
         "Do not browse, call tools, mention Hermes, or include markdown fences."
@@ -939,57 +1030,9 @@ async def _call_hermes_free_for_article(
         keyword, domain, source_material=source_material, revision_feedback=revision_feedback
     )
     strict_prompt = f"{system_prompt}\n\n{generation_prompt}"
-    # Tier A: Direct in-process Hermes agent invocation (avoids Windows CLI pipe truncation)
-    try:
-        hermes_agent_dir = str(hermes_home / "hermes-agent")
-        if os.path.isdir(hermes_agent_dir) and hermes_agent_dir not in sys.path:
-            sys.path.insert(0, hermes_agent_dir)
-
-        from hermes_cli.runtime_provider import resolve_runtime_provider
-        from run_agent import AIAgent
-
-        runtime = resolve_runtime_provider(requested=provider, target_model=model)
-        if runtime.get("api_key") or runtime.get("base_url"):
-            logger.info(
-                "Hermes Codex first with free-provider fallback is invoking in-process %s/%s for %s",
-                provider,
-                model,
-                keyword,
-            )
-            agent = AIAgent(
-                api_key=runtime.get("api_key"),
-                base_url=runtime.get("base_url"),
-                provider=runtime.get("provider"),
-                api_mode=runtime.get("api_mode"),
-                model=model,
-                quiet_mode=True,
-                platform="cli",
-            )
-            agent.suppress_status_output = True
-            loop_res = await asyncio.to_thread(agent.run_conversation, strict_prompt)
-            raw_output = loop_res.get("final_response") or ""
-            if raw_output:
-                article = _parse_llm_json_response(raw_output)
-                if article and _openrouter_article_quality_check(article):
-                    logger.info(
-                        "Hermes free article writer in-process %s/%s succeeded for %s (%d chars content)",
-                        provider,
-                        model,
-                        keyword,
-                        len(article.get("content", "")),
-                    )
-                    return article
-                logger.warning(
-                    "Hermes in-process generation produced unparseable response (len=%d), falling back to CLI subprocess",
-                    len(raw_output),
-                )
-    except Exception as exc:
-        logger.warning(
-            "Hermes in-process conversation attempt raised (%s); proceeding to CLI subprocess", exc
-        )
 
     command = [
-        hermes_cli,
+        *base_cmd,
         "--ignore-user-config",
         "--ignore-rules",
         "--provider",
@@ -1172,10 +1215,11 @@ async def _call_gemini_api_for_article(
     prompt = _build_generation_prompt(keyword, domain, source_material=source_material)
     system_instruction = "You are a professional recipe article generator for RankStein. Output ONLY valid, complete JSON matching the requested schema."
     models = [
+        "gemini-3.5-flash",
+        "gemini-2.5-flash",
+        "gemini-3-flash-preview",
         "gemini-3.8-flash",
-        "gemini-3.6-flash",
         "gemini-flash-latest",
-        "gemini-3.7-flash",
     ]
     session = _get_session()
 
@@ -3470,6 +3514,9 @@ async def _generate_article_with_revision_loop(
                 )
                 draft = last_valid_draft
             else:
+                abort_predicate = getattr(generate_coro_fn, "abort_retry", None)
+                if callable(abort_predicate) and abort_predicate():
+                    return None, {}
                 if attempt < max_revisions:
                     await asyncio.sleep(2)
                     continue
@@ -4495,6 +4542,10 @@ async def process_keyword(
             if res.outcome != "success":
                 return None
             return res.article
+
+        _hermes_caller.abort_retry = (
+            lambda: hermes_result is not None and hermes_result.outcome == "availability_failure"
+        )
 
         hermes_article, hermes_q = await _generate_article_with_revision_loop(
             "openai-codex",

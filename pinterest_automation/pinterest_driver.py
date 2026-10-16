@@ -20,6 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from xml.etree import ElementTree
 
+import httpx
 from playwright.async_api import Page, Response
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
@@ -195,6 +196,27 @@ def _rss_candidate_receipt(body, candidate, title, description, started_at, obse
         if all(checks.values()):
             return True, checks
     return False, checks
+
+
+async def _anonymous_public_document(url: str, *, max_bytes: int = 3_000_000) -> str | None:
+    """Read one public Pinterest document without the browser's account cookies."""
+    if _pinterest_public_url(url) is None:
+        return None
+    async with httpx.AsyncClient(
+        headers={"User-Agent": "Mozilla/5.0", "Accept": "text/html,application/rss+xml"},
+        cookies={},
+        follow_redirects=False,
+        timeout=httpx.Timeout(12),
+    ) as client:
+        async with client.stream("GET", url) as response:
+            if response.status_code != 200 or str(response.url) != url:
+                return None
+            content = bytearray()
+            async for chunk in response.aiter_bytes():
+                content.extend(chunk)
+                if len(content) > max_bytes:
+                    return None
+            return content.decode(response.encoding or "utf-8", errors="replace")
 
 
 def _int_env(name: str, default: int) -> int:
@@ -1747,6 +1769,22 @@ class PinterestDriver:
         if not title or not link:
             return finish("expected_metadata_missing")
         candidate_event = self._pin_create_event
+        started_at, observed_at = (
+            creation_data.get("generation_started_at"),
+            creation_data.get("observed_at"),
+        )
+
+        def fresh_create_window():
+            return (
+                str(creation_data.get("pin_id")) == candidate
+                and type(started_at) in (int, float)
+                and type(observed_at) in (int, float)
+                and math.isfinite(started_at)
+                and math.isfinite(observed_at)
+                and started_at <= observed_at <= time.time() + 5
+                and time.time() - observed_at <= 600
+            )
+
         try:
             async with asyncio.timeout(35):
                 response = await page.context.request.get(
@@ -1762,6 +1800,28 @@ class PinterestDriver:
                 metadata = _PublishedPinMetadata()
                 metadata.feed(await response.text())
                 metadata.close()
+                anonymous_variant = False
+                # The authenticated API context can receive Pinterest's CSR
+                # shell with no public ownership tags. A separate, cookieless
+                # read must independently satisfy the same publication gates.
+                if (
+                    not metadata.ambiguous
+                    and metadata.exact("pinterestapp:source") is None
+                    and metadata.exact("pinterestapp:pinner") is None
+                ):
+                    if not fresh_create_window():
+                        return finish("fresh_create_window_unavailable")
+                    diagnostic["anonymous_fallback_attempted"] = True
+                    public_body = await _anonymous_public_document(
+                        f"https://www.pinterest.com/pin/{candidate}/"
+                    )
+                    if public_body is None:
+                        return finish("anonymous_public_document_unavailable")
+                    metadata = _PublishedPinMetadata()
+                    metadata.feed(public_body)
+                    metadata.close()
+                    anonymous_variant = True
+                diagnostic["public_response_variant"] = "anonymous" if anonymous_variant else "session"
                 if (
                     self._pin_create_event is not candidate_event
                     or self._pin_create_data is not creation_data
@@ -1788,37 +1848,32 @@ class PinterestDriver:
                     return finish("verified", verified=True, method="public-metadata")
                 if not checks["source_matches"] or not checks["pinner_matches"]:
                     return finish("public_owner_or_source_mismatch")
-                started_at, observed_at = (
-                    creation_data.get("generation_started_at"),
-                    creation_data.get("observed_at"),
-                )
-                if (
-                    str(creation_data.get("pin_id")) != candidate
-                    or type(started_at) not in (int, float)
-                    or type(observed_at) not in (int, float)
-                    or not math.isfinite(started_at)
-                    or not math.isfinite(observed_at)
-                    or not started_at <= observed_at <= time.time() + 5
-                    or time.time() - observed_at > 600
-                ):
+                if not fresh_create_window():
                     return finish("fresh_create_window_unavailable")
                 diagnostic["create_window"] = {
                     "started_at": started_at,
                     "observed_at": observed_at,
                 }
-                feed = await page.context.request.get(
-                    f"https://www.pinterest.com/{username}/feed.rss",
-                    timeout=15000,
-                    fail_on_status_code=False,
-                )
-                feed_url = _pinterest_public_url(feed.url)
-                if (
-                    feed.status != 200
-                    or feed_url is None
-                    or feed_url.path.casefold() != f"/{username}/feed.rss".casefold()
-                ):
-                    return finish("owned_rss_unavailable")
-                rss_body = await feed.text()
+                if anonymous_variant:
+                    rss_body = await _anonymous_public_document(
+                        f"https://www.pinterest.com/{username}/feed.rss", max_bytes=2_000_000
+                    )
+                    if rss_body is None:
+                        return finish("owned_rss_unavailable")
+                else:
+                    feed = await page.context.request.get(
+                        f"https://www.pinterest.com/{username}/feed.rss",
+                        timeout=15000,
+                        fail_on_status_code=False,
+                    )
+                    feed_url = _pinterest_public_url(feed.url)
+                    if (
+                        feed.status != 200
+                        or feed_url is None
+                        or feed_url.path.casefold() != f"/{username}/feed.rss".casefold()
+                    ):
+                        return finish("owned_rss_unavailable")
+                    rss_body = await feed.text()
                 if (
                     self._pin_create_event is not candidate_event
                     or self._pin_create_data is not creation_data

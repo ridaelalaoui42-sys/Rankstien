@@ -165,7 +165,8 @@ def test_windows_subprocess_is_hidden_and_bounded_without_shell(monkeypatch, tmp
     assert captured["creationflags"] == 0x08000000
     assert captured["capture_output"] is True
     assert captured.get("shell", False) is False
-    assert "-ExecutionPolicy" not in captured["command"]
+    assert "-ExecutionPolicy" in captured["command"]
+    assert "Bypass" in captured["command"]
     assert captured["command"][-1] == str(source.resolve())
 
 

@@ -253,6 +253,110 @@ def test_durable_evidence_retains_the_same_row_bounds_and_unknown_budget_behavio
 
 
 @pytest.mark.unit
+def test_semantic_validation_descheduling_does_not_consume_the_sql_deadline(
+    isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _archive_pin(isolated_proof_queue, _pin_job("job", "10000000000000000"), frozen_time.current.timestamp())
+    limiter = object.__new__(rate_module.RateLimiter)
+    limiter._proof_db_file = isolated_proof_queue
+    clock = [100.0]
+    validate = limiter._verified_upload_identity
+
+    def descheduled_validation(job, routes):
+        clock[0] += 30.0
+        return validate(job, routes)
+
+    monkeypatch.setattr(rate_module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(limiter, "_verified_upload_identity", descheduled_validation)
+
+    assert limiter._proof_daily_counts() == {"pin_upload:recetadolce:rida": 1}
+
+
+@pytest.mark.unit
+def test_semantic_validation_cpu_budget_fails_closed(
+    isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch, caplog
+) -> None:
+    _archive_pin(isolated_proof_queue, _pin_job("job", "10000000000000000"), frozen_time.current.timestamp())
+    limiter = object.__new__(rate_module.RateLimiter)
+    limiter._proof_db_file = isolated_proof_queue
+    cpu_clock = [100.0]
+    validate = limiter._verified_upload_identity
+
+    def expensive_validation(job, routes):
+        cpu_clock[0] += rate_module._PROOF_PARSE_CPU_SECONDS + 1
+        return validate(job, routes)
+
+    monkeypatch.setattr(rate_module.time, "thread_time", lambda: cpu_clock[0])
+    monkeypatch.setattr(limiter, "_verified_upload_identity", expensive_validation)
+
+    with caplog.at_level(logging.WARNING):
+        assert limiter._proof_daily_counts() is None
+    assert "proof validation incomplete: CPU time bound exceeded" in caplog.text
+
+
+@pytest.mark.unit
+def test_identical_archived_and_durable_json_is_only_validated_once(
+    isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job = _pin_job("same-job", "10000000000000000")
+    timestamp = frozen_time.current.timestamp()
+    _archive_pin(isolated_proof_queue, job, timestamp)
+    _durable_pin(isolated_proof_queue, job, timestamp)
+    limiter = object.__new__(rate_module.RateLimiter)
+    limiter._proof_db_file = isolated_proof_queue
+    validate = limiter._verified_upload_identity
+    calls = []
+
+    def counted_validation(job, routes):
+        calls.append(job["id"])
+        return validate(job, routes)
+
+    monkeypatch.setattr(limiter, "_verified_upload_identity", counted_validation)
+
+    assert limiter._proof_daily_counts() == {"pin_upload:recetadolce:rida": 1}
+    assert calls == ["same-job"]
+
+
+@pytest.mark.unit
+def test_combined_snapshot_byte_budget_fails_closed_even_for_duplicate_json(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job = _pin_job("same-job", "10000000000000000")
+    timestamp = frozen_time.current.timestamp()
+    _archive_pin(isolated_proof_queue, job, timestamp)
+    _durable_pin(isolated_proof_queue, job, timestamp)
+    monkeypatch.setattr(rate_module, "_PROOF_MAX_BYTES", len(json.dumps(job).encode("utf-8")))
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() is None
+    assert limiter.can_execute("pin_upload:recetadolce:rida") is False
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("table", ["completed_log", "completion_evidence", "jobs"])
+def test_corrupt_snapshot_json_keeps_the_budget_unknown(
+    tmp_path: Path, isolated_proof_queue: Path, frozen_time, table: str
+) -> None:
+    timestamp = frozen_time.current.timestamp()
+    with sqlite3.connect(isolated_proof_queue) as connection:
+        if table == "jobs":
+            connection.execute(
+                "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?)",
+                ("bad", "pin_upload", "{", "completed", "{}", timestamp),
+            )
+        else:
+            query = {
+                "completed_log": "INSERT INTO completed_log VALUES (?, ?, ?)",
+                "completion_evidence": "INSERT INTO completion_evidence VALUES (?, ?, ?)",
+            }[table]
+            connection.execute(query, ("bad", "{", timestamp))
+    limiter = rate_module.RateLimiter(db_file=tmp_path / "rate.db")
+
+    assert limiter._proof_daily_counts() is None
+    assert limiter.can_execute("pin_upload:recetadolce:rida") is False
+
+
+@pytest.mark.unit
 def test_legacy_queue_without_durable_table_remains_readable(
     tmp_path: Path, isolated_proof_queue: Path, frozen_time
 ) -> None:

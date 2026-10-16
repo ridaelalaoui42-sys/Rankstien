@@ -179,6 +179,11 @@ async def run_scenario(
             patches.enter_context(patch.object(queue_module, name, root / f"{name}.absent.json"))
         patches.enter_context(patch.object(supervisor_module, "get_config", return_value=configured))
         patches.enter_context(patch.object(supervisor_module, "paused_accounts", return_value=set()))
+        # Benchmark assets deliberately contain fake bytes: decode performance
+        # is outside the simulated browser-I/O scheduling measurement.
+        patches.enter_context(
+            patch.object(supervisor_module, "validate_pin_upload_image", return_value={"ok": True})
+        )
         patches.enter_context(patch.object(supervisor_module, "PinterestDriver", SimulatedDriver))
         patches.enter_context(
             patch.object(supervisor_module, "get_rate_limiter", return_value=SimulatedLimiter())
@@ -383,6 +388,7 @@ async def benchmark(args: argparse.Namespace) -> dict:
             "No real Pinterest requests, browsers, account authentication or uploads.",
             "No claim about measured live Pinterest throughput or safe posting limits.",
             "Simulated login/upload/confirmation I/O replaces the driver.",
+            "Local upload media preflight is simulated for the intentionally fake image fixtures.",
             "Production inter-job pause is compressed from 2s to 0.01s.",
             "Rate budget eligibility is simulated; blocked jobs retain real SQLite retry timestamps.",
             "Browser launches are simulated without launch latency; this does not test launch-capacity races.",

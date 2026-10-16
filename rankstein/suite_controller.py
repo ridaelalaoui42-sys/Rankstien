@@ -21,9 +21,25 @@ from . import log_manager
 from .config import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data"
-PROJECT_PYTHON = PROJECT_ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-if not PROJECT_PYTHON.exists():
-    PROJECT_PYTHON = Path(sys.executable)
+
+
+def _resolve_project_python() -> Path:
+    env_override = os.environ.get("RANKSTEIN_PYTHON")
+    if not env_override and (PROJECT_ROOT / ".env").exists():
+        try:
+            with open(PROJECT_ROOT / ".env", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip().startswith("RANKSTEIN_PYTHON="):
+                        env_override = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+        except OSError:
+            pass
+    if env_override and Path(env_override).exists():
+        return Path(env_override)
+    return Path(sys.executable)
+
+
+PROJECT_PYTHON = _resolve_project_python()
 
 RUNTIME_DIR = DATA_DIR / "runtime"
 CAMPAIGN_LEASE_FILE = RUNTIME_DIR / "campaign_lease.json"

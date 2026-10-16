@@ -82,6 +82,12 @@ def get_supabase_session():
     return _SUPABASE_SESSION
 
 
+def _resolve_project_python() -> str:
+    from rankstein.launcher import _resolve_project_python as _rpp
+
+    return str(_rpp())
+
+
 # Domain registry — resolves a Domain by handle (or default).
 from rankstein.category_policy import CategoryPolicyError, assign_article_category
 from rankstein.domain import get_registry
@@ -693,12 +699,11 @@ def start_automation_supervisor(dry_run: bool = False, workers: int | None = Non
     Returns: {launched: bool, pid: int | None, command: str}
     """
     import subprocess
-    import sys
 
     from rankstein.runtime_env import clean_python_env
 
     PROJECT_ROOT = Path(__file__).resolve().parent
-    cmd = [sys.executable, str(PROJECT_ROOT / "run_autonomous.py"), "run"]
+    cmd = [_resolve_project_python(), str(PROJECT_ROOT / "run_autonomous.py"), "run"]
     if workers is not None and int(workers) > 0:
         cmd.extend(["--workers", str(int(workers))])
     cmd_str = " ".join(cmd)
@@ -5495,12 +5500,11 @@ def run_turbo_articles_pipeline(once: bool = True, all_domains: bool = True) -> 
     This generates articles and hero images autonomously.
     """
     import subprocess
-    import sys
 
     from rankstein.runtime_env import clean_python_env
 
     PROJECT_ROOT = Path(__file__).resolve().parent
-    cmd = [sys.executable, str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py")]
+    cmd = [_resolve_project_python(), str(PROJECT_ROOT / "backend" / "scripts" / "turbo_articles.py")]
     if once:
         cmd.append("--once")
     if all_domains:
@@ -5535,12 +5539,14 @@ def run_bulk_pinterest_supervisor(limit: int = 0) -> dict:
     This cleans up the workspace and bulk uploads pending Pinterest pins.
     """
     import subprocess
-    import sys
 
     from rankstein.runtime_env import clean_python_env
 
     PROJECT_ROOT = Path(__file__).resolve().parent
-    cmd = [sys.executable, str(PROJECT_ROOT / "backend" / "scripts" / "batch_upload_remastered.py")]
+    cmd = [
+        _resolve_project_python(),
+        str(PROJECT_ROOT / "backend" / "scripts" / "batch_upload_remastered.py"),
+    ]
     if limit > 0:
         cmd.extend(["--limit", str(limit)])
 
@@ -5583,7 +5589,6 @@ def run_article_remaster_campaign(
     source for a 30-asset target.
     """
     import subprocess
-    import sys
 
     from rankstein.domain import get_registry
     from rankstein.prompts import build_recipe_image_scrape_brief
@@ -5626,7 +5631,7 @@ def run_article_remaster_campaign(
         # may not weaken the required 15-source / 30-asset contract.
         safe_count = 30
         cmd = [
-            sys.executable,
+            _resolve_project_python(),
             str(PROJECT_ROOT / "backend" / "services" / "remasterer.py"),
             actual_title,
             actual_title,

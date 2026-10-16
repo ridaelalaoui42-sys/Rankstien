@@ -8,8 +8,8 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -132,7 +132,7 @@ GENIAL_HALLOWEEN_KEYWORDS = [
 def refresh_domain_halloween(domain_handle: str, halloween_items: list[tuple[str, str]]) -> None:
     registry = get_registry()
     domain = registry.get(domain_handle)
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    now_iso = datetime.datetime.now(datetime.UTC).isoformat()
 
     # 1. Update keywords.md: replace next 50 Pending rows
     roadmap_path = domain.keywords_file
@@ -150,7 +150,9 @@ def refresh_domain_halloween(domain_handle: str, halloween_items: list[tuple[str
         )
 
     roadmap_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    logger.info("[%s] Successfully updated %d pending rows in %s.", domain_handle, replace_count, roadmap_path.name)
+    logger.info(
+        "[%s] Successfully updated %d pending rows in %s.", domain_handle, replace_count, roadmap_path.name
+    )
 
     # 2. Update daily_best_keywords.json
     daily_best_json = domain.root / "daily_best_keywords.json"
@@ -208,14 +210,31 @@ def refresh_domain_halloween(domain_handle: str, halloween_items: list[tuple[str
 
     daily_best_json.write_text(json.dumps(json_payload, indent=2, ensure_ascii=False), encoding="utf-8")
     daily_best_md.write_text("\n".join(md_lines) + "\n", encoding="utf-8")
-    logger.info("[%s] Wrote %d qualified Halloween items to %s and %s.", domain_handle, len(items), daily_best_json.name, daily_best_md.name)
+    logger.info(
+        "[%s] Wrote %d qualified Halloween items to %s and %s.",
+        domain_handle,
+        len(items),
+        daily_best_json.name,
+        daily_best_md.name,
+    )
 
     # 3. Verify evidence check
     eligible_keys, reason = load_qualified_keyword_keys(domain)
-    logger.info("[%s] load_qualified_keyword_keys verified: %d eligible keywords (reason=%s)", domain_handle, len(eligible_keys), reason)
+    logger.info(
+        "[%s] load_qualified_keyword_keys verified: %d eligible keywords (reason=%s)",
+        domain_handle,
+        len(eligible_keys),
+        reason,
+    )
     first_kw = halloween_items[0][0]
-    qualified, q_reason, evidence = has_qualified_keyword_evidence(domain, first_kw)
-    logger.info("[%s] Sample evidence check for '%s': qualified=%s, reason=%s", domain_handle, first_kw, qualified, q_reason)
+    qualified, q_reason, _evidence = has_qualified_keyword_evidence(domain, first_kw)
+    logger.info(
+        "[%s] Sample evidence check for '%s': qualified=%s, reason=%s",
+        domain_handle,
+        first_kw,
+        qualified,
+        q_reason,
+    )
 
 
 def main():

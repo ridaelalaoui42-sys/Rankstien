@@ -108,3 +108,31 @@ python -m pytest tests/unit -q
 python scripts/dev/validate_gemini_runtime.py
 python scripts/dev/validate_automation.py
 ```
+
+## Durable Operational Lessons (2026-10-16)
+
+### 1. Native Memory Service Architecture
+- Completely eliminated external `agentmemory` (Node/npm dependency, port 3111, `iii.exe` binary).
+- Replaced with self-contained, thread-safe SQLite FTS5 engine (`backend/services/memory_service.py`) storing memories in `data/memory/rankstein_memory.db`.
+- Fully drop-in compatible with previous memory APIs (`search`, `remember`, `list`, `stats`).
+- Bypasses all HTTP socket overhead, startup port race conditions, and Node.js process dependencies.
+
+### 2. Windows CPython Runtime Isolation
+- Windows App Execution Aliases (`python.exe` in `AppData/Local/Microsoft/WindowsApps`) break C-extension DLL loading (`_psutil_windows.pyd`, `_ssl.pyd`).
+- Resolved by explicitly pinning `RANKSTEIN_PYTHON="C:\Program Files\Python312\python.exe"` in `.env` and standardizing on `_resolve_project_python()` across `rankstein.launcher`, `rankstein.suite_controller`, and `rankstein_mcp_server`.
+- Added ctypes Windows `GlobalMemoryStatusEx` fallback in `rankstein/log_manager.py` to ensure resource admission never fails closed when psutil encounters environment degradation.
+
+### 3. Hermes CLI Subprocess Isolation
+- Importing Hermes modules (`from run_agent import AIAgent`) inside RankStein triggers Hermes's internal bootstrap recovery logic, which executes `os.execve` / `runpy.run_path` inside Hermes's private venv (`C:\ProgramData\hermes\hermes-agent\venv`), stripping RankStein dependencies (`ModuleNotFoundError: No module named 'requests'`).
+- Executing Hermes via isolated subprocess `hermes --safe-mode --provider gemini -m gemini-2.5-flash-lite -z strict_prompt` provides robust, clean JSON outputs without venv hijacking or prompt clutter.
+
+### 4. Pinterest Chromium Profile Auto-Seeding
+- Remasterer browser sessions (`remasterer_<handle>`) run in dedicated Chromium profile directories to prevent worker lock convoys.
+- Initialized profiles lack cookies and trigger Pinterest login walls.
+- Remasterer now auto-seeds `Default/Network/Cookies` and `Local State` (DPAPI key) from authenticated available profiles (`data/sessions/DD` or `data/sessions/pinterest_rida_v7`), allowing headless scraping and pin resurrection to run without login gates.
+
+### 5. Windows PowerShell ExecutionPolicy for Internal Subprocesses
+- Calling unsigned helper scripts (such as `scripts/dev/read_source_image_text.ps1` for local Windows Media OCR) via Python subprocess on Windows requires `-ExecutionPolicy Bypass`.
+- Standard Windows client installations default to `Restricted` or `RemoteSigned` policies, which block downloaded/untrusted script files with `UnauthorizedAccess`.
+- Passing `-ExecutionPolicy Bypass` directly in the command arguments allows safe local execution without altering machine-wide security policies.
+

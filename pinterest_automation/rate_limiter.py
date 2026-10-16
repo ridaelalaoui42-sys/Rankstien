@@ -31,6 +31,7 @@ _PROOF_TIMEOUT_SECONDS = 2.0
 _PROOF_MAX_ROWS = 20000
 _PROOF_MAX_ROW_BYTES = 1024 * 1024
 _PROOF_MAX_BYTES = 64 * 1024 * 1024
+_PROOF_PARSE_CPU_SECONDS = 2.0
 _BUDGET_REFRESH_SECONDS = 10.0
 _UNKNOWN_BUDGET_RETRY_SECONDS = 60.0
 _PIN_ID = re.compile(r"\d{15,20}")
@@ -194,8 +195,8 @@ class RateLimiter:
             has_durable_evidence = connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'completion_evidence'"
             ).fetchone()
-            pins: dict[str, set[str]] = {}
             row_count = byte_count = 0
+            snapshot: list[tuple[str, bool, tuple]] = []
             queries = [
                 (
                     "completed_log",
@@ -221,29 +222,52 @@ class RateLimiter:
                 for row in connection.execute(query, (today, end)):
                     row_count += 1
                     byte_count += sum(len(value.encode("utf-8")) for value in row if isinstance(value, str))
-                    if (
-                        row_count > _PROOF_MAX_ROWS
-                        or byte_count > _PROOF_MAX_BYTES
-                        or time.monotonic() > deadline
-                    ):
-                        raise ValueError("proof scan incomplete: row, byte or time bound exceeded")
-                    if current:
-                        job = {
-                            "type": row[0],
-                            "payload": json.loads(row[1]),
-                            "status": row[2],
-                            "result": json.loads(row[3] or "{}"),
-                        }
-                    else:
-                        job = json.loads(row[0])
-                    if not isinstance(job, dict):
-                        continue
-                    identity = self._verified_upload_identity(job, routes)
-                    if identity:
-                        operation, pin_id = identity
-                        pins.setdefault(operation, set()).add(pin_id)
+                    if row_count > _PROOF_MAX_ROWS:
+                        raise ValueError("proof scan incomplete: row bound exceeded")
+                    if byte_count > _PROOF_MAX_BYTES:
+                        raise ValueError("proof scan incomplete: byte bound exceeded")
+                    if time.monotonic() > deadline:
+                        raise ValueError("proof scan incomplete: time bound exceeded")
+                    snapshot.append((stage, current, row))
             if time.monotonic() > deadline:
                 raise ValueError("proof scan incomplete: time bound exceeded")
+            # The SQL deadline bounds acquiring one complete database snapshot,
+            # not Python URL/account validation. On a busy host, descheduling
+            # during that validation used to invalidate an already complete,
+            # small snapshot and block every account. Release SQLite before
+            # parsing; rows/bytes remain bounded and parsing has its own CPU
+            # budget, which does not charge time given to browser processes.
+            connection.close()
+            connection = None
+            parse_deadline = time.thread_time() + _PROOF_PARSE_CPU_SECONDS
+            pins: dict[str, set[str]] = {}
+            seen_archived: set[str] = set()
+            for stage, current, row in snapshot:
+                if time.thread_time() > parse_deadline:
+                    raise ValueError("proof validation incomplete: CPU time bound exceeded")
+                if current:
+                    job = {
+                        "type": row[0],
+                        "payload": json.loads(row[1]),
+                        "status": row[2],
+                        "result": json.loads(row[3] or "{}"),
+                    }
+                else:
+                    # completed_log and completion_evidence commonly hold the
+                    # exact same JSON. Both were read and counted above, but
+                    # their identical semantic proof only needs validating once.
+                    if row[0] in seen_archived:
+                        continue
+                    seen_archived.add(row[0])
+                    job = json.loads(row[0])
+                if not isinstance(job, dict):
+                    continue
+                identity = self._verified_upload_identity(job, routes)
+                if identity:
+                    operation, pin_id = identity
+                    pins.setdefault(operation, set()).add(pin_id)
+            if time.thread_time() > parse_deadline:
+                raise ValueError("proof validation incomplete: CPU time bound exceeded")
             return {operation: len(values) for operation, values in pins.items()}
         except (OSError, sqlite3.Error, TypeError, ValueError, KeyError, AttributeError) as exc:
             logger.warning(
@@ -269,7 +293,11 @@ class RateLimiter:
             ).fetchall()
             return {operation: count for operation, count in rows}
         except (OSError, sqlite3.Error) as exc:
-            logger.warning("Rate limiter: persisted daily reporting unavailable: %s", type(exc).__name__)
+            logger.warning(
+                "Rate limiter: persisted daily reporting unavailable: cause=%s: %s",
+                type(exc).__name__,
+                str(exc)[:200],
+            )
             return None
         finally:
             if connection is not None:

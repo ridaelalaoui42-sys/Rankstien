@@ -158,7 +158,14 @@ async def _wait_for_owner(page, owner_id: str, username: str, deadline: float, i
         if page.is_closed():
             raise AccountRecoveryStateError("Chrome closed before owner verification completed")
         url = urlsplit(page.url)
-        if url.scheme == "https" and url.hostname in {"pinterest.com", "www.pinterest.com"}:
+        if (
+            url.scheme == "https"
+            and url.hostname
+            and (
+                url.hostname in {"pinterest.com", "www.pinterest.com"}
+                or url.hostname.endswith(".pinterest.com")
+            )
+        ):
             try:
                 async with asyncio.timeout(5):
                     snapshot = await page.evaluate(_IDENTITY_SCRIPT)

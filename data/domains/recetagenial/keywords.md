@@ -237,7 +237,7 @@
 | El aperitivo que encantará a todos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | mejores aperitivos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | recetas faciles para cocinar | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
-| Momias de hojaldre con salchicha Frankfurt para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Momias de hojaldre con salchicha Frankfurt para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Live |
 | comida verano | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | gazpacho de sandía y jengibre | Sopas | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | salmorejo con virutas de jamón | Sopas | Pinterest Trends + Google News | Receta Genial | High | Live |
@@ -245,17 +245,16 @@
 | pollo al horno con limón y romero | Carnes | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | berenjenas rellenas de verduras y queso | General | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | pimientos rellenos de arroz y verduras | General | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
-| Huevos rellenos de atún con arañas de aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | brochetas de pollo y verduras | Carnes | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Crema de calabaza asada con telaraña de nata | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Momias de hojaldre con salchicha Frankfurt para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | tarta de queso al horno tradicional | Postres | Pinterest Trends + Google News | Receta Genial | High | Failed |
-| Dedos de bruja salados con salchichas y almendras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Huevos rellenos de atún con arañas de aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | lentejas frías estilo ensalada | General | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Pimientos naranjas rellenos tallados como calabazas de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Albóndigas terroríficas con salsa de tomate sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Croquetas caseras de calabaza y queso para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Crema de calabaza asada con telaraña de nata | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Dedos de bruja salados con salchichas y almendras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Croquetas caseras de calabaza y queso para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Needs Verification |
 | mejillones en escabeche casero | Pescados | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Mini pizzas momia con queso fundido y aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Pimientos naranjas rellenos tallados como calabazas de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | ensalada de garbanzos y aguacate | Ensaladas | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | aperitivos salados saludables | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | ideas de mesa de postre | Postres | Pinterest Trends + Google News | Receta Genial | Low | Live |
@@ -263,46 +262,41 @@
 | ensalada lentejas | Ensaladas | Pinterest Trends + Google News | Receta Genial | Low | Failed |
 | recetas verano | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | ensalada de pasta | Ensaladas | Pinterest Trends + Google News | Receta Genial | Low | Live |
-| Arroz negro con calamares y ojos de huevo de codorniz | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Recetas de Aperitivos y Canapés Fáciles | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Live |
 | Gourmet recetas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | Cocina Vital | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
 | Descubre la Receta Perfecta | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Empanada gallega con diseño de calabaza de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Albóndigas terroríficas con salsa de tomate sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Recetas con un toque picante | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Recetas para quien ama el picante | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
+| Croquetas caseras de calabaza y queso para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Mini pizzas momia con queso fundido y aceitunas negras | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Arroz negro con calamares y ojos de huevo de codorniz | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Empanada gallega con diseño de calabaza de Halloween | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Huesos de santo tradicionales rellenos de dulce de yema | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Aperitivos Fáciles con Masa de Hojaldre para Antojos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Buñuelos de viento caseros rellenos de crema para Todos los Santos | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Aperitivo De Queso Y Jamón | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
+| Ensalada tenebrosa de remolacha y queso de cabra | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Needs Verification |
+| Pastel de carne momificado envuelto en hojaldre | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Aperitivo fácil con fuet | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Salchichas momia crujientes al horno para niños | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Tostas de queso brie con mermelada de higos sangrienta | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Escobas de bruja con queso y palitos salados | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Aperitivos Fáciles con Masa de Hojaldre para Antojos | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Hamburguesas monstruo con queso cheddar y aceitunas | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Aperitivo De Queso Y Jamón | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Ensalada tenebrosa de remolacha y queso de cabra | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Pastel de carne momificado envuelto en hojaldre | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Aperitivo fácil con fuet | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Canapés de ataúd de pan de molde con jamón y queso | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Tabla de quesos y embutidos decorada para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Tartar de salmón y aguacate con ojos espeluznantes | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Calamares en su tinta con arroz y telaraña de alioli | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Tortilla de patatas decorada con pimientos de Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | receta de Eclairs de chocolate | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Tarta de Queso y Cuajada | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Failed |
 | Tarta de queso con mango | Postres | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Crema de calabacín verde de bruja con picatostes | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Empanadillas de calabaza y carne picada al horno | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Alitas de pollo murciélago marinadas en salsa barbacoa oscura | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Costillas de cerdo asadas con salsa roja sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Brochetas de albóndigas monstruo con queso fundido | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Solomillo de cerdo envuelto en hojaldre momia | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Merluza en salsa verde con ojos de guisantes terroríficos | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Buñuelos de calabaza tradicionales valencianos | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| Panecillos de calabaza con forma de calabacitas | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Hamburguesas monstruo con queso cheddar y aceitunas | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Empanadillas de calabaza y carne picada al horno | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Ensalada tenebrosa de remolacha y queso de cabra | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Costillas de cerdo asadas con salsa roja sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Pastel de carne momificado envuelto en hojaldre | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Canapés de ataúd de pan de molde con jamón y queso | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Tabla de quesos y embutidos decorada para Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Tartar de salmón y aguacate con ojos espeluznantes | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | recetas faciles | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Quesadilla de calabaza y queso fundido con cara de monstruo | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | recetas fáciles de comida | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
-| Pulpo a la gallega con patatas en caldero de bruja | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Calamares en su tinta con arroz y telaraña de alioli | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Recetas de Guisos de carne tradicionales | Carnes | Pinterest Trends + Google News | Receta Genial | High | Live |
 | maneras de marinar las carnes | Carnes | Pinterest Trends + Google News | Receta Genial | High | Live |
 | Recetas ricas en proteínas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
@@ -326,14 +320,28 @@
 | Recetas Fáciles y Rápidas | Aperitivos | Pinterest Trends + Google News | Receta Genial | Medium | Live |
 | Ensalada de garbanzos crujientes con verduras de verano | Ensaladas | Production Campaign 2026-07-28 | Receta Genial | High | Live |
 | Aperitivos de calabacin en freidora de aire | Aperitivos | Production Campaign 2026-07-28 | Receta Genial | High | Live |
-| Risotto negro de sepia con decoración tenebrosa | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Tortilla de patatas decorada con pimientos de Halloween | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Saludables | Aperitivos | Pinterest Trends + Google News | Receta Genial | Low | Live |
-| Ensaladilla rusa decorada con arañas de aceituna negra | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Crema de calabacín verde de bruja con picatostes | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Recetas de postres para fin de año | Postres | Google News | Receta Genial | High | Live |
 | Postres con sabor a chocolate | Postres | Google News | Receta Genial | High | Live |
+| Empanadillas de calabaza y carne picada al horno | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Paella valenciana con diseño temático de calabaza | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| aperitivos bebidas | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Live |
+| Alitas de pollo murciélago marinadas en salsa barbacoa oscura | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Costillas de cerdo asadas con salsa roja sangrienta | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Brochetas de albóndigas monstruo con queso fundido | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Solomillo de cerdo envuelto en hojaldre momia | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Merluza en salsa verde con ojos de guisantes terroríficos | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Buñuelos de calabaza tradicionales valencianos | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Panecillos de calabaza con forma de calabacitas | Postres | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Muslos de pollo crujientes con salsa diabólica picante | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Failed |
+| Quesadilla de calabaza y queso fundido con cara de monstruo | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Pulpo a la gallega con patatas en caldero de bruja | Pescados | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Risotto negro de sepia con decoración tenebrosa | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
+| Ensaladilla rusa decorada con arañas de aceituna negra | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Champiñones rellenos al horno con caras de calavera | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Paella valenciana con diseño temático de calabaza | Arroces | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| aperitivos bebidas | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Live |
 | Croquetas de jamón ibérico momificadas con tiras de queso | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Brochetas de queso fresco, tomate cherry y aceitunas araña | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Dip de queso crema y guacamole con telaraña de crema agria | Aperitivos | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
@@ -346,22 +354,6 @@
 | Ensalada de espinacas, calabaza asada y semillas de granada | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Rollitos de calabacín rellenos de carne y queso fundido de momia | Carnes | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
 | Crema de zanahoria y naranja con arañas de sésamo negro | Ensaladas | Pinterest Trends + Google News + Google Autocomplete | Receta Genial | High | Pending |
-| postres recetas pdf | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
-| aperitivos recetas | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| aperitivos recetas faciles | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| aperitivos recetas de rechupete | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| recetas aperitivos navidad | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| recetas aperitivos frios | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| recetas aperitivos nochevieja | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| recetas aperitivos navideños | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| recetas aperitivos originales | Aperitivos | Google News + Google Suggestions | Receta Genial | High | Pending |
-| postres ideas | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
-| postres ideas faciles | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
-| postres ideas para vender | Postres | Google News + Google Suggestions | Receta Genial | Low | Pending |
-| ideas postres saludables | Postres | Google News + Google Suggestions | Receta Genial | Low | Pending |
-| ideas postres navideños | Postres | Google News + Google Suggestions | Receta Genial | Low | Pending |
-| Recetas sin carne perfectas para Viernes Santo | Carnes | Google News | Receta Genial | High | Pending |
-| ideas postres halloween | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
 | ideas postres en vasitos | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
 | ideas postres individuales | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
 | ideas postres año nuevo | Postres | Google News + Google Suggestions | Receta Genial | Medium | Pending |
@@ -724,6 +716,6 @@
 | tarta de queso tradicional al horno | Postres | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
 | croquetas caseras | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
 | tortilla española receta | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
-| tortilla española receta fácil | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
-| pollo al horno | Carnes | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
-| tortilla española | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| tortilla española receta fácil | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Needs Verification |
+| pollo al horno | Carnes | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |
+| tortilla española | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Failed |

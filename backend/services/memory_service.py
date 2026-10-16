@@ -25,9 +25,17 @@ DEFAULT_DB_PATH = DATA_DIR / "memory" / "rankstein_memory.db"
 class MemoryService:
     """Native Memory Manager storing operational knowledge in SQLite with FTS5."""
 
-    def __init__(self, db_path: Path | str | None = None, project: str = "rankstein"):
+    def __init__(
+        self,
+        db_path: Path | str | None = None,
+        project: str = "rankstein",
+        cwd: str | None = None,
+        base_url: str | None = None,
+        **kwargs: Any,
+    ):
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
         self.project = project
+        self.cwd = cwd or str(PROJECT_ROOT)
         self._lock = threading.Lock()
         self._ensure_db()
 
@@ -411,6 +419,7 @@ class MemoryService:
                     relations = cur.fetchone()[0]
                     return {
                         "ok": True,
+                        "engine": "native_sqlite_fts5",
                         "total": total,
                         "by_type": by_type,
                         "relations": relations,

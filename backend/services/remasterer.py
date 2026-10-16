@@ -708,6 +708,34 @@ class PinRemasterer:
         self._profile_lease = None
         self.last_collection_diagnostics: dict[str, int | str] = {}
 
+    def _ensure_authenticated_session(self):
+        cookies_file = self.session_dir / "Default" / "Network" / "Cookies"
+        if cookies_file.exists() and cookies_file.stat().st_size >= 25000:
+            return
+        candidates = [
+            SESSION_DIR.parent / "DD",
+            SESSION_DIR.parent / "pinterest_rida_v7",
+            SESSION_DIR.parent / "turbo_m1",
+        ]
+        import shutil
+
+        for candidate in candidates:
+            if not candidate.exists() or candidate.resolve() == self.session_dir.resolve():
+                continue
+            cand_cookies = candidate / "Default" / "Network" / "Cookies"
+            cand_local_state = candidate / "Local State"
+            if not cand_cookies.exists() or cand_cookies.stat().st_size < 25000:
+                continue
+            try:
+                (self.session_dir / "Default" / "Network").mkdir(parents=True, exist_ok=True)
+                if cand_local_state.exists():
+                    shutil.copy2(cand_local_state, self.session_dir / "Local State")
+                shutil.copy2(cand_cookies, cookies_file)
+                print(f"Seeded authenticated cookies from {candidate.name} into {self.session_name}")
+                break
+            except Exception:
+                continue
+
     async def start(self):
         # Never delete locks or kill another campaign's browser. A legacy
         # owner without this lease is protected by Chromium's profile lock.
@@ -716,6 +744,7 @@ class PinRemasterer:
             raise RuntimeError("remaster_profile_busy")
         self._profile_lease = lease
         try:
+            self._ensure_authenticated_session()
             await self._start_browser()
         except BaseException:
             lease.release()

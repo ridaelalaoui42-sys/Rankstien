@@ -10,9 +10,10 @@ from html import escape
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import httpx
 import pytest
 
-from pinterest_automation.pinterest_driver import PinterestDriver
+from pinterest_automation.pinterest_driver import PinterestDriver, _anonymous_public_document
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -28,7 +29,10 @@ OWNER_URL = "https://www.pinterest.com/mediacomaas/"
 
 
 @pytest.fixture
-def candidate_driver():
+def candidate_driver(monkeypatch):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", AsyncMock(return_value=None))
     now = datetime.now(UTC).replace(microsecond=0)
     driver = object.__new__(PinterestDriver)
     driver.config = SimpleNamespace(accounts={})
@@ -390,3 +394,146 @@ async def test_cancellation_during_either_proof_request_propagates(candidate_dri
         await _verify(driver, page)
 
     driver._verify_recent_public_pin.assert_not_awaited()
+
+
+async def test_authenticated_csr_shell_uses_cookieless_exact_pin_and_owned_fresh_rss(
+    candidate_driver, monkeypatch
+):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    driver, now = candidate_driver
+    page, _pin, feed = _page(now, html="<html><head><title>Pinterest</title></head><body></body></html>")
+    anonymous = AsyncMock(side_effect=[_public_html(), _rss(now, title=DESCRIPTION)])
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", anonymous)
+
+    assert await _verify(driver, page) == CANDIDATE
+    assert [call.args[0] for call in anonymous.await_args_list] == [PIN_URL, FEED_URL]
+    assert anonymous.await_args_list[1].kwargs == {"max_bytes": 2_000_000}
+    assert page.context.request.get.await_count == 1
+    feed.text.assert_not_awaited()
+    assert driver._pin_candidate_verification["public_response_variant"] == "anonymous"
+    assert driver._pin_candidate_verification["method"] == "rss-create-receipt"
+
+
+@pytest.mark.parametrize("case", ["wrong_owner", "wrong_source", "wrong_receipt", "missing", "expired"])
+async def test_anonymous_shell_fallback_keeps_all_ownership_receipt_and_generation_gates(
+    candidate_driver, monkeypatch, case
+):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    driver, now = candidate_driver
+    page, _pin, _feed = _page(now, html="<html><head></head><body></body></html>")
+    html = _public_html(
+        pinner="https://www.pinterest.com/another/" if case == "wrong_owner" else OWNER_URL,
+        source="https://another.test/recipe" if case == "wrong_source" else DESTINATION,
+    )
+    rss = _rss(now, title="Wrong title" if case == "wrong_receipt" else TITLE)
+    anonymous = AsyncMock(side_effect=[None if case == "missing" else html, rss])
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", anonymous)
+    if case == "expired":
+        driver._pin_create_data["observed_at"] = now.timestamp() - 750
+        driver._pin_create_data["generation_started_at"] = now.timestamp() - 800
+
+    assert await _verify(driver, page) is None
+    if case == "expired":
+        anonymous.assert_not_awaited()
+    elif case in {"wrong_owner", "wrong_source", "missing"}:
+        assert anonymous.await_count == 1
+    else:
+        assert anonymous.await_count == 2
+
+
+@pytest.mark.parametrize("replace", ["event", "data"])
+async def test_anonymous_fetch_discards_changed_generation(candidate_driver, monkeypatch, replace):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    driver, now = candidate_driver
+    page, _pin, _feed = _page(now, html="<html><head></head><body></body></html>")
+
+    async def fetch(*_args, **_kwargs):
+        if replace == "event":
+            driver._pin_create_event = asyncio.Event()
+        else:
+            driver._pin_create_data = dict(driver._pin_create_data)
+        return _public_html()
+
+    anonymous = AsyncMock(side_effect=fetch)
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", anonymous)
+    assert await _verify(driver, page) is None
+    assert anonymous.await_count == 1
+    assert driver._pin_candidate_verification["reason"] == "stale_interception"
+
+
+async def test_partial_or_conflicting_session_ownership_does_not_use_anonymous_fallback(
+    candidate_driver, monkeypatch
+):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    driver, now = candidate_driver
+    page, _pin, _feed = _page(now, html=_public_html(source=None))
+    anonymous = AsyncMock(return_value=_public_html())
+    monkeypatch.setattr(driver_module, "_anonymous_public_document", anonymous)
+    assert await _verify(driver, page) is None
+    anonymous.assert_not_awaited()
+
+
+async def test_anonymous_read_has_no_account_cookie_and_does_not_follow_redirects(monkeypatch):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    received = []
+
+    def handler(request):
+        received.append(request)
+        return httpx.Response(200, text="<html>public</html>", headers={"Set-Cookie": "private=never"})
+
+    real_client = httpx.AsyncClient
+    options = []
+
+    def client(**kwargs):
+        options.append(kwargs)
+        return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(driver_module.httpx, "AsyncClient", client)
+    assert await _anonymous_public_document(PIN_URL) == "<html>public</html>"
+    assert await _anonymous_public_document(FEED_URL) == "<html>public</html>"
+    assert all(
+        "cookie" not in request.headers and "authorization" not in request.headers for request in received
+    )
+    assert all(option["cookies"] == {} and option["follow_redirects"] is False for option in options)
+
+
+@pytest.mark.parametrize("case", ["redirect", "not_found", "oversized", "foreign"])
+async def test_anonymous_public_document_rejects_redirect_status_size_and_foreign_host(monkeypatch, case):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    received = []
+
+    def handler(request):
+        received.append(request)
+        return httpx.Response(
+            302 if case == "redirect" else 404 if case == "not_found" else 200,
+            content=b"x" * 33,
+            headers={"Location": OTHER_PIN_URL},
+        )
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        driver_module.httpx,
+        "AsyncClient",
+        lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    url = "https://foreign.invalid/pin/" + CANDIDATE if case == "foreign" else PIN_URL
+    assert await _anonymous_public_document(url, max_bytes=32) is None
+    assert len(received) == (0 if case == "foreign" else 1)
+
+
+async def test_cancellation_during_anonymous_proof_propagates(candidate_driver, monkeypatch):
+    import pinterest_automation.pinterest_driver as driver_module
+
+    driver, now = candidate_driver
+    page, _pin, _feed = _page(now, html="<html><head></head><body></body></html>")
+    monkeypatch.setattr(
+        driver_module, "_anonymous_public_document", AsyncMock(side_effect=asyncio.CancelledError)
+    )
+    with pytest.raises(asyncio.CancelledError):
+        await _verify(driver, page)

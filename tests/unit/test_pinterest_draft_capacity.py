@@ -19,8 +19,12 @@ import pytest
 @pytest.fixture(autouse=True)
 def _isolated_manual_recovery_state(monkeypatch, tmp_path):
     import pinterest_automation.account_recovery as recovery_module
+    import pinterest_automation.supervisor as supervisor_module
 
     monkeypatch.setattr(recovery_module, "RECOVERY_STATE_FILE", tmp_path / "account_recovery.json")
+    # These draft-repair scenarios deliberately use placeholder image bytes;
+    # the real preflight/DLQ integration has its own media test suite.
+    monkeypatch.setattr(supervisor_module, "validate_pin_upload_image", lambda *_: {"ok": True})
 
 
 @pytest.fixture
