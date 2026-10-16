@@ -1,13 +1,13 @@
 # File-by-file Project Audit
 
-Generated: 2026-10-12T18:46:57.983902+00:00
+Generated: 2026-10-16T02:04:12.785042+00:00
 Root: `C:\Users\REDX420\Desktop\Rankstein`
 
 ## Summary
 
-- Files audited: 494
-- OK: 407
-- Review: 80
+- Files audited: 531
+- OK: 439
+- Review: 85
 - Fail: 7
 
 ## Scope
@@ -40,7 +40,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 40 | 1609 | `backend/agents/validator.py` |  |
 | ok | backend | 2 | 29 | `backend/api/__init__.py` |  |
 | ok | backend | 34 | 1463 | `backend/api/operator_auth.py` |  |
-| ok | backend | 3650 | 136865 | `backend/api/operator_routes.py` |  |
+| ok | backend | 3766 | 141929 | `backend/api/operator_routes.py` |  |
 | ok | backend | 435 | 17098 | `backend/api/routes.py` |  |
 | ok | backend | 2 | 31 | `backend/core/__init__.py` |  |
 | ok | backend | 124 | 4836 | `backend/core/a2a_protocol.py` |  |
@@ -50,6 +50,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 63 | 2087 | `backend/core/security.py` |  |
 | ok | backend | 86 | 2824 | `backend/main.py` |  |
 | ok | backend | 67 | 2044 | `backend/operator.py` |  |
+| ok | backend | 67 | 2044 | `backend/operator_backup.py` |  |
 | ok | backend | 23 | 432 | `backend/requirements.txt` |  |
 | ok | backend | 179 | 6473 | `backend/scripts/batch_upload_all_remastered.py` |  |
 | ok | backend | 695 | 24074 | `backend/scripts/batch_upload_remastered.py` |  |
@@ -65,19 +66,19 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 50 | 1799 | `backend/scripts/force_fix_visibility.py` |  |
 | ok | backend | 106 | 2872 | `backend/scripts/gemini_token_rotator.py` |  |
 | ok | backend | 759 | 25377 | `backend/scripts/hero_image_pipeline.py` |  |
-| ok | backend | 1858 | 75712 | `backend/scripts/pinterest_batch_core.py` |  |
+| ok | backend | 2348 | 96875 | `backend/scripts/pinterest_batch_core.py` |  |
 | ok | backend | 656 | 25121 | `backend/scripts/pinterest_uploader_v4.py` |  |
 | ok | backend | 33 | 806 | `backend/scripts/trigger_funnel.py` |  |
-| ok | backend | 5456 | 221637 | `backend/scripts/turbo_articles.py` |  |
+| ok | backend | 5851 | 240308 | `backend/scripts/turbo_articles.py` |  |
 | ok | backend | 2 | 27 | `backend/services/__init__.py` |  |
 | ok | backend | 75 | 2665 | `backend/services/competitor_analyzer.py` |  |
 | ok | backend | 140 | 5324 | `backend/services/harvester.py` |  |
 | ok | backend | 109 | 3900 | `backend/services/keyword_mapper.py` |  |
 | ok | backend | 187 | 7320 | `backend/services/memory_service.py` |  |
-| ok | backend | 913 | 35428 | `backend/services/news_scraper.py` |  |
+| ok | backend | 1060 | 42657 | `backend/services/news_scraper.py` |  |
 | ok | backend | 89 | 3017 | `backend/services/nvidia_client.py` |  |
-| ok | backend | 1546 | 60552 | `backend/services/operator_pipeline.py` |  |
-| ok | backend | 2741 | 113891 | `backend/services/remasterer.py` |  |
+| ok | backend | 1564 | 61510 | `backend/services/operator_pipeline.py` |  |
+| ok | backend | 2773 | 116685 | `backend/services/remasterer.py` |  |
 | ok | backend | 167 | 6802 | `backend/services/scraper.py` |  |
 | ok | backend | 147 | 4748 | `backend/services/seo_tools.py` |  |
 | ok | backend | 108 | 4271 | `backend/services/site_auditor.py` |  |
@@ -85,21 +86,21 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | backend | 966 | 44726 | `backend/static/operator/index.html` |  |
 | ok | backend | 13 | 357796 | `backend/static/operator/lucide.min.js` |  |
 | ok | backend | 1705 | 31636 | `backend/static/operator/operator.css` |  |
-| ok | backend | 2628 | 107624 | `backend/static/operator/operator.js` |  |
+| ok | backend | 2639 | 108254 | `backend/static/operator/operator.js` |  |
 | ok | docs | 63 | 1825 | `cli-harness/README.md` |  |
 | ok | docs | 52 | 1558 | `cli-harness/SKILL.md` |  |
 | ok | docs | 69 | 2360 | `cli-harness/cli_anything_rankstein/HARNESS.md` |  |
 | ok | project | 4 | 104 | `cli-harness/cli_anything_rankstein/__init__.py` |  |
 | ok | project | 471 | 19685 | `cli-harness/cli_anything_rankstein/__main__.py` |  |
 | ok | project | 23 | 546 | `cli-harness/pyproject.toml` |  |
-| ok | domain-data | 268 | 9027 | `data/domains/recetadolce/daily_best_keywords.json` |  |
-| ok | docs | 22 | 1449 | `data/domains/recetadolce/daily_best_keywords.md` |  |
+| ok | domain-data | 12 | 409 | `data/domains/recetadolce/daily_best_keywords.json` |  |
+| ok | docs | 7 | 199 | `data/domains/recetadolce/daily_best_keywords.md` |  |
 | ok | domain-data | 36 | 1140 | `data/domains/recetadolce/domain.json` |  |
-| ok | docs | 850 | 98879 | `data/domains/recetadolce/keywords.md` |  |
-| ok | domain-data | 268 | 8662 | `data/domains/recetagenial/daily_best_keywords.json` |  |
-| ok | docs | 22 | 1504 | `data/domains/recetagenial/daily_best_keywords.md` |  |
+| ok | docs | 925 | 108577 | `data/domains/recetadolce/keywords.md` |  |
+| ok | domain-data | 12 | 410 | `data/domains/recetagenial/daily_best_keywords.json` |  |
+| ok | docs | 7 | 200 | `data/domains/recetagenial/daily_best_keywords.md` |  |
 | ok | domain-data | 40 | 1176 | `data/domains/recetagenial/domain.json` |  |
-| ok | docs | 624 | 72150 | `data/domains/recetagenial/keywords.md` |  |
+| ok | docs | 724 | 85160 | `data/domains/recetagenial/keywords.md` |  |
 | ok | docs | 96 | 4883 | `docs/system/AUTONOMOUS_AGENTIC_SYSTEM.md` |  |
 | ok | docs | 111 | 11732 | `docs/system/CAMPAIGN_PIPELINE.md` |  |
 | ok | docs | 0 | 0 | `docs/system/HERMES_SOUL.md` |  |
@@ -108,6 +109,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | docs | 200 | 9578 | `docs/system/PRODUCTION_RUNTIME_PLAN.md` |  |
 | ok | docs | 70 | 2201 | `docs/system/PROJECT_HYGIENE.md` |  |
 | ok | docs | 75 | 4329 | `docs/system/PROJECT_MAP.md` |  |
+| ok | docs | 113 | 4769 | `docs/system/STARNET_RANKSTEIN_AGENTS.md` |  |
 | ok | docs | 325 | 16084 | `docs/system/SYSTEM_ARCHITECTURE.md` |  |
 | ok | docs | 398 | 12595 | `docs/templates/GENERIC_PINTEREST_PIN_TEMPLATE.md` |  |
 | ok | docs | 94 | 6821 | `docs/templates/IMAGE_GENERATION_CONTRACT.md` |  |
@@ -258,21 +260,21 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | docs | 22 | 1615 | `memory/pinterest_backlog.md` |  |
 | ok | core | 55 | 1956 | `pinterest_automation/__init__.py` |  |
 | ok | core | 233 | 8588 | `pinterest_automation/browser_utils.py` |  |
-| ok | core | 871 | 31517 | `pinterest_automation/campaign.py` |  |
+| ok | core | 977 | 37498 | `pinterest_automation/campaign.py` |  |
 | ok | core | 246 | 9752 | `pinterest_automation/circuit_breaker.py` |  |
 | ok | core | 513 | 18878 | `pinterest_automation/config.py` |  |
 | ok | core | 281 | 11121 | `pinterest_automation/health_monitor.py` |  |
-| ok | core | 1576 | 65809 | `pinterest_automation/job_queue.py` |  |
+| ok | core | 2397 | 110128 | `pinterest_automation/job_queue.py` |  |
 | ok | core | 282 | 11776 | `pinterest_automation/mcp_bridge.py` |  |
 | ok | core | 172 | 6217 | `pinterest_automation/mcp_client.py` |  |
 | ok | core | 343 | 12660 | `pinterest_automation/mcp_integration.py` |  |
-| ok | core | 1398 | 62284 | `pinterest_automation/pinterest_driver.py` |  |
-| ok | core | 524 | 24158 | `pinterest_automation/rate_limiter.py` |  |
+| ok | core | 1577 | 71531 | `pinterest_automation/pinterest_driver.py` |  |
+| ok | core | 553 | 25380 | `pinterest_automation/rate_limiter.py` |  |
 | ok | core | 102 | 4134 | `pinterest_automation/routing.py` |  |
-| ok | core | 164 | 5821 | `pinterest_automation/runtime_state.py` |  |
+| ok | core | 381 | 14402 | `pinterest_automation/runtime_state.py` |  |
 | ok | core | 568 | 22061 | `pinterest_automation/self_healing.py` |  |
-| ok | core | 485 | 20430 | `pinterest_automation/session_pool.py` |  |
-| ok | core | 880 | 42638 | `pinterest_automation/supervisor.py` |  |
+| ok | core | 483 | 20307 | `pinterest_automation/session_pool.py` |  |
+| ok | core | 1000 | 48596 | `pinterest_automation/supervisor.py` |  |
 | ok | core | 61 | 1897 | `pinterest_automation/utils.py` |  |
 | ok | project | 249 | 8197 | `pyproject.toml` |  |
 | ok | project | 39 | 1405 | `rankstein.py` |  |
@@ -295,7 +297,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 130 | 4946 | `rankstein/pinterest_connector.py` |  |
 | ok | core | 346 | 10791 | `rankstein/pipeline_events.py` |  |
 | ok | core | 882 | 40072 | `rankstein/production_batch.py` |  |
-| ok | core | 569 | 21078 | `rankstein/production_reconcile.py` |  |
+| ok | core | 587 | 21923 | `rankstein/production_reconcile.py` |  |
 | ok | core | 87 | 3642 | `rankstein/production_safety.py` |  |
 | ok | core | 490 | 15326 | `rankstein/prompts.py` |  |
 | ok | core | 383 | 16413 | `rankstein/provisioner.py` |  |
@@ -311,7 +313,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | core | 634 | 24116 | `rankstein/suite_controller.py` |  |
 | ok | core | 2043 | 70306 | `rankstein/trend_intelligence.py` |  |
 | ok | core | 29 | 886 | `rankstein/windows_compat.py` |  |
-| ok | project | 5655 | 239398 | `rankstein_mcp_server.py` |  |
+| ok | project | 5696 | 241505 | `rankstein_mcp_server.py` |  |
 | ok | project | 193 | 4145 | `requirements.txt` |  |
 | review | scripts | 77 | 2926 | `scripts/debug/audit_all_105_urls.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 137 | 5535 | `scripts/debug/audit_and_clean_database.py` | python syntax error: line 135: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
@@ -353,6 +355,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 25 | 1105 | `scripts/debug/inspect_draft_drawer.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 46 | 1980 | `scripts/debug/inspect_issue_posts.py` | python syntax error: line 34: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 29 | 1013 | `scripts/debug/inspect_page_schema.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 244 | 11177 | `scripts/debug/inspect_pinterest_draft_ui.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 70 | 2500 | `scripts/debug/inspect_pinterest_remaster_dom.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 23 | 839 | `scripts/debug/inspect_queue_breakdown.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 54 | 2097 | `scripts/debug/inspect_schema_issues.py` | python syntax error: line 14: invalid syntax<br>non-production helper retained under scripts/debug or scripts/oneoff |
@@ -365,8 +368,10 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 80 | 2866 | `scripts/debug/perfect_extract_ribbons.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 167 | 5336 | `scripts/debug/post_remediation_audit.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 32 | 1973 | `scripts/debug/probe_source_ocr.ps1` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 169 | 7639 | `scripts/debug/production_watch_checkpoint.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 128 | 5210 | `scripts/debug/provision_boards_medridaelalaoui6.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 23 | 743 | `scripts/debug/publish_test_article.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 132 | 5596 | `scripts/debug/recover_selected_primary_evidence.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | fail | scripts | 117 | 5101 | `scripts/debug/repair_all_supabase_schemas.py` | python syntax error: line 115: invalid syntax. Perhaps you forgot a comma?<br>non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 120 | 4434 | `scripts/debug/test_arc_text.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 28 | 1252 | `scripts/debug/test_article_slug.py` | non-production helper retained under scripts/debug or scripts/oneoff |
@@ -394,12 +399,16 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | review | scripts | 335 | 13400 | `scripts/debug/test_recipe_card_visual_ref.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 655 | 30613 | `scripts/debug/test_recipe_suite_pins.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 57 | 2701 | `scripts/debug/test_submit_board.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 131 | 5417 | `scripts/debug/trace_existing_pinterest_job.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 17 | 794 | `scripts/debug/verify_20.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 43 | 1811 | `scripts/debug/verify_dashboard.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 44 | 1663 | `scripts/debug/verify_final_deployment.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 37 | 1703 | `scripts/debug/verify_live_fixes.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 52 | 2503 | `scripts/debug/verify_live_sites.py` | non-production helper retained under scripts/debug or scripts/oneoff |
 | review | scripts | 79 | 2907 | `scripts/debug/verify_nemotron_json.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| review | scripts | 87 | 3372 | `scripts/debug/verify_omniroute_tokenharbor.py` | non-production helper retained under scripts/debug or scripts/oneoff |
+| ok | scripts | 252 | 10746 | `scripts/dev/audit_pinterest_folder_destinations.py` |  |
+| ok | scripts | 420 | 18838 | `scripts/dev/benchmark_pinterest_workers.py` |  |
 | ok | scripts | 89 | 3165 | `scripts/dev/check_no_root_scratch.py` |  |
 | ok | scripts | 97 | 3698 | `scripts/dev/continue_production_batch.py` |  |
 | ok | scripts | 1 | 13 | `scripts/dev/data/sessions/DD/component_crx_cache/metadata.json` |  |
@@ -407,6 +416,8 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | scripts | 21 | 994 | `scripts/dev/disable_legacy_odysseus_task.ps1` |  |
 | ok | scripts | 162 | 5608 | `scripts/dev/live_article_quality_check.py` |  |
 | ok | scripts | 11 | 697 | `scripts/dev/live_logs.ps1` |  |
+| ok | scripts | 389 | 17297 | `scripts/dev/observe_pinterest_workers.py` |  |
+| ok | scripts | 211 | 7776 | `scripts/dev/plan_pinterest_destination_repair.py` |  |
 | ok | scripts | 307 | 9508 | `scripts/dev/project_audit.py` |  |
 | ok | scripts | 43 | 2399 | `scripts/dev/read_source_image_text.ps1` |  |
 | ok | scripts | 520 | 20784 | `scripts/dev/repair_article_quality.py` |  |
@@ -423,7 +434,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | scripts | 78 | 2658 | `scripts/ops/check_pins.py` |  |
 | ok | scripts | 164 | 7342 | `scripts/ops/clean_all_duplicates.py` |  |
 | ok | scripts | 232 | 8039 | `scripts/ops/clean_duplicate_posts.py` |  |
-| ok | scripts | 304 | 14051 | `scripts/ops/clear_pinterest_drafts.py` |  |
+| ok | scripts | 911 | 39604 | `scripts/ops/clear_pinterest_drafts.py` |  |
 | ok | scripts | 223 | 10383 | `scripts/ops/ensure_pinterest_boards.py` |  |
 | ok | scripts | 46 | 1432 | `scripts/ops/force_chromium_env.py` |  |
 | ok | scripts | 174 | 6551 | `scripts/ops/force_chromium_login.py` |  |
@@ -453,7 +464,7 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | tests | 0 | 0 | `tests/unit/__init__.py` |  |
 | ok | tests | 94 | 3087 | `tests/unit/test_ai_engine.py` |  |
 | ok | tests | 100 | 4025 | `tests/unit/test_article_quality_policy.py` |  |
-| ok | tests | 289 | 10811 | `tests/unit/test_article_remaster_queue.py` |  |
+| ok | tests | 309 | 11445 | `tests/unit/test_article_remaster_queue.py` |  |
 | ok | tests | 170 | 7069 | `tests/unit/test_branding.py` |  |
 | ok | tests | 201 | 8719 | `tests/unit/test_browser_utils.py` |  |
 | ok | tests | 42 | 1220 | `tests/unit/test_campaign_guard.py` |  |
@@ -479,23 +490,47 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | tests | 18 | 581 | `tests/unit/test_nvidia_fallback.py` |  |
 | ok | tests | 259 | 10701 | `tests/unit/test_operator.py` |  |
 | ok | tests | 70 | 3093 | `tests/unit/test_operator_client.py` |  |
-| ok | tests | 306 | 11820 | `tests/unit/test_operator_live_status.py` |  |
+| ok | tests | 338 | 13244 | `tests/unit/test_operator_live_status.py` |  |
 | ok | tests | 1518 | 56503 | `tests/unit/test_operator_pipeline.py` |  |
-| ok | tests | 767 | 27248 | `tests/unit/test_pinterest_production_runtime.py` |  |
+| ok | tests | 217 | 8498 | `tests/unit/test_operator_worker_snapshot_truth.py` |  |
+| ok | tests | 148 | 5652 | `tests/unit/test_pinterest_account_dispatch.py` |  |
+| ok | tests | 68 | 2746 | `tests/unit/test_pinterest_account_failures.py` |  |
+| ok | tests | 85 | 2817 | `tests/unit/test_pinterest_board_creation.py` |  |
+| ok | tests | 333 | 12337 | `tests/unit/test_pinterest_destination_repair.py` |  |
+| ok | tests | 348 | 13988 | `tests/unit/test_pinterest_dlq_recovery.py` |  |
+| ok | tests | 1003 | 43255 | `tests/unit/test_pinterest_draft_capacity.py` |  |
+| ok | tests | 855 | 34799 | `tests/unit/test_pinterest_draft_cleanup.py` |  |
+| ok | tests | 140 | 5769 | `tests/unit/test_pinterest_existing_board.py` |  |
+| ok | tests | 144 | 5897 | `tests/unit/test_pinterest_folder_destination_audit.py` |  |
+| ok | tests | 242 | 9638 | `tests/unit/test_pinterest_folder_intake.py` |  |
+| ok | tests | 382 | 17258 | `tests/unit/test_pinterest_navigation_deferral.py` |  |
+| ok | tests | 308 | 12297 | `tests/unit/test_pinterest_pin_proof.py` |  |
+| ok | tests | 773 | 27447 | `tests/unit/test_pinterest_production_runtime.py` |  |
 | ok | tests | 77 | 2335 | `tests/unit/test_pinterest_public_verification.py` |  |
+| ok | tests | 503 | 20104 | `tests/unit/test_pinterest_publish_actionability.py` |  |
+| ok | tests | 323 | 11575 | `tests/unit/test_pinterest_runtime_fencing.py` |  |
+| ok | tests | 311 | 11498 | `tests/unit/test_pinterest_scaling_startup.py` |  |
+| ok | tests | 183 | 7135 | `tests/unit/test_pinterest_session_configuration.py` |  |
+| ok | tests | 108 | 4525 | `tests/unit/test_pinterest_supervisor_control.py` |  |
+| ok | tests | 204 | 7932 | `tests/unit/test_pinterest_supervisor_ownership.py` |  |
+| ok | tests | 290 | 12037 | `tests/unit/test_pinterest_worker_observer.py` |  |
+| ok | tests | 204 | 6964 | `tests/unit/test_pinterest_worker_scaling.py` |  |
 | ok | tests | 78 | 2156 | `tests/unit/test_pipeline_events.py` |  |
 | ok | tests | 158 | 5930 | `tests/unit/test_pipeline_progress_deadlines.py` |  |
 | ok | tests | 472 | 19242 | `tests/unit/test_production_batch.py` |  |
 | ok | tests | 395 | 18351 | `tests/unit/test_production_batch_import.py` |  |
-| ok | tests | 486 | 17131 | `tests/unit/test_production_reconcile.py` |  |
+| ok | tests | 518 | 18551 | `tests/unit/test_production_reconcile.py` |  |
 | ok | tests | 55 | 2032 | `tests/unit/test_production_safety.py` |  |
 | ok | tests | 253 | 11022 | `tests/unit/test_provisioner.py` |  |
-| ok | tests | 462 | 18135 | `tests/unit/test_rate_limiter_persistence.py` |  |
+| ok | tests | 214 | 9613 | `tests/unit/test_queue_completion_evidence.py` |  |
+| ok | tests | 626 | 24512 | `tests/unit/test_rate_limiter_persistence.py` |  |
+| ok | tests | 47 | 1851 | `tests/unit/test_remaster_completion_evidence.py` |  |
 | ok | tests | 540 | 21020 | `tests/unit/test_remaster_deadlines_recovery.py` |  |
-| ok | tests | 309 | 10344 | `tests/unit/test_remaster_native_fallback.py` |  |
+| ok | tests | 209 | 7858 | `tests/unit/test_remaster_intake_budget.py` |  |
+| ok | tests | 309 | 10345 | `tests/unit/test_remaster_native_fallback.py` |  |
 | ok | tests | 142 | 4819 | `tests/unit/test_remaster_relevance.py` |  |
 | ok | tests | 216 | 8046 | `tests/unit/test_remaster_source_quality.py` |  |
-| ok | tests | 311 | 11331 | `tests/unit/test_remaster_variants.py` |  |
+| ok | tests | 482 | 17861 | `tests/unit/test_remaster_variants.py` |  |
 | ok | tests | 50 | 1870 | `tests/unit/test_runtime_backup.py` |  |
 | ok | tests | 64 | 2546 | `tests/unit/test_runtime_maintenance.py` |  |
 | ok | tests | 178 | 7363 | `tests/unit/test_save_image_from_base64.py` |  |
@@ -505,11 +540,13 @@ Excluded: dependencies, caches, browser sessions, generated media, local reports
 | ok | tests | 161 | 6024 | `tests/unit/test_site_factory.py` |  |
 | ok | tests | 199 | 7265 | `tests/unit/test_source_image_quality.py` |  |
 | ok | tests | 287 | 10275 | `tests/unit/test_startup.py` |  |
-| ok | tests | 153 | 5992 | `tests/unit/test_step_images.py` |  |
+| ok | tests | 210 | 9168 | `tests/unit/test_step_image_extraction.py` |  |
+| ok | tests | 254 | 9572 | `tests/unit/test_step_image_publishing.py` |  |
+| ok | tests | 281 | 10921 | `tests/unit/test_step_images.py` |  |
 | ok | tests | 108 | 3544 | `tests/unit/test_subscribers.py` |  |
 | ok | tests | 110 | 4154 | `tests/unit/test_suite_controller.py` |  |
 | ok | tests | 32 | 768 | `tests/unit/test_supabase_headers.py` |  |
 | ok | tests | 174 | 6050 | `tests/unit/test_supabase_image_upload.py` |  |
 | ok | tests | 623 | 22324 | `tests/unit/test_trend_intelligence.py` |  |
-| ok | tests | 2634 | 93585 | `tests/unit/test_turbo_articles.py` |  |
+| ok | tests | 2940 | 105373 | `tests/unit/test_turbo_articles.py` |  |
 | ok | tests | 28 | 902 | `tests/unit/test_windows_compat.py` |  |

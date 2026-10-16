@@ -717,7 +717,7 @@ def refresh_domain_trend_lists(
         excluded_keywords = {
             row.keyword.casefold()
             for row in existing_rows
-            if row.status.strip().casefold() in {"live", "in progress"}
+            if row.status.strip().casefold() in {"live", "in progress", "failed", "needs verification"}
         }
         candidates = rank_terms_for_domain(
             domain,
@@ -869,6 +869,10 @@ async def _fetch_pinterest_niche_trending_terms_async(
 
     browser_type, profile_dir = _trend_browser_profile(domain)
     profile_dir.mkdir(parents=True, exist_ok=True)
+    with contextlib.suppress(Exception):
+        from pinterest_automation.browser_utils import kill_browser_locks
+
+        kill_browser_locks(profile_dir, browser_type)
 
     queries = _pinterest_seed_queries(domain)
     query_batches: list[list[str]] = []
@@ -887,6 +891,10 @@ async def _fetch_pinterest_niche_trending_terms_async(
             launch_options["args"] = ["--no-remote", "--allow-downgrade"]
         else:
             launch_options["user_agent"] = USER_AGENT
+            chromium_channel = os.environ.get("PINTEREST_CHROMIUM_CHANNEL", "chrome").strip()
+            if chromium_channel:
+                launch_options["channel"] = chromium_channel
+                launch_options["ignore_default_args"] = ["--enable-automation"]
 
         browser = await browser_engine.launch_persistent_context(
             str(profile_dir),

@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-10-12T18:46:57.983902+00:00",
+  "generated_at": "2026-10-16T02:04:12.785042+00:00",
   "root": "C:\\Users\\REDX420\\Desktop\\Rankstein",
-  "files_audited": 494,
+  "files_audited": 531,
   "status_counts": {
-    "ok": 407,
-    "review": 80,
+    "ok": 439,
+    "review": 85,
     "fail": 7
   },
   "kind_counts": {
     "agent-config": 1,
-    "backend": 65,
+    "backend": 66,
     "core": 53,
-    "docs": 29,
+    "docs": 30,
     "domain-data": 4,
     "frontend": 134,
     "project": 8,
-    "scripts": 132,
-    "tests": 68
+    "scripts": 141,
+    "tests": 94
   },
   "files": [
     {
@@ -191,8 +191,8 @@
       "path": "backend/api/operator_routes.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 136865,
-      "lines": 3650,
+      "bytes": 141929,
+      "lines": 3766,
       "findings": []
     },
     {
@@ -261,6 +261,14 @@
     },
     {
       "path": "backend/operator.py",
+      "kind": "backend",
+      "status": "ok",
+      "bytes": 2044,
+      "lines": 67,
+      "findings": []
+    },
+    {
+      "path": "backend/operator_backup.py",
       "kind": "backend",
       "status": "ok",
       "bytes": 2044,
@@ -391,8 +399,8 @@
       "path": "backend/scripts/pinterest_batch_core.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 75712,
-      "lines": 1858,
+      "bytes": 96875,
+      "lines": 2348,
       "findings": []
     },
     {
@@ -415,8 +423,8 @@
       "path": "backend/scripts/turbo_articles.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 221637,
-      "lines": 5456,
+      "bytes": 240308,
+      "lines": 5851,
       "findings": []
     },
     {
@@ -463,8 +471,8 @@
       "path": "backend/services/news_scraper.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 35428,
-      "lines": 913,
+      "bytes": 42657,
+      "lines": 1060,
       "findings": []
     },
     {
@@ -479,16 +487,16 @@
       "path": "backend/services/operator_pipeline.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 60552,
-      "lines": 1546,
+      "bytes": 61510,
+      "lines": 1564,
       "findings": []
     },
     {
       "path": "backend/services/remasterer.py",
       "kind": "backend",
       "status": "ok",
-      "bytes": 113891,
-      "lines": 2741,
+      "bytes": 116685,
+      "lines": 2773,
       "findings": []
     },
     {
@@ -551,8 +559,8 @@
       "path": "backend/static/operator/operator.js",
       "kind": "backend",
       "status": "ok",
-      "bytes": 107624,
-      "lines": 2628,
+      "bytes": 108254,
+      "lines": 2639,
       "findings": []
     },
     {
@@ -607,16 +615,16 @@
       "path": "data/domains/recetadolce/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 9027,
-      "lines": 268,
+      "bytes": 409,
+      "lines": 12,
       "findings": []
     },
     {
       "path": "data/domains/recetadolce/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1449,
-      "lines": 22,
+      "bytes": 199,
+      "lines": 7,
       "findings": []
     },
     {
@@ -631,24 +639,24 @@
       "path": "data/domains/recetadolce/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 98879,
-      "lines": 850,
+      "bytes": 108577,
+      "lines": 925,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.json",
       "kind": "domain-data",
       "status": "ok",
-      "bytes": 8662,
-      "lines": 268,
+      "bytes": 410,
+      "lines": 12,
       "findings": []
     },
     {
       "path": "data/domains/recetagenial/daily_best_keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 1504,
-      "lines": 22,
+      "bytes": 200,
+      "lines": 7,
       "findings": []
     },
     {
@@ -663,8 +671,8 @@
       "path": "data/domains/recetagenial/keywords.md",
       "kind": "docs",
       "status": "ok",
-      "bytes": 72150,
-      "lines": 624,
+      "bytes": 85160,
+      "lines": 724,
       "findings": []
     },
     {
@@ -729,6 +737,14 @@
       "status": "ok",
       "bytes": 4329,
       "lines": 75,
+      "findings": []
+    },
+    {
+      "path": "docs/system/STARNET_RANKSTEIN_AGENTS.md",
+      "kind": "docs",
+      "status": "ok",
+      "bytes": 4769,
+      "lines": 113,
       "findings": []
     },
     {
@@ -1935,8 +1951,8 @@
       "path": "pinterest_automation/campaign.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 31517,
-      "lines": 871,
+      "bytes": 37498,
+      "lines": 977,
       "findings": []
     },
     {
@@ -1967,8 +1983,8 @@
       "path": "pinterest_automation/job_queue.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 65809,
-      "lines": 1576,
+      "bytes": 110128,
+      "lines": 2397,
       "findings": []
     },
     {
@@ -1999,16 +2015,16 @@
       "path": "pinterest_automation/pinterest_driver.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 62284,
-      "lines": 1398,
+      "bytes": 71531,
+      "lines": 1577,
       "findings": []
     },
     {
       "path": "pinterest_automation/rate_limiter.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 24158,
-      "lines": 524,
+      "bytes": 25380,
+      "lines": 553,
       "findings": []
     },
     {
@@ -2023,8 +2039,8 @@
       "path": "pinterest_automation/runtime_state.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 5821,
-      "lines": 164,
+      "bytes": 14402,
+      "lines": 381,
       "findings": []
     },
     {
@@ -2039,16 +2055,16 @@
       "path": "pinterest_automation/session_pool.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 20430,
-      "lines": 485,
+      "bytes": 20307,
+      "lines": 483,
       "findings": []
     },
     {
       "path": "pinterest_automation/supervisor.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 42638,
-      "lines": 880,
+      "bytes": 48596,
+      "lines": 1000,
       "findings": []
     },
     {
@@ -2231,8 +2247,8 @@
       "path": "rankstein/production_reconcile.py",
       "kind": "core",
       "status": "ok",
-      "bytes": 21078,
-      "lines": 569,
+      "bytes": 21923,
+      "lines": 587,
       "findings": []
     },
     {
@@ -2359,8 +2375,8 @@
       "path": "rankstein_mcp_server.py",
       "kind": "project",
       "status": "ok",
-      "bytes": 239398,
-      "lines": 5655,
+      "bytes": 241505,
+      "lines": 5696,
       "findings": []
     },
     {
@@ -2777,6 +2793,16 @@
       ]
     },
     {
+      "path": "scripts/debug/inspect_pinterest_draft_ui.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 11177,
+      "lines": 244,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/inspect_pinterest_remaster_dom.py",
       "kind": "scripts",
       "status": "review",
@@ -2898,6 +2924,16 @@
       ]
     },
     {
+      "path": "scripts/debug/production_watch_checkpoint.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 7639,
+      "lines": 169,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/provision_boards_medridaelalaoui6.py",
       "kind": "scripts",
       "status": "review",
@@ -2913,6 +2949,16 @@
       "status": "review",
       "bytes": 743,
       "lines": 23,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/debug/recover_selected_primary_evidence.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 5596,
+      "lines": 132,
       "findings": [
         "non-production helper retained under scripts/debug or scripts/oneoff"
       ]
@@ -3189,6 +3235,16 @@
       ]
     },
     {
+      "path": "scripts/debug/trace_existing_pinterest_job.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 5417,
+      "lines": 131,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
       "path": "scripts/debug/verify_20.py",
       "kind": "scripts",
       "status": "review",
@@ -3249,6 +3305,32 @@
       ]
     },
     {
+      "path": "scripts/debug/verify_omniroute_tokenharbor.py",
+      "kind": "scripts",
+      "status": "review",
+      "bytes": 3372,
+      "lines": 87,
+      "findings": [
+        "non-production helper retained under scripts/debug or scripts/oneoff"
+      ]
+    },
+    {
+      "path": "scripts/dev/audit_pinterest_folder_destinations.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 10746,
+      "lines": 252,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/benchmark_pinterest_workers.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 18838,
+      "lines": 420,
+      "findings": []
+    },
+    {
       "path": "scripts/dev/check_no_root_scratch.py",
       "kind": "scripts",
       "status": "ok",
@@ -3302,6 +3384,22 @@
       "status": "ok",
       "bytes": 697,
       "lines": 11,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/observe_pinterest_workers.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 17297,
+      "lines": 389,
+      "findings": []
+    },
+    {
+      "path": "scripts/dev/plan_pinterest_destination_repair.py",
+      "kind": "scripts",
+      "status": "ok",
+      "bytes": 7776,
+      "lines": 211,
       "findings": []
     },
     {
@@ -3436,8 +3534,8 @@
       "path": "scripts/ops/clear_pinterest_drafts.py",
       "kind": "scripts",
       "status": "ok",
-      "bytes": 14051,
-      "lines": 304,
+      "bytes": 39604,
+      "lines": 911,
       "findings": []
     },
     {
@@ -3676,8 +3774,8 @@
       "path": "tests/unit/test_article_remaster_queue.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 10811,
-      "lines": 289,
+      "bytes": 11445,
+      "lines": 309,
       "findings": []
     },
     {
@@ -3884,8 +3982,8 @@
       "path": "tests/unit/test_operator_live_status.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 11820,
-      "lines": 306,
+      "bytes": 13244,
+      "lines": 338,
       "findings": []
     },
     {
@@ -3897,11 +3995,115 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_operator_worker_snapshot_truth.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 8498,
+      "lines": 217,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_account_dispatch.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 5652,
+      "lines": 148,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_account_failures.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2746,
+      "lines": 68,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_board_creation.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 2817,
+      "lines": 85,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_destination_repair.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 12337,
+      "lines": 333,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_dlq_recovery.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 13988,
+      "lines": 348,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_draft_capacity.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 43255,
+      "lines": 1003,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_draft_cleanup.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 34799,
+      "lines": 855,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_existing_board.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 5769,
+      "lines": 140,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_folder_destination_audit.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 5897,
+      "lines": 144,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_folder_intake.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 9638,
+      "lines": 242,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_navigation_deferral.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 17258,
+      "lines": 382,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_pin_proof.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 12297,
+      "lines": 308,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_pinterest_production_runtime.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 27248,
-      "lines": 767,
+      "bytes": 27447,
+      "lines": 773,
       "findings": []
     },
     {
@@ -3910,6 +4112,70 @@
       "status": "ok",
       "bytes": 2335,
       "lines": 77,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_publish_actionability.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 20104,
+      "lines": 503,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_runtime_fencing.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 11575,
+      "lines": 323,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_scaling_startup.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 11498,
+      "lines": 311,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_session_configuration.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 7135,
+      "lines": 183,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_supervisor_control.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 4525,
+      "lines": 108,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_supervisor_ownership.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 7932,
+      "lines": 204,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_worker_observer.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 12037,
+      "lines": 290,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_pinterest_worker_scaling.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 6964,
+      "lines": 204,
       "findings": []
     },
     {
@@ -3948,8 +4214,8 @@
       "path": "tests/unit/test_production_reconcile.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 17131,
-      "lines": 486,
+      "bytes": 18551,
+      "lines": 518,
       "findings": []
     },
     {
@@ -3969,11 +4235,27 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_queue_completion_evidence.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 9613,
+      "lines": 214,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_rate_limiter_persistence.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 18135,
-      "lines": 462,
+      "bytes": 24512,
+      "lines": 626,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_remaster_completion_evidence.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 1851,
+      "lines": 47,
       "findings": []
     },
     {
@@ -3985,10 +4267,18 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_remaster_intake_budget.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 7858,
+      "lines": 209,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_remaster_native_fallback.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 10344,
+      "bytes": 10345,
       "lines": 309,
       "findings": []
     },
@@ -4012,8 +4302,8 @@
       "path": "tests/unit/test_remaster_variants.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 11331,
-      "lines": 311,
+      "bytes": 17861,
+      "lines": 482,
       "findings": []
     },
     {
@@ -4089,11 +4379,27 @@
       "findings": []
     },
     {
+      "path": "tests/unit/test_step_image_extraction.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 9168,
+      "lines": 210,
+      "findings": []
+    },
+    {
+      "path": "tests/unit/test_step_image_publishing.py",
+      "kind": "tests",
+      "status": "ok",
+      "bytes": 9572,
+      "lines": 254,
+      "findings": []
+    },
+    {
       "path": "tests/unit/test_step_images.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 5992,
-      "lines": 153,
+      "bytes": 10921,
+      "lines": 281,
       "findings": []
     },
     {
@@ -4140,8 +4446,8 @@
       "path": "tests/unit/test_turbo_articles.py",
       "kind": "tests",
       "status": "ok",
-      "bytes": 93585,
-      "lines": 2634,
+      "bytes": 105373,
+      "lines": 2940,
       "findings": []
     },
     {

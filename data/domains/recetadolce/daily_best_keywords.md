@@ -1,21 +1,11 @@
 # Daily Best Keywords - Receta Dolce
 
-Generated: 2026-10-12T20:17:25.111204+00:00
+Generated: 2026-10-16T16:25:48.035509+00:00
 
 | Keyword | Cluster | Priority | Score | Specificity | Demand | News Hits |
 |---|---|---|---:|---:|---:|---:|
-| ensalada de garbanzos aguacate | fresas-y-nata | Medium | 100.00 | 3.0 | 8.0 | 1 |
-| tortilla española receta original | fresas-y-nata | High | 100.00 | 3.0 | 8.0 | 1 |
-| tortilla española emplatado | fresas-y-nata | Medium | 100.00 | 3.0 | 8.0 | 1 |
-| croquetas caseras de jamon | fresas-y-nata | Medium | 100.00 | 4.0 | 8.0 | 1 |
-| salmón al horno con espárragos | fresas-y-nata | Low | 100.00 | 3.0 | 8.0 | 1 |
-| ensalada de garbanzos atun | fresas-y-nata | Medium | 100.00 | 4.0 | 8.0 | 1 |
-| pollo al horno con papas | fresas-y-nata | Low | 100.00 | 3.0 | 8.0 | 1 |
-| paella de marisco video | fresas-y-nata | Low | 100.00 | 3.0 | 8.0 | 1 |
-| croquetas caseras de pollo | fresas-y-nata | Medium | 100.00 | 4.0 | 8.0 | 1 |
-| croquetas caseras de cocido | fresas-y-nata | High | 100.00 | 3.0 | 8.0 | 1 |
-| croquetas caseras en freidora de aire | fresas-y-nata | Low | 100.00 | 4.0 | 8.0 | 1 |
-| pollo al horno con verduras | fresas-y-nata | Low | 100.00 | 4.0 | 8.0 | 1 |
-| ensalada de garbanzos recetas facil | fresas-y-nata | Medium | 100.00 | 3.0 | 8.0 | 1 |
-| tortilla española receta facil | fresas-y-nata | Low | 100.00 | 3.0 | 8.0 | 1 |
-| salmón al horno con verduras | fresas-y-nata | Low | 100.00 | 4.0 | 8.0 | 1 |
+| tarta de queso receta | fresas-y-nata | Low | 75.00 | 3.0 | 20.0 | 5 |
+| helado de pistacho con chocolate | fresas-y-nata | Low | 69.00 | 4.0 | 20.0 | 5 |
+| tarta de queso fria | fresas-y-nata | Low | 69.00 | 4.0 | 20.0 | 5 |
+| helado de pistacho | fresas-y-nata | Low | 63.00 | 3.0 | 20.0 | 5 |
+| helado de pistacho de mercadona | fresas-y-nata | Low | 63.00 | 3.0 | 20.0 | 5 |

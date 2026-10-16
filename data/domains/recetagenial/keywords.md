@@ -2,7 +2,7 @@
 
 | Keyword | Cluster | Source | Target Blog | Priority | Status |
 |---|---|---|---|---|---|
-| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso de pistacho | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | Medium | Needs Verification |
 | 5 Aperitivos Sencillos Rapidos Fiestas | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos De Navidad Originales Y Faciles Para Triunfar | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
 | 7 Aperitivos Fiestas Faciles Economicos V2 | Aperitivos | Supabase Recovery | Receta Genial | Medium | Live |
@@ -640,18 +640,90 @@
 | tortilla española gourmet | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
 | croquetas caseras de carne | Carnes | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
 | paella de marisco en casa | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Needs Verification |
-| arroz caldoso con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| arroz caldoso receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| arroz caldoso con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| arroz caldoso casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| arroz caldoso con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| arroz caldoso al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | In Progress |
+| arroz caldoso con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| arroz caldoso receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| arroz caldoso con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| arroz caldoso al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
 | albondigas caseras con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
 | albondigas caseras con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| merluza en salsa verde con patatas y romero | Pescados | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| merluza en salsa verde de jamon iberico cremosas | Pescados | Pinterest Trends + Google News | Receta Genial | High | In Progress |
-| merluza en salsa verde jugosa con cebolla | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| merluza en salsa verde tradicional valenciana | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| merluza en salsa verde con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| merluza en salsa verde con verduras y limon | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
-| merluza en salsa verde con bogavante y gambas | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| merluza en salsa verde con patatas y romero | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde de jamon iberico cremosas | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde jugosa con cebolla | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde tradicional valenciana | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| merluza en salsa verde con verduras y limon | Pescados | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| merluza en salsa verde con bogavante y gambas | Pescados | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| merluza en salsa verde receta tradicional vasca | Pescados | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| merluza en salsa verde con chorizo y verduras | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde casero y refrescante | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde con queso gratinado | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| merluza en salsa verde al horno facil | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| bacalao al pil pil con patatas y romero | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil de jamon iberico cremosas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| bacalao al pil pil jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| bacalao al pil pil tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| bacalao al pil pil con verduras y limon | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| bacalao al pil pil con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| bacalao al pil pil al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| lentejas estofadas con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| lentejas estofadas con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| gazpacho andaluz con patatas y romero | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz de jamon iberico cremosas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz con verduras y limon | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| gazpacho andaluz con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz en salsa de la abuela | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| gazpacho andaluz con almejas y perejil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| gazpacho andaluz con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Live |
+| gazpacho andaluz al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| pimientos rellenos de carne con patatas y romero | Carnes | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| pimientos rellenos de carne de jamon iberico cremosas | Carnes | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| pimientos rellenos de carne jugosa con cebolla | Carnes | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| pimientos rellenos de carne tradicional valenciana | Carnes | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| pimientos rellenos de carne con aguacate y atun | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne con verduras y limon | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne con bogavante y gambas | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne con almejas y perejil | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne receta tradicional vasca | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne con chorizo y verduras | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne casero y refrescante | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne con queso gratinado | Carnes | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| pimientos rellenos de carne al horno facil | Carnes | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| dorada a la sal con patatas y romero | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal de jamon iberico cremosas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal con aguacate y atun | Pescados | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal con verduras y limon | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| dorada a la sal con bogavante y gambas | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal con chorizo y verduras | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| dorada a la sal con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| dorada a la sal al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Pending |
+| solomillo de cerdo en salsa jugosa con cebolla | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| solomillo de cerdo en salsa tradicional valenciana | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| solomillo de cerdo en salsa receta tradicional vasca | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| solomillo de cerdo en salsa casero y refrescante | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| solomillo de cerdo en salsa con queso gratinado | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Needs Verification |
+| solomillo de cerdo en salsa al horno facil | Aperitivos | Pinterest Trends + Google News | Receta Genial | High | Failed |
+| croquetas caseras de queso | Aperitivos | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso cumpleaños | Postres | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Genial | High | Failed |
+| tarta de queso tradicional al horno | Postres | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| croquetas caseras | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| tortilla española receta | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| tortilla española receta fácil | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| pollo al horno | Carnes | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |
+| tortilla española | Aperitivos | Google Autocomplete Demand + Google News + Google Suggestions | Receta Genial | Low | Pending |

@@ -570,7 +570,7 @@
 | helado de pistacho con fresa | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Live |
 | tarta tatin de manzana tradicional | Tartas y Pasteles | Pinterest Trends + Google News | Receta Dolce | High | Live |
 | pastel de zanahoria y nueces | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Live |
-| batidos refrescantes de verano | Bebidas | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
+| batidos refrescantes de verano | Bebidas | Pinterest Trends + Google News | Receta Dolce | Medium | Failed |
 | Recetas nostálgicas | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
 | Pastel decorado con fresas | Pasteles | Pinterest Trends + Google News | Receta Dolce | Medium | Pending |
 | Galletas de maicena y leche condensada | Galletas | Pinterest Trends + Google News | Receta Dolce | High | Live |
@@ -862,18 +862,68 @@
 | brownie de chocolate con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
 | brownie de chocolate con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
 | brownie de chocolate con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
-| brownie de chocolate crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| brownie de chocolate artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | In Progress |
-| tarta de limon con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
-| tarta de limon con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
-| tarta de limon crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
-| tarta de limon artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| brownie de chocolate crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| brownie de chocolate artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de limon casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de limon facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de limon cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta de limon sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de limon artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
 | magdalenas caseras casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| magdalenas caseras cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| magdalenas caseras con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| magdalenas caseras estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| magdalenas caseras con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Pending |
+| magdalenas caseras artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate estilo tradicional de la abuela | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| trufas de chocolate artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| crema catalana con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Needs Verification |
+| tarta tatin de manzana casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana con nueces y chocolate | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana con dulce de leche | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta tatin de manzana artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos casera al horno | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos facil y esponjoso | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos con queso crema | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos cremoso y suave | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos sin horno tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos con frutos rojos | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos con yogur griego | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos crujientes y faciles | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso y arandanos artesanal tradicional | fresas-y-nata | Pinterest Trends + Google News | Receta Dolce | High | Failed |
+| tarta de queso cumpleaños | fresas-y-nata | Google Autocomplete Demand + Google News + Pinterest Trends | Receta Dolce | High | Failed |
+| tarta de queso receta | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| helado de pistacho con chocolate | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| tarta de queso fria | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| helado de pistacho | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
+| helado de pistacho de mercadona | fresas-y-nata | Google Autocomplete Demand + Google News + Google Suggestions | Receta Dolce | Low | Pending |
