@@ -140,4 +140,5 @@ temp/
 test_temp.py
 final_bypass.py
 backend/operator_backup.py
+.ecc/
 

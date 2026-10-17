@@ -58,7 +58,18 @@ if ($env:NEXT_PUBLIC_SUPABASE_URL) {
     Write-Warning "[boot] Supabase URL not found in environment."
 }
 
-# 5. Optional Supervisor Launch
+# 5. Verify ECC Harness & Memory Vault
+if (Get-Command ecc -ErrorAction SilentlyContinue) {
+    Write-Host "[boot] Verifying ECC Harness status & doctor..."
+    $eccCheck = & ecc doctor 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[boot] ECC Harness verified healthy." -ForegroundColor Green
+    } else {
+        Write-Warning "[boot] ECC doctor reported issues: $eccCheck"
+    }
+}
+
+# 6. Optional Supervisor Launch
 if ($WithSupervisor -or $StartAll) {
     Write-Host "[boot] Starting Autonomous Pinterest Supervisor..." -ForegroundColor Yellow
     $autonomousScript = Join-Path $ProjectRoot "run_autonomous.py"

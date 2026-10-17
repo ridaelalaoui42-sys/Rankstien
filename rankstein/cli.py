@@ -562,6 +562,30 @@ def cmd_suite_uninstall(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ecc(args: argparse.Namespace) -> int:
+    import shutil
+    import subprocess
+
+    ecc_bin = shutil.which("ecc") or shutil.which("ecc.cmd")
+    ecc_args = getattr(args, "ecc_args", []) or []
+    if not ecc_bin:
+        ecc_script = Path("C:/Users/REDX420/Desktop/ECC/scripts/ecc.js")
+        if ecc_script.exists():
+            cmd = ["node", str(ecc_script), *ecc_args]
+        else:
+            print("Error: ECC CLI is not installed or available on PATH.", file=sys.stderr)
+            return 1
+    else:
+        cmd = [ecc_bin, *ecc_args]
+
+    try:
+        res = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
+        return res.returncode
+    except Exception as exc:
+        print(f"Error running ECC: {exc}", file=sys.stderr)
+        return 1
+
+
 # ───────────────────────────────────────────────────────────────────────────
 # Argparse builder
 # ───────────────────────────────────────────────────────────────────────────
@@ -794,6 +818,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     suite_uninstall = suite_sub.add_parser("uninstall", help="Remove Windows Scheduled Tasks")
     suite_uninstall.set_defaults(func=cmd_suite_uninstall)
+
+    ecc_parser = sub.add_parser("ecc", help="Invoke ECC agent harness optimization commands")
+    ecc_parser.add_argument(
+        "ecc_args",
+        nargs=argparse.REMAINDER,
+        help="Arguments passed directly to ECC CLI (e.g. doctor, status, security-ioc-scan, memory)",
+    )
+    ecc_parser.set_defaults(func=cmd_ecc)
 
     return p
 

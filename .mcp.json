@@ -1,0 +1,78 @@
+{
+  "mcpServers": {
+    "rankstein": {
+      "command": "python",
+      "args": [
+        "-u",
+        "C:\\Users\\REDX420\\Desktop\\Rankstein\\rankstein_mcp_server.py"
+      ]
+    },
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp?project_ref=hokcljsrrnjxzgdhjice&read_only=true",
+      "type": "http"
+    },
+    "playwright_firefox": {
+      "command": "playwright-mcp.cmd",
+      "args": [
+        "--browser",
+        "firefox",
+        "--user-data-dir",
+        "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\sessions\\pinterest_rida_v7",
+        "--allow-unrestricted-file-access"
+      ]
+    },
+    "playwright_chromium": {
+      "command": "playwright-mcp.cmd",
+      "args": [
+        "--browser",
+        "chromium",
+        "--user-data-dir",
+        "C:\\Users\\REDX420\\Desktop\\Rankstein\\data\\sessions\\pinterest_chromium",
+        "--allow-unrestricted-file-access"
+      ]
+    },
+    "nanobanana": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\REDX420\\Desktop\\Rankstein\\nanobanana-extension\\mcp-server\\dist\\index.js"
+      ],
+      "env": {
+        "NANOBANANA_MODEL": "gemini-3.1-flash-image-preview"
+      }
+    },
+    "ecc_memory_vault": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\REDX420\\Desktop\\ECC\\scripts\\memory-mcp.mjs"
+      ],
+      "env": {
+        "ECC_MEMORY_HARNESS": "gemini"
+      }
+    },
+    "sequential_thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "parallel_search": {
+      "type": "http",
+      "url": "https://search.parallel.ai/mcp"
+    },
+    "chrome_devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@1.10.1"
+      ]
+    }
+  }
+}
