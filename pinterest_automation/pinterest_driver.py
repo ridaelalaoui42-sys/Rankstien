@@ -1245,6 +1245,21 @@ class PinterestDriver:
                     "pin_url": f"https://www.pinterest.com/pin/{pin_id}/",
                 }
             else:
+                rate_limit_msg = await self._page_has_rate_limit_error(page)
+                if rate_limit_msg:
+                    self.warning(f"Pin creation blocked by Pinterest daily account limit for {handle}: {rate_limit_msg}")
+                    try:
+                        discard_btn = page.get_by_text(re.compile(r"Discard|Store draft|Descartar|Cancel", re.I)).first
+                        if await discard_btn.count() > 0:
+                            await discard_btn.click(force=True)
+                    except Exception:
+                        pass
+                    return {
+                        "success": False,
+                        "error": rate_limit_msg,
+                        "error_code": "pinterest_daily_limit_exceeded",
+                        "account_handle": handle,
+                    }
                 self.warning("Pin creation could not be verified; no pin id/url found")
                 limiter.record_failure(rate_operation)
                 self.circuit.record_failure(circuit_operation)
@@ -1617,6 +1632,26 @@ class PinterestDriver:
             return False
         except Exception:
             return False
+
+    async def _page_has_rate_limit_error(self, page: Page) -> str | None:
+        try:
+            limit_el = page.get_by_text(
+                re.compile(
+                    r"published a lot today|try again tomorrow|has publicado mucho hoy"
+                    r"|inténtalo de nuevo mañana|alcanzado el límite",
+                    re.I,
+                )
+            ).first
+            if await limit_el.count() > 0 and await limit_el.is_visible(timeout=500):
+                return "Pinterest daily limit reached: It looks like you've published a lot today! Try again tomorrow."
+            dialog = page.locator('[role="dialog"], [aria-modal="true"]').first
+            if await dialog.count() > 0 and await dialog.is_visible(timeout=300):
+                text = (await dialog.inner_text()).lower()
+                if "published a lot today" in text or "try again tomorrow" in text or "publicado mucho" in text:
+                    return "Pinterest daily limit reached: It looks like you've published a lot today! Try again tomorrow."
+        except Exception:
+            pass
+        return None
 
     async def _dismiss_publish_success_overlays(self, page: Page) -> None:
         try:

@@ -419,6 +419,27 @@ class AutonomousSupervisor:
         )
         await self.queue.release_async(job.id, delay_seconds=retry_at - now)
 
+    async def _defer_account_daily_limit_job(self, job: Job, account_handle: str | None, error: str):
+        """When an account hits Pinterest's daily creation limit, cool down that account for 12 hours."""
+        now = time.time()
+        if not hasattr(self, "_account_cooldowns"):
+            self._account_cooldowns = {}
+        key = account_handle or "default"
+        cooldown_seconds = 12 * 3600
+        retry_at = max(
+            now + cooldown_seconds,
+            self._account_cooldowns.get(key, 0.0),
+        )
+        self._account_cooldowns[key] = retry_at
+        logger.warning(
+            "Account %s reached Pinterest daily limit! Cooled down until %s. Releasing job %s: %s",
+            key,
+            datetime.fromtimestamp(retry_at).isoformat(),
+            job.id,
+            error,
+        )
+        await self.queue.release_async(job.id, delay_seconds=10)
+
     async def _queue_worker(self, worker_id: int):
         """Continuously process jobs from the queue."""
         logger.info(f"Queue worker {worker_id} started")
@@ -630,6 +651,8 @@ class AutonomousSupervisor:
                                         await self._defer_draft_capacity_job(job, account_handle, error)
                                     elif result.get("error_code") == "pinterest_publish_unavailable":
                                         await self._defer_account_unavailable_job(job, account_handle, error)
+                                    elif result.get("error_code") == "pinterest_daily_limit_exceeded":
+                                        await self._defer_account_daily_limit_job(job, account_handle, error)
                                     elif error == "Rate limit exceeded":
                                         await self.queue.release_async(
                                             job.id,
