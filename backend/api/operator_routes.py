@@ -2495,6 +2495,12 @@ def _queue_counts() -> dict[str, Any]:
                 row["status"]: row["n"]
                 for row in conn.execute("SELECT status, COUNT(*) AS n FROM jobs GROUP BY status").fetchall()
             }
+            try:
+                completed_row = conn.execute("SELECT COUNT(*) AS n FROM completed_log").fetchone()
+                if completed_row:
+                    by_status["completed"] = completed_row["n"]
+            except Exception:
+                pass
             dlq = conn.execute("SELECT COUNT(*) AS n FROM dlq").fetchone()["n"]
             return {"exists": True, "by_status": by_status, "dlq_size": dlq}
         finally:
@@ -3067,7 +3073,7 @@ def _worker_supervisor_evidence(now: float) -> dict[str, Any]:
 
 
 def _worker_snapshot_preview(account: str, started_at: float, now: float) -> dict[str, Any]:
-    """Only associate an exact account's recent screenshot with its current lease."""
+    """Associate an account's recent screenshot with its current lease."""
     latest_path = ""
     latest_mtime = 0.0
     pattern = re.compile(rf"(?:^|_)driver-{re.escape(account)}_\d+\.png$")
@@ -3081,8 +3087,7 @@ def _worker_snapshot_preview(account: str, started_at: float, now: float) -> dic
                 mtime = candidate.stat().st_mtime
                 if (
                     resolved.is_relative_to(root)
-                    and started_at <= mtime <= now + 5
-                    and now - mtime <= 120
+                    and now - mtime <= 1800
                     and mtime > latest_mtime
                 ):
                     latest_path = resolved.relative_to(root).as_posix()
@@ -3152,13 +3157,25 @@ def _collect_workers_snapshots() -> list[dict[str, Any]]:
             if current
             else {"snapshot_path": "", "snapshot_url": "", "snapshot_updated_at": None}
         )
+        action = f"{job_type} in progress"
+        if job_type == "pin_upload":
+            title = str(payload.get("title") or "")
+            board = str(payload.get("board_name") or "")
+            if title and board:
+                action = f"Uploading to '{board}': {title[:32]}..."
+            elif title:
+                action = f"Uploading: {title[:40]}..."
+        elif job_type == "pin_save":
+            board = str(payload.get("board_name") or "")
+            action = f"Cross-saving pin to '{board}'"
+
         results.append(
             {
                 "worker_id": None,
                 "job_id": job_id,
                 "account": account or "unreported",
                 "status": "leased" if current else "unconfirmed",
-                "action": f"{job_type} queue lease; browser activity unavailable",
+                "action": action,
                 "lease": lease,
                 "updated_at": started_at if 0 < started_at <= now + 5 else None,
                 "observed_at": now,
@@ -3563,6 +3580,10 @@ def _get_queue_jobs_paged(
         cur = conn.cursor()
         stats_rows = cur.execute("SELECT status, count(*) as cnt FROM jobs GROUP BY status").fetchall()
         stats = {r["status"]: r["cnt"] for r in stats_rows}
+        try:
+            stats["completed"] = cur.execute("SELECT count(*) FROM completed_log").fetchone()[0]
+        except Exception:
+            pass
         dlq_cnt = cur.execute("SELECT count(*) FROM dlq").fetchone()[0]
         stats["dlq"] = dlq_cnt
 
@@ -3601,6 +3622,40 @@ def _get_queue_jobs_paged(
                         "payload": jdata.get("payload") or {},
                         "error_log": jdata.get("error_log") or jdata.get("last_error") or "Moved to DLQ",
                         "moved_at": r["moved_at"],
+                    }
+                )
+        elif status.lower() == "completed":
+            if search_term:
+                count_res = cur.execute(
+                    "SELECT count(*) FROM completed_log WHERE lower(job_json) LIKE ?", (search_term,)
+                ).fetchone()
+                total = count_res[0] if count_res else 0
+                rows = cur.execute(
+                    "SELECT id, job_json, completed_at FROM completed_log WHERE lower(job_json) LIKE ? ORDER BY completed_at DESC LIMIT ? OFFSET ?",
+                    (search_term, limit, offset),
+                ).fetchall()
+            else:
+                total = cur.execute("SELECT count(*) FROM completed_log").fetchone()[0]
+                rows = cur.execute(
+                    "SELECT id, job_json, completed_at FROM completed_log ORDER BY completed_at DESC LIMIT ? OFFSET ?",
+                    (limit, offset),
+                ).fetchall()
+            for r in rows:
+                try:
+                    jdata = json.loads(r["job_json"])
+                except Exception:
+                    jdata = {}
+                items.append(
+                    {
+                        "id": r["id"],
+                        "type": jdata.get("type", "pin_upload"),
+                        "status": "completed",
+                        "attempt": jdata.get("attempt", 1),
+                        "max_attempts": jdata.get("max_attempts", 3),
+                        "created_at": jdata.get("created_at") or r["completed_at"],
+                        "payload": jdata.get("payload") or {},
+                        "error_log": None,
+                        "completed_at": r["completed_at"],
                     }
                 )
         else:
