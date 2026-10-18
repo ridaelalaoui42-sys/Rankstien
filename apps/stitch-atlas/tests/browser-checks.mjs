@@ -18,6 +18,10 @@ try{
   await page.locator('#search-topics').fill('moss');assert.equal(await page.locator('.topic-card').count(),1);
   await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/tools',{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Increase row count'}).click();assert.equal(await page.locator('#counter-output').textContent(),'1');
+  assert.equal(await page.locator('[data-testid="yarn-estimate"]').textContent(),'159 g');
+  assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 or 86 stitches');
+  await page.getByLabel('Your approximate target').fill('80');
+  assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.close();
  }
  console.log('Stitch Atlas cross-viewport browser checks passed.');
