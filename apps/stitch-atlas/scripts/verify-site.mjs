@@ -7,7 +7,7 @@ const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/lear
 for(const f of jsFiles)assert(existsSync(join(cwd,f)),`Required page or component missing: ${f}`);
 assert(existsSync(join(cwd,'public/images/editorial-hero.jpg')),'Original generated editorial hero missing');
 for(const category of ['bag','stitch','blanket','square','flower','yarn'])assert(existsSync(join(cwd,`public/category/${category}.svg`)),`Missing category illustration: ${category}`);
-for(const asset of ['mark.svg','wordmark.svg','wordmark-inverse.svg','illustration.svg','pinterest-concept.jpg','social-cover.jpg'])assert(existsSync(join(cwd,'public/brand',asset)),`Missing identity asset: ${asset}`);
+for(const asset of ['mark.svg','wordmark.svg','wordmark-inverse.svg','illustration.svg','pinterest-concept.svg','social-cover.svg','avatar.png'])assert(existsSync(join(cwd,'public/brand',asset)),`Missing identity asset: ${asset}`);
 const layout=read('app/layout.jsx');
 assert(layout.includes('index:false,follow:false'),'A preview must not become indexable');
 assert(!layout.includes('example.com'),'No fake production canonical allowed');
