@@ -24,21 +24,25 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.getByLabel('Your approximate target').fill('1');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
-  // Without Supabase, the studio is a truthful browser-local drafting workspace.
+  // With no database, the studio remains a browser-local, never-published workbench.
   const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
   assert.equal(studio.status(),200);
   await page.getByTestId('offline-studio').waitFor();
-  assert.equal(await page.getByText('LOCAL-ONLY · UNPUBLISHED').count(),1);
-  assert.equal(await page.getByRole('button',{name:/publish/i}).count(),0,'No browser-local publish action');
+  await page.getByText('Publishing is locked').waitFor();
+  assert.equal(await page.getByRole('button',{name:/^publish/i}).count(),0,'No browser-local publish action');
   const slug='original-yarn-note-'+width;
-  await page.getByLabel('Editorial title').fill('A thoughtful original crochet yarn note');
-  await page.getByLabel('Permanent slug').fill(slug);
-  await page.getByRole('button',{name:'Save in this browser'}).click();
-  await page.getByText('Saved on this browser only.',{exact:false}).waitFor();
+  await page.getByLabel('Working headline').fill('A thoughtful original crochet yarn note');
+  await page.getByLabel('URL slug').fill(slug);
+  await page.getByLabel('Editorial summary').fill('An original tutorial draft about keeping accurate crochet row counts and interpreting turning chains for new crocheters.');
+  await page.getByRole('button',{name:'Save local draft'}).click();
+  await page.getByText('Draft saved in this browser only.',{exact:false}).waitFor();
   await page.reload({waitUntil:'domcontentloaded'});
+  await page.getByTestId('offline-studio').waitFor();
   await page.getByRole('button',{name:/A thoughtful original crochet yarn note/}).click();
-  assert.equal(await page.getByLabel('Permanent slug').inputValue(),slug);
-  assert.equal(await page.getByRole('button',{name:/publish/i}).count(),0);
+  assert.equal(await page.getByLabel('URL slug').inputValue(),slug);
+  await page.getByRole('button',{name:'Private reading preview'}).click();
+  await page.getByText('UNPUBLISHED DRAFT / LOCAL PREVIEW').waitFor();
+  assert.equal(await page.getByRole('button',{name:/^publish/i}).count(),0);
   const overflowStudio=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   assert(overflowStudio<=1,`Studio horizontal overflow ${overflowStudio}px at ${width}`);
   const unpublished=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/patterns/untested-celtic-bag',{waitUntil:'domcontentloaded'});
