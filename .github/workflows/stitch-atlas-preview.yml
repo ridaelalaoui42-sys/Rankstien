@@ -1,0 +1,43 @@
+name: Stitch Atlas premium preview
+on:
+  pull_request:
+    paths:
+      - 'apps/stitch-atlas/**'
+      - '.github/workflows/stitch-atlas-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Next.js and browser test harness
+        working-directory: apps/stitch-atlas
+        run: npm install --no-audit --no-fund
+      - name: Structural/editorial quality gates
+        working-directory: apps/stitch-atlas
+        run: npm test
+      - name: Build production output
+        working-directory: apps/stitch-atlas
+        run: npm run build
+      - name: Install headless Chromium
+        working-directory: apps/stitch-atlas
+        run: npx playwright install --with-deps chromium
+      - name: Serve and exercise 360/390/768/1024/1440 breakpoints
+        working-directory: apps/stitch-atlas
+        run: |
+          set -e
+          npm run start -- -p 3000 > /tmp/stitch-atlas-next.log 2>&1 &
+          APP_PID=$!
+          trap 'kill $APP_PID || true' EXIT
+          for i in $(seq 1 35); do
+            if curl --silent --fail http://127.0.0.1:3000/ > /dev/null; then break; fi
+            sleep 2
+          done
+          STITCH_ATLAS_BASE_URL=http://127.0.0.1:3000 node scripts/smoke.mjs
+          STITCH_ATLAS_BASE_URL=http://127.0.0.1:3000 npm run test:browser

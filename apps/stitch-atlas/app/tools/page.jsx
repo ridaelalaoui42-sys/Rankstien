@@ -1,0 +1,3 @@
+import MakerTools from '../../components/MakerTools';
+export const metadata={title:'Crochet Row Counter, Gauge & Terminology Tools',description:'Lightweight crochet row counter, gauge calculator and US-to-UK stitch terminology reference. Free, accessible and private by default.'};
+export default function Tools(){return <main id="main"><section className="inner-hero tools-hero"><div className="container"><p className="kicker">TOOLS FOR THE WORKTABLE</p><h1>Small helpers.<br/><em>Big satisfaction.</em></h1><p>Keep your place, understand unfamiliar abbreviations and make better gauge estimates. Free tools that work without an account.</p></div></section><div className="section container"><MakerTools/></div></main>}

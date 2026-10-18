@@ -1,0 +1,22 @@
+{
+  "name": "stitch-atlas-editorial",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "node scripts/verify-site.mjs",
+    "test": "node scripts/verify-site.mjs",
+    "test:browser": "node tests/browser-checks.mjs"
+  },
+  "dependencies": {
+    "next": "15.5.3",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

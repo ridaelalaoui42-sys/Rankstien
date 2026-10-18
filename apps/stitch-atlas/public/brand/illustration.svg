@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="750" viewBox="0 0 750 750" role="img"><rect width="100%" height="100%" fill="none"/><defs><pattern id="threads" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M4 8Q14 0 23 8T32 24Q26 36 14 30T4 8Z" fill="none" stroke="#fff6e8" opacity=".37" stroke-width="4"/></pattern></defs>
+<ellipse cx="380" cy="655" rx="255" ry="26" fill="#3c674b" opacity=".1"/>
+<path d="M197 525q-77-76-17-192q31-58 110-80q134-33 218 73q87 109 7 227q-75 105-209 77q-82-18-109-105Z" fill="#faf1de" stroke="#b9745d" stroke-width="4"/>
+<path d="M197 525q-77-76-17-192q31-58 110-80q134-33 218 73q87 109 7 227q-75 105-209 77q-82-18-109-105Z" fill="url(#threads)"/>
+<path d="M220 333q107-53 219 21M175 412q142-79 341-4M181 501q123-87 338-7M220 566q125-65 250-37" stroke="#b9745d" stroke-width="18" stroke-linecap="round" fill="none" opacity=".65"/>
+<path d="M251 285q-23 151 137 341M305 255q-36 174 133 355M366 264q-15 168 98 309M425 310q-27 135 35 204" stroke="#c7896b" stroke-width="13" opacity=".53" stroke-linecap="round" fill="none"/>
+<path d="M427 215L556 596" stroke="#e4c79f" stroke-width="18" stroke-linecap="round"/><path d="M427 215q-27-58 4-78q35-15 41 18q3 26-34 43" fill="none" stroke="#e4c79f" stroke-width="16" stroke-linecap="round"/><path d="M482 128L578 410" stroke="#f8edd2" stroke-width="17" stroke-linecap="round"/><path d="M482 128q-13-30 2-53q21-13 30 12t-25 30" fill="none" stroke="#f8edd2" stroke-width="14"/>
+<path d="M112 587Q78 455 116 314M104 459Q55 454 38 405M108 403Q148 363 155 308" fill="none" stroke="#466651" stroke-width="7"/><path d="M116 314Q71 301 70 355Q109 358 116 314ZM108 403Q155 390 154 430Q129 444 108 403ZM98 471Q64 455 56 484Q80 505 98 471ZM122 356Q151 334 171 355Q163 377 122 356Z" fill="#527b61"/>
+<path d="M623 608Q647 526 625 445M627 496Q593 476 576 453M637 540Q678 510 693 480" fill="none" stroke="#355f4c" stroke-width="7"/><path d="M625 448Q597 433 596 459Q614 473 625 448ZM632 512Q665 481 672 508Q650 535 632 512ZM634 554Q596 544 603 577Q626 582 634 554Z" fill="#537e60"/>
+<path d="M305 664q72 30 158 1" stroke="#b9745d" stroke-width="3" fill="none" opacity=".5"/></svg>
