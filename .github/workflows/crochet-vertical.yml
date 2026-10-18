@@ -30,3 +30,11 @@ jobs:
         run: python -m compileall -q rankstein/crochet_vertical.py rankstein/cli.py rankstein/niche_detector.py rankstein/site_factory.py
       - name: Run crochet unit and CLI safety tests
         run: python -m pytest tests/unit/test_crochet_vertical.py -q
+      - name: Score complete 87-keyword pack without publishing
+        run: python rankstein.py crochet research --csv docs/research/crochet/keyword_research_source_2026-10-18.csv --output data/reports/crochet-keywords-reviewed.json
+      - name: Reject intentionally untested crochet draft
+        run: |
+          if python rankstein.py crochet audit --input docs/examples/crochet-untested-pattern.json; then
+            echo 'Unexpectedly approved an untested pattern' >&2
+            exit 1
+          fi
