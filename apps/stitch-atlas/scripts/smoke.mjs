@@ -4,7 +4,7 @@ for(const [path,expected] of [['/','There’s beauty in'],['/patterns','Patterns
  const r=await fetch(root+path);assert.equal(r.status,200,`${path} status ${r.status}`);const html=await r.text();assert(html.includes(expected),`${path} missing headline`);
  assert(/noindex/.test(html),`${path} preview MUST remain non-indexable`);
 }
-for(const path of ['/brand/mark.svg','/brand/wordmark.svg','/brand/wordmark-inverse.svg','/images/editorial-hero.jpg','/category/bag.svg','/category/yarn.svg','/brand/social-cover.jpg','/brand/pinterest-concept.jpg']){
+for(const path of ['/brand/mark.svg','/brand/wordmark.svg','/brand/wordmark-inverse.svg','/images/editorial-hero.jpg','/category/bag.svg','/category/yarn.svg','/brand/social-cover.svg','/brand/pinterest-concept.svg','/brand/avatar.png','/apple-touch-icon.png','/og-cover.jpg']){
  const r=await fetch(root+path);assert.equal(r.status,200,`${path} HTTP status`);assert(Number(r.headers.get('content-length')||'1')>0,`${path} empty asset`);
 }
 const robots=await (await fetch(root+'/robots.txt')).text();assert(robots.includes('Disallow: /'),'Preview robots must disallow crawling');
