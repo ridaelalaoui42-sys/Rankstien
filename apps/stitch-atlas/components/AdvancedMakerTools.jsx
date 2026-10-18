@@ -29,10 +29,10 @@ export default function AdvancedMakerTools(){
     const values=[multiple,edge,target].map(Number);
     const [m,e,n]=values;
     if(values.some(v=>!Number.isSafeInteger(v))||m<1||m>1000||e<0||e>1000||n<1||n>100000)return null;
-    const repetitions=Math.max(0,Math.floor((n-e)/m));
+    const repetitions=Math.max(1,Math.floor((n-e)/m));
     const low=e+repetitions*m;
     const high=e+(repetitions+(low<n?1:0))*m;
-    return {low:Math.max(0,low),high,exact:n===low,repeatCount:repetitions};
+    return {low,high,exact:n===low,repeatCount:repetitions,belowMinimum:n<e+m};
   },[multiple,edge,target]);
   return <div className="advanced-maker-tools">
     <section className="tool-panel advanced-tool-panel" id="yarn-estimator" aria-labelledby="yarn-title">
@@ -58,8 +58,8 @@ export default function AdvancedMakerTools(){
         <NumberField label="Extra edge stitches" min="0" value={edge} set={setEdge}/>
         <NumberField label="Your approximate target" min="1" max="100000" value={target} set={setTarget}/>
       </div><div className="craft-calc-output" aria-live="polite"><span>CLOSEST VALID FOUNDATION COUNTS</span>
-        <output data-testid="repeat-estimate">{repeat?(repeat.exact?repeat.low+' stitches':repeat.low+' or '+repeat.high+' stitches'):'—'}</output>
-        <small>{repeat?(repeat.exact?'Exact match: '+repeat.repeatCount+' repeats + '+edge+' edge stitches.':'Choose based on the pattern shaping and desired size. Nearest count at/below target uses '+repeat.repeatCount+' repeats.'):'Use positive integer repeats and realistic stitch counts.'}</small>
+        <output data-testid="repeat-estimate">{repeat?(repeat.exact?repeat.low+' stitches':(repeat.low===repeat.high?repeat.low+' stitches':repeat.low+' or '+repeat.high+' stitches')):'—'}</output>
+        <small>{repeat?(repeat.belowMinimum?'Minimum valid foundation count uses '+repeat.repeatCount+' repeat + '+edge+' edge stitches.':repeat.exact?'Exact match: '+repeat.repeatCount+' repeats + '+edge+' edge stitches.':'Choose based on the pattern shaping and desired size. Nearest count at/below target uses '+repeat.repeatCount+' repeats.'):'Use positive integer repeats and realistic stitch counts.'}</small>
       </div></div></section>
   </div>;
 }
