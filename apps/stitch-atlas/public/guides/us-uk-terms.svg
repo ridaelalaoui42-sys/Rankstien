@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" role="img" aria-labelledby="title description">
+    <title id="title">US vs UK crochet without the confusion</title><desc id="description">Same stitch. Different name. Keep the chart handy.. Original Stitch Atlas explanatory illustration, not a tested project pattern.</desc>
+    <defs><pattern id="paper-grain" width="56" height="56" patternUnits="userSpaceOnUse"><path d="M0 28h56 M28 0v56" stroke="#cabbab" opacity=".20" stroke-width=".7"/></pattern>
+    <pattern id="loops" width="42" height="48" patternUnits="userSpaceOnUse"><path d="M1 25Q9 3 22 24T42 25" fill="none" stroke="#e7eee0" stroke-width="5"/></pattern></defs>
+    <rect width="1200" height="720" rx="0" fill="#faf5ec"/><rect width="1200" height="720" fill="url(#paper-grain)"/>
+    <path d="M82 86h1036" stroke="#c4bba9" stroke-width="1"/>
+    <text x="83" y="63" fill="#b36f57" font-family="Arial,sans-serif" font-size="16" font-weight="700" text-anchor="start">STITCH ATLAS  /  VISUAL FIELD NOTES</text>
+    <text x="1114" y="63" fill="#64826c" font-family="Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">STUDY  /  02</text>
+    <rect x="108" y="151" width="476" height="405" rx="20" fill="#dbe7d9"/>
+    <rect x="616" y="151" width="476" height="405" rx="20" fill="#ead9cf"/>
+    <text x="155" y="211" fill="#64826c" font-family="Arial,sans-serif" font-size="24" font-weight="700" text-anchor="start">UNITED STATES</text><text x="663" y="211" fill="#b36f57" font-family="Arial,sans-serif" font-size="24" font-weight="700" text-anchor="start">UNITED KINGDOM</text>
+    <text x="345" y="375" fill="#243b2f" font-family="Georgia,serif" font-size="155" font-weight="500" text-anchor="middle">sc</text><text x="852" y="375" fill="#243b2f" font-family="Georgia,serif" font-size="155" font-weight="500" text-anchor="middle">dc</text>
+    <path d="M527 346h144 M639 319l32 27-32 26" stroke="#b36f57" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <text x="345" y="442" fill="#65766a" font-family="Georgia,serif" font-size="27" font-weight="400" text-anchor="middle">single crochet</text>
+    <text x="852" y="442" fill="#65766a" font-family="Georgia,serif" font-size="27" font-weight="400" text-anchor="middle">double crochet</text>
+    <text x="155" y="506" fill="#64826c" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="start">SAME PHYSICAL STITCH</text>
+    <text x="661" y="506" fill="#b36f57" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="start">DIFFERENT STITCH NAME</text>
+    <text x="150" y="602" fill="#243b2f" font-family="Georgia,serif" font-size="26" font-weight="500" text-anchor="start">Always check the terminology used by the original instructions.</text>
+    <path d="M82 642h1036" stroke="#c4bba9" stroke-width="1"/>
+    <text x="84" y="677" fill="#243b2f" font-family="Georgia,serif" font-size="25" font-weight="500" text-anchor="start">US vs UK crochet without the confusion</text>
+    <text x="1114" y="677" fill="#65766a" font-family="Arial,sans-serif" font-size="13" font-weight="700" text-anchor="end">ILLUSTRATION · NOT A FINISHED PATTERN</text>
+    </svg>

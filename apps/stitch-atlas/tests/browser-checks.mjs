@@ -24,6 +24,25 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.getByLabel('Your approximate target').fill('1');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
+  const guides=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/guides',{waitUntil:'domcontentloaded'});
+  assert.equal(guides.status(),200,'Guide library must be accessible');
+  assert.equal(await page.locator('.guide-card').count(),6);
+  await page.getByLabel('Find a guide').fill('US vs UK');
+  assert.equal(await page.locator('.guide-card').count(),1,'US/UK guide search should match exactly once');
+  await page.locator('.guide-card').first().click();
+  await page.getByRole('heading',{level:1,name:/US vs UK crochet terms/}).waitFor();
+  assert.equal(await page.locator('.guide-body-section').count(),5);
+  assert.equal(await page.locator('.guide-table-wrap tbody tr').count(),6);
+  assert.equal(await page.locator('.guide-related .guide-card').count(),3);
+  const guideOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  assert(guideOverflow<=1,`Guide horizontal overflow ${guideOverflow}px at ${width}`);
+  const gauge=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/guides/how-to-measure-crochet-gauge',{waitUntil:'domcontentloaded'});
+  assert.equal(gauge.status(),200);
+  assert.equal(await page.locator('h1').count(),1);
+  assert.equal((await page.locator('meta[name="robots"]').getAttribute('content')).includes('noindex'),true);
+  assert.equal(await page.locator('script[type="application/ld+json"]').count(),0,'Stage must not emit live Article schema');
+  const missingGuide=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/guides/fictional-tested-bag',{waitUntil:'domcontentloaded'});
+  assert.equal(missingGuide.status(),404,'Unknown guide must never return a fake content page');
   // With no database, the studio remains a browser-local, never-published workbench.
   const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
   assert.equal(studio.status(),200);

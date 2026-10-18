@@ -33,3 +33,10 @@ console.log('Stitch Atlas editorial CMS structural checks passed: RLS, independe
 assert(existsSync(join(cwd,'lib/offline-workspace.mjs')),'Browser-only draft contract missing');
 assert(read('app/studio/page.jsx').includes('OfflineDraftStudio'),'No-database staging must offer safe local drafts');
 assert(read('lib/offline-workspace.mjs').includes('publication_enabled:false'),'Local archive must explicitly block publication');
+
+for(const asset of ['app/guides/page.jsx','app/guides/[slug]/page.jsx','components/GuideCollection.jsx','components/GuideCatalog.jsx','components/GuideActions.jsx','styles/guides.css','lib/guides.mjs','docs/PINTEREST_ASSETS_MANIFEST.json'])assert(existsSync(join(cwd,asset)),`Missing learning-library asset: ${asset}`);
+const guideModule=read('lib/guides.mjs');
+assert(guideModule.includes('learningGuides')&&!guideModule.includes('aggregateRating'),'Original guides only; no fake ratings');
+for(const slug of ['count-stitches','us-uk-terms','gauge-swatch','bag-yarn','bag-lining','moss-stitch'])assert(existsSync(join(cwd,`public/guides/${slug}.svg`)),`Guide visual missing: ${slug}`);
+assert(read('app/layout.jsx').includes("STITCH_ATLAS_INDEXING_ENABLED")===false,'Indexable guide gate must not silently change the overall noindex preview');
+console.log('Stitch Atlas learning library structural audit passed.');
