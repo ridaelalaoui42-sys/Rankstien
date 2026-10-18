@@ -253,7 +253,7 @@ def detect_niche(domain: str) -> NicheInfo:
         f"Task: classify the domain {domain!r}.\n"
         'Schema: {"niche": string (5-10 words), "language": string (ISO 639-1, '
         'e.g. en/es/fr/it/de), "vertical": one of ["recipe blog", "lifestyle", '
-        '"tech", "fitness", "finance", "travel", "general"], '
+        '"tech", "fitness", "finance", "travel", "fiber arts", "general"], '
         '"display_name": string (1-3 words, title-cased brand name)}\n\n'
         "Treat domain language hints (recetas/dolce → es/it; keto → en; etc.) "
         "as strong signals.\n\n"
@@ -324,6 +324,10 @@ def generate_categories(niche: str, language: str, count: int = 6) -> list[str]:
 
 def _fallback_categories(niche: str, count: int) -> list[str]:
     base = ["Recipes", "Quick & Easy", "Healthy", "Comfort Food", "Holiday", "Tips"]
+    if any(word in niche.lower() for word in ("crochet", "amigurumi", "fiber arts", "fibre arts")):
+        from rankstein.crochet_vertical import CROCHET_CATEGORIES
+
+        return list(CROCHET_CATEGORIES[:count])
     if "fitness" in niche.lower() or "workout" in niche.lower():
         base = ["Workouts", "Nutrition", "Recovery", "Equipment", "Mindset", "Programs"]
     elif "travel" in niche.lower():
