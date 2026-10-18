@@ -22,6 +22,8 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 or 86 stitches');
   await page.getByLabel('Your approximate target').fill('80');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
+  await page.getByLabel('Your approximate target').fill('1');
+  assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
   await page.close();
  }
  console.log('Stitch Atlas cross-viewport browser checks passed.');
