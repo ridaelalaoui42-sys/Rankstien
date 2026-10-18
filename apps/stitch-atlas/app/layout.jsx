@@ -1,4 +1,5 @@
 import './globals.css';
+import '../styles/guides.css';
 import SiteHeader from '../components/SiteHeader';
 import Footer from '../components/Footer';
 const title='Stitch Atlas | Crochet Patterns, Stitches & Handmade Living';

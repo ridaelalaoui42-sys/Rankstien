@@ -1,0 +1,67 @@
+{
+  "site": "Stitch Atlas",
+  "destinationHost": null,
+  "autopublish": false,
+  "pins": [
+    {
+      "slug": "how-to-count-crochet-stitches",
+      "image": "/pins/how-to-count-crochet-stitches.png",
+      "targetPath": "/guides/how-to-count-crochet-stitches",
+      "pinTitle": "Find each stitch. Count with confidence.",
+      "pinDescription": "Stop the off-by-one mistake before it grows. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "us-uk-crochet-terms",
+      "image": "/pins/us-uk-crochet-terms.png",
+      "targetPath": "/guides/us-uk-crochet-terms",
+      "pinTitle": "US vs UK crochet without the confusion",
+      "pinDescription": "Same stitch. Different name. Keep the chart handy. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "how-to-measure-crochet-gauge",
+      "image": "/pins/how-to-measure-crochet-gauge.png",
+      "targetPath": "/guides/how-to-measure-crochet-gauge",
+      "pinTitle": "The gauge swatch that tells the truth",
+      "pinDescription": "Know your stitch count before starting a project. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "how-to-choose-yarn-for-crochet-bags",
+      "image": "/pins/how-to-choose-yarn-for-crochet-bags.png",
+      "targetPath": "/guides/how-to-choose-yarn-for-crochet-bags",
+      "pinTitle": "Choose bag yarn with intention",
+      "pinDescription": "Structure, handles, load and fabric\u2014together. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "how-to-line-a-crochet-bag",
+      "image": "/pins/how-to-line-a-crochet-bag.png",
+      "targetPath": "/guides/how-to-line-a-crochet-bag",
+      "pinTitle": "Fit a fabric lining the thoughtful way",
+      "pinDescription": "Measure the finished bag. Mock up. Then stitch. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "moss-stitch-crochet-explained",
+      "image": "/pins/moss-stitch-crochet-explained.png",
+      "targetPath": "/guides/moss-stitch-crochet-explained",
+      "pinTitle": "See moss stitch as a gentle rhythm",
+      "pinDescription": "Single crochets and chain spaces, made understandable. Read the free learning guide at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    }
+  ]
+}
