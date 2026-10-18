@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const sql=readFileSync(new URL('../db/migrations/20261018_stitch_atlas_editorial.sql',import.meta.url),'utf8');
+test('schema targets only dedicated crochet tables, not existing recipe posts',()=>{assert.match(sql,/CREATE TABLE public\.craft_posts/);assert.doesNotMatch(sql,/CREATE TABLE public\.posts\s*\(/);assert.doesNotMatch(sql,/ALTER TABLE public\.posts/)});
+test('publishing is disabled by default in the database',()=>{assert.match(sql,/publishing_enabled bool NOT NULL DEFAULT false/);assert.match(sql,/publication remains disabled/i)});
+test('explicit RLS on staff, posts, settings, and review events',()=>{for(const t of ['craft_staff','craft_settings','craft_posts','craft_events'])assert(sql.includes(`ALTER TABLE public.${t} ENABLE ROW LEVEL SECURITY`))});
+test('contributors have no direct status publish route',()=>{assert.match(sql,/status IN \('draft','needs_changes'\)/);assert.match(sql,/CREATE POLICY craft_contributor_insert/);assert.doesNotMatch(sql,/CREATE POLICY craft_contributor_publish/)});
+test('independent reviewer and publisher roles are checked at SQL boundary',()=>{assert.match(sql,/item\.author_id=auth\.uid\(\)/);assert.match(sql,/item\.reviewed_by = item\.author_id/);assert.match(sql,/craft_role\(\) <> 'publisher'/)});
+test('RLS and security-definer functions are explicit in migration',()=>{assert.match(sql,/SECURITY DEFINER SET search_path = ''/);assert.match(sql,/CREATE POLICY craft_public_posts/);assert.match(sql,/REVOKE ALL ON public\.craft_staff/)});

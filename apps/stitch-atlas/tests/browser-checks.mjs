@@ -24,6 +24,12 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.getByLabel('Your approximate target').fill('1');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
+  // CMS is configured fail-closed in preview, and unpublished pattern slugs are never public.
+  const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
+  assert.equal(studio.status(),200);
+  assert.equal(await page.getByText('Awaiting an isolated crochet database.').count(),1);
+  const unpublished=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/patterns/untested-celtic-bag',{waitUntil:'domcontentloaded'});
+  assert.equal(unpublished.status(),404,'No unpublished fake patterns may be publicly available');
   await page.close();
  }
  console.log('Stitch Atlas cross-viewport browser checks passed.');

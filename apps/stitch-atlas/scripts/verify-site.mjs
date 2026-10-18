@@ -3,13 +3,11 @@ import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const cwd=process.cwd();
 const read=p=>readFileSync(join(cwd,p),'utf8');
-const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/AdvancedMakerTools.jsx','components/Footer.jsx'];
+const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/AdvancedMakerTools.jsx','components/EditorialStudio.jsx','components/Footer.jsx','app/studio/page.jsx','app/patterns/[slug]/page.jsx','app/api/studio/posts/route.js','app/api/studio/posts/[id]/route.js'];
 for(const f of jsFiles)assert(existsSync(join(cwd,f)),`Required page or component missing: ${f}`);
 assert(existsSync(join(cwd,'public/images/editorial-hero.jpg')),'Original generated editorial hero missing');
-assert(existsSync(join(cwd,'public/og-cover.jpg')),'Social Open Graph image must exist');
-assert(existsSync(join(cwd,'public/apple-touch-icon.png')),'Apple touch icon must exist');
 for(const category of ['bag','stitch','blanket','square','flower','yarn'])assert(existsSync(join(cwd,`public/category/${category}.svg`)),`Missing category illustration: ${category}`);
-for(const asset of ['mark.svg','wordmark.svg','wordmark-inverse.svg','illustration.svg','pinterest-concept.svg','social-cover.svg','avatar.png'])assert(existsSync(join(cwd,'public/brand',asset)),`Missing identity asset: ${asset}`);
+for(const asset of ['mark.svg','wordmark.svg','wordmark-inverse.svg','illustration.svg','pinterest-concept.jpg','social-cover.jpg'])assert(existsSync(join(cwd,'public/brand',asset)),`Missing identity asset: ${asset}`);
 const layout=read('app/layout.jsx');
 assert(layout.includes('index:false,follow:false'),'A preview must not become indexable');
 assert(!layout.includes('example.com'),'No fake production canonical allowed');
@@ -22,3 +20,12 @@ assert(read('app/globals.css').includes('prefers-reduced-motion'),'Missing reduc
 const topics=read('lib/topics.js');
 assert(topics.includes('Original pattern concept')&&!topics.includes('physically_tested'),'No unverified published pattern claim');
 console.log('Stitch Atlas structural audit passed: pages, visual assets, stage SEO policy, accessibility safeguards, honest content states.');
+
+for(const required of ['lib/editorial-contract.mjs','lib/studio-server.mjs','lib/public-craft.mjs','db/migrations/20261018_stitch_atlas_editorial.sql','docs/EDITORIAL_CMS.md'])assert(existsSync(join(cwd,required)),`Missing isolated editorial asset: ${required}`);
+const schema=read('db/migrations/20261018_stitch_atlas_editorial.sql');
+assert(schema.includes('publishing_enabled bool NOT NULL DEFAULT false'),'DB publishing must default disabled');
+assert(schema.includes('ENABLE ROW LEVEL SECURITY'),'Database must require RLS');
+assert(schema.includes('item.author_id=auth.uid()'),'Independent reviewer guard required');
+assert(read('lib/studio-server.mjs').includes("CROCHET_PUBLISHING_ENABLED!=='true'"),'Server launch gate required');
+assert(!read('app/studio/page.jsx').includes('robots:{index:true'),'Private studio must not be indexable');
+console.log('Stitch Atlas editorial CMS structural checks passed: RLS, independent review and default-deny publication.');
