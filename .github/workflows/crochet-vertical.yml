@@ -1,0 +1,40 @@
+name: Crochet vertical research and quality checks
+
+on:
+  pull_request:
+    paths:
+      - 'rankstein/crochet_vertical.py'
+      - 'rankstein/cli.py'
+      - 'rankstein/niche_detector.py'
+      - 'rankstein/site_factory.py'
+      - 'tests/unit/test_crochet_vertical.py'
+      - 'docs/system/CROCHET_ADSENSE_VERTICAL.md'
+      - '.github/workflows/crochet-vertical.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  craft-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated tests
+        run: python -m pip install pytest pydantic pydantic-settings python-dotenv
+      - name: Compile new and touched source
+        run: python -m compileall -q rankstein/crochet_vertical.py rankstein/cli.py rankstein/niche_detector.py rankstein/site_factory.py
+      - name: Run crochet unit and CLI safety tests
+        run: python -m pytest tests/unit/test_crochet_vertical.py -q
+      - name: Score complete 87-keyword pack without publishing
+        run: python rankstein.py crochet research --csv docs/research/crochet/keyword_research_source_2026-10-18.csv --output data/reports/crochet-keywords-reviewed.json
+      - name: Reject intentionally untested crochet draft
+        run: |
+          if python rankstein.py crochet audit --input docs/examples/crochet-untested-pattern.json; then
+            echo 'Unexpectedly approved an untested pattern' >&2
+            exit 1
+          fi

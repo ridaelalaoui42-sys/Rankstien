@@ -133,6 +133,15 @@ def create_site_project(
     overwrite: bool = False,
 ) -> SiteProjectResult:
     """Create a sanitized, rebranded site project for a provisioned domain."""
+    # A craft site needs its own Pattern/Tutorial model. Copying a food
+    # template would emit invalid Recipe JSON-LD and recipe-only content flows.
+    from rankstein.crochet_vertical import is_crochet_niche
+
+    if is_crochet_niche(niche_info.niche):
+        raise ValueError(
+            "Crochet cannot use the food site factory. Use a standalone "
+            "crochet Pattern/Tutorial template and complete the editorial QA gate first."
+        )
     project_root = project_root.resolve()
     domain_root = domain_root.resolve()
     template = (template_path or default_template_path(project_root)).resolve()

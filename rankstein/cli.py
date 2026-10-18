@@ -586,6 +586,48 @@ def cmd_ecc(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_crochet_research(args: argparse.Namespace) -> int:
+    """Score existing crochet keyword evidence; never enqueue publication."""
+    from rankstein.crochet_vertical import research_crochet_csv
+
+    try:
+        report = research_crochet_csv(Path(args.csv))
+    except (OSError, ValueError, UnicodeError) as exc:
+        print(f"Crochet research input error: {exc}", file=sys.stderr)
+        return 2
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "vertical": "crochet",
+        "total_rows": report["total_input_rows"],
+        "qualified": report["qualified"],
+        "rejected": len(report["rejected"]),
+        "publishable": False,
+        "output": str(output),
+    }, ensure_ascii=False))
+    return 0
+
+
+def cmd_crochet_audit(args: argparse.Namespace) -> int:
+    """Fail-closed pattern/content QA from a local draft JSON artifact."""
+    from rankstein.crochet_vertical import audit_crochet_content
+
+    try:
+        draft = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError) as exc:
+        print(f"Crochet draft input error: {exc}", file=sys.stderr)
+        return 2
+    if not isinstance(draft, dict):
+        print("Crochet draft input must be a JSON object", file=sys.stderr)
+        return 2
+    from dataclasses import asdict
+
+    audit = audit_crochet_content(draft)
+    print(json.dumps(asdict(audit), ensure_ascii=False, indent=2))
+    return 0 if audit.publishable else 1
+
+
 # ───────────────────────────────────────────────────────────────────────────
 # Argparse builder
 # ───────────────────────────────────────────────────────────────────────────
@@ -597,6 +639,16 @@ def build_parser() -> argparse.ArgumentParser:
         description="RankStein — multi-domain autonomous SEO content engine.",
     )
     sub = p.add_subparsers(dest="command", required=True)
+
+    crochet = sub.add_parser("crochet", help="Crochet research and QA (no publishing or site cloning)")
+    crochet_sub = crochet.add_subparsers(dest="crochet_action", required=True)
+    crochet_research = crochet_sub.add_parser("research", help="Score sourced crochet keyword CSV")
+    crochet_research.add_argument("--csv", type=Path, required=True, help="Sourced 87-keyword research CSV")
+    crochet_research.add_argument("--output", type=Path, default=PROJECT_ROOT / "data/reports/crochet-keyword-review.json")
+    crochet_research.set_defaults(func=cmd_crochet_research)
+    crochet_audit = crochet_sub.add_parser("audit", help="Check a draft pattern/tutorial for publication blockers")
+    crochet_audit.add_argument("--input", type=Path, required=True, help="Draft JSON to validate without publishing")
+    crochet_audit.set_defaults(func=cmd_crochet_audit)
 
     add = sub.add_parser("add-domain", help="Provision a new blog (wizard)")
     add.add_argument("domain", help="Domain name (e.g. keto-dinners.com)")
