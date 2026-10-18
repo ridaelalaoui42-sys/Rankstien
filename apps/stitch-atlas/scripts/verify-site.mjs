@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const cwd=process.cwd();
 const read=p=>readFileSync(join(cwd,p),'utf8');
-const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/Footer.jsx'];
+const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/AdvancedMakerTools.jsx','components/Footer.jsx'];
 for(const f of jsFiles)assert(existsSync(join(cwd,f)),`Required page or component missing: ${f}`);
 assert(existsSync(join(cwd,'public/images/editorial-hero.jpg')),'Original generated editorial hero missing');
 assert(existsSync(join(cwd,'public/og-cover.jpg')),'Social Open Graph image must exist');
