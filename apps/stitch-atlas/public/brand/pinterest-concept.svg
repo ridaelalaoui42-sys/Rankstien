@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1500" viewBox="0 0 1000 1500" role="img" aria-labelledby="title desc">
+<title id="title">Stitch Atlas — Crochet Learning Guides</title><desc id="desc">An original Pinterest editorial graphic with stitches, tools and brand typography. Introductory content, not a tested pattern.</desc>
+<defs><linearGradient id="b" x2="0" y2="1"><stop stop-color="#f6ece0"/><stop offset="1" stop-color="#e7d7c8"/></linearGradient><pattern id="s" width="90" height="110" patternUnits="userSpaceOnUse"><path d="M0 30q22-42 45 0t45 0M0 75q22 42 45 0t45 0" fill="none" stroke="#7b9c83" stroke-width="7" opacity=".72"/></pattern></defs>
+<rect width="1000" height="1500" fill="url(#b)"/><rect width="1000" height="1500" fill="url(#s)" opacity=".22"/>
+<rect x="57" y="60" width="886" height="1380" rx="23" fill="none" stroke="#9a6f5d" stroke-width="3"/>
+<text x="500" y="178" font-family="Arial,sans-serif" text-anchor="middle" letter-spacing="9" font-size="25" fill="#6c8070">THE MAKER'S NOTEBOOK</text>
+<text x="500" y="318" font-family="Georgia,serif" text-anchor="middle" font-size="95" fill="#263c2e">A little more</text><text x="500" y="425" font-family="Georgia,serif" font-style="italic" text-anchor="middle" font-size="91" fill="#b66e57">than a stitch.</text>
+<text x="500" y="514" font-family="Arial,sans-serif" text-anchor="middle" font-size="30" fill="#435547">FREE CROCHET LEARNING GUIDES</text>
+<rect x="125" y="594" width="750" height="610" rx="40" fill="#7d9980"/><rect x="175" y="644" width="650" height="510" fill="url(#s)"/>
+<circle cx="500" cy="885" r="160" fill="#f7e9d5"/><circle cx="500" cy="885" r="129" fill="none" stroke="#ba775b" stroke-width="13"/>
+<g fill="none" stroke="#ba775b" stroke-width="9" stroke-linecap="round"><path d="M390 840q104-80 224 0M389 886q115-89 223 0M395 932q100-78 211 0"/><path d="M425 782q-40 112 100 200M484 765q-15 126 104 209M537 767q19 111 77 157"/></g>
+<path d="M595 1029q87 28 144-50" stroke="#f7e9d5" stroke-width="10" fill="none" stroke-linecap="round"/>
+<text x="500" y="1300" font-family="Georgia,serif" text-anchor="middle" font-size="68" fill="#263c2e">Stitch <tspan fill="#b66e57" font-style="italic">Atlas</tspan></text>
+<text x="500" y="1358" font-family="Arial,sans-serif" text-anchor="middle" font-size="23" letter-spacing="4" fill="#5c715d">ORIGINAL CRAFT JOURNAL · FREE TO LEARN</text>
+</svg>

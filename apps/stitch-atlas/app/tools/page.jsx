@@ -1,0 +1,4 @@
+import MakerTools from '../../components/MakerTools';
+import AdvancedMakerTools from '../../components/AdvancedMakerTools';
+export const metadata={title:'Free Crochet Row Counter, Yarn Estimator, Gauge & Repeat Planner',description:'Free crochet row counter, stitch-repeat planner, swatch-based yarn estimate, gauge calculator and US/UK stitch terminology reference. No account required.'};
+export default function Tools(){return <main id="main"><section className="inner-hero tools-hero"><div className="container"><p className="kicker">TOOLS FOR THE WORKTABLE</p><h1>Small helpers.<br/><em>Big satisfaction.</em></h1><p>Keep your place, understand unfamiliar abbreviations and make better gauge estimates. Free tools that work without an account.</p></div></section><div className="section container"><MakerTools/><AdvancedMakerTools/></div></main>}

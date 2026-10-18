@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1640" height="624" viewBox="0 0 1640 624" role="img" aria-labelledby="title desc">
+<title id="title">Stitch Atlas — Crochet &amp; Creative Living</title><desc id="desc">Original handcrafted crochet brand cover in warm paper, sage and terracotta.</desc>
+<defs><linearGradient id="paper" x2="1" y2="1"><stop stop-color="#faf6ef"/><stop offset="1" stop-color="#f0e6d8"/></linearGradient><pattern id="grain" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M0 24h48M24 0v48" stroke="#cbbaa8" stroke-width=".55" opacity=".23"/></pattern><pattern id="woven" width="57" height="72" patternUnits="userSpaceOnUse"><path d="M0 34q14-32 28 0t29 0M0 44q14 32 28 0t29 0" stroke="#fff6e8" stroke-width="4" fill="none" opacity=".68"/></pattern></defs>
+<rect width="1640" height="624" fill="url(#paper)"/><rect width="1640" height="624" fill="url(#grain)"/>
+<path d="M1001 0h639v624h-639q-165-150-10-319q-95-143 10-305Z" fill="#738e79"/><rect x="1000" width="640" height="624" fill="url(#woven)" opacity=".38"/>
+<circle cx="1310" cy="305" r="182" fill="#e4c9b5" opacity=".9"/><circle cx="1310" cy="305" r="150" fill="none" stroke="#9e6c57" stroke-width="8"/><g stroke="#ae7860" stroke-width="6" fill="none" stroke-linecap="round"><path d="M1184 240q142-116 250 2M1170 271q155-109 275-2M1166 312q161-101 281 0M1193 363q142-88 243 0M1229 395q96-68 170 0"/><path d="M1198 207q-45 110 131 232M1233 176q-26 94 139 261M1268 170q7 122 149 224M1310 154q20 105 128 193"/></g><path d="M1385 452q92 45 162-34" stroke="#9e6c57" stroke-width="8" fill="none" stroke-linecap="round"/>
+<path d="M1516 421q-3-52 47-65q1 51-47 65Z" fill="#e6e0c7"/><path d="M1516 421q40 1 46 45q-46 8-46-45Z" fill="#cad6bc"/>
+<g fill="#b56d55"><circle cx="85" cy="83" r="9"/><circle cx="111" cy="83" r="9"/><circle cx="137" cy="83" r="9"/></g>
+<text x="112" y="169" font-family="Arial,sans-serif" font-size="23" font-weight="bold" letter-spacing="7" fill="#ab715d">A NEW CROCHET JOURNAL</text>
+<text x="105" y="302" font-family="Georgia,serif" font-size="116" fill="#20382c">Stitch <tspan font-style="italic" fill="#b66e57">Atlas</tspan></text>
+<text x="110" y="372" font-family="Arial,sans-serif" font-size="27" letter-spacing="2" fill="#4c5f50">LEARN THE STITCH. LOVE THE PROCESS.</text>
+<path d="M110 419h705" stroke="#b66e57" stroke-width="2" opacity=".55"/>
+<text x="110" y="479" font-family="Georgia,serif" font-style="italic" font-size="33" fill="#304639">Free learning guides · Thoughtful maker tools · Original patterns in development</text>
+<text x="110" y="553" font-family="Arial,sans-serif" font-size="17" letter-spacing="5" fill="#6f7e70">STITCH ATLAS / HANDMADE LIVING / EST. 2026</text>
+</svg>
