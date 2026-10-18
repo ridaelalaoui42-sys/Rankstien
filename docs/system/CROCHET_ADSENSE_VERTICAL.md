@@ -18,10 +18,10 @@ The new vertical is designed for free original crochet patterns and instructiona
 
 ## Run against the 87-keyword research CSV
 
-Download the accompanying `crochet_keyword_research_2026-10-18.csv` research pack to your Rankstien machine. Then:
+A clean snapshot of all 87 sourced keyword records is included under `docs/research/crochet/keyword_research_source_2026-10-18.csv`. Then:
 
 ```shell
-python rankstein.py crochet research --csv path/to/crochet_keyword_research_2026-10-18.csv --output data/reports/crochet-keyword-review.json
+python rankstein.py crochet research --csv docs/research/crochet/keyword_research_source_2026-10-18.csv --output data/reports/crochet-keyword-review.json
 python rankstein.py crochet audit --input docs/examples/crochet-untested-pattern.json
 python -m pytest tests/unit/test_crochet_vertical.py -q
 ```
