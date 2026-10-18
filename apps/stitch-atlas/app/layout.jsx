@@ -9,8 +9,8 @@ export const metadata={
   description:'An independent crochet publication in development. Discover thoughtfully illustrated stitch lessons, useful maker tools and a forthcoming collection of original, tested free patterns.',
   applicationName:'Stitch Atlas',
   manifest:'/site.webmanifest',
-  icons:{icon:[{url:'/favicon.ico',sizes:'any'},{url:'/brand/mark.svg',type:'image/svg+xml'}],apple:'/apple-touch-icon.png'},
-  openGraph:{type:'website',siteName:'Stitch Atlas',title,description:'A future home for genuine free crochet patterns, practical stitch learning and quiet creative inspiration.',images:[{url:'/og-cover.jpg',width:1200,height:630,alt:'Stitch Atlas crochet editorial brand'}]},
+  icons:{icon:[{url:'/brand/mark.svg',type:'image/svg+xml'}],apple:'/apple-touch-icon.png'},
+  openGraph:{type:'website',siteName:'Stitch Atlas',title,description:'A future home for genuine free crochet patterns, practical stitch learning and quiet creative inspiration.',images:[{url:'/og-cover.jpg',width:900,height:600,alt:'Stitch Atlas crochet editorial brand'}]},
   twitter:{card:'summary_large_image'},
   robots:{index:false,follow:false},
 };
