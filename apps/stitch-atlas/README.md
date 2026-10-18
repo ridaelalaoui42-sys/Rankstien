@@ -52,3 +52,10 @@ All custom vector logos and category illustration assets in `/public/brand` and 
 See [docs/EDITORIAL_CMS.md](docs/EDITORIAL_CMS.md) for setup, permissions, migration and QA gates.
 
 Run `npm run test:editorial` for the isolated validation/security contract tests.
+
+
+## Database-free Stitch Atlas editorial desk
+
+Open `/studio` on the preview. Until a dedicated crochet Supabase project exists, the desk operates **entirely in the current browser**: save up to 60 local unpublished drafts, import an evidence-labeled Rankstien handoff JSON file, inspect structural quality warnings, view a private text preview, and export a backup file. Drafts do not appear on public article URLs and there is no publication or approval button. Browser local storage is not encrypted or automatically backed up. The two recipe production databases are untouched.
+
+The future role-based CMS lives in `db/migrations/20261018_stitch_atlas_editorial.sql` and the protected API routes. Do not apply the migration to either recipe database. Deployment requires a separate, user-approved crochet database and real row-level security tests.

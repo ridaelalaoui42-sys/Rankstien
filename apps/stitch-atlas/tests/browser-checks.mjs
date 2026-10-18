@@ -24,10 +24,23 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.getByLabel('Your approximate target').fill('1');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
-  // CMS is configured fail-closed in preview, and unpublished pattern slugs are never public.
+  // Without Supabase, the studio is a truthful browser-local drafting workspace.
   const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
   assert.equal(studio.status(),200);
-  assert.equal(await page.getByText('Awaiting an isolated crochet database.').count(),1);
+  await page.getByTestId('offline-studio').waitFor();
+  assert.equal(await page.getByText('LOCAL-ONLY · UNPUBLISHED').count(),1);
+  assert.equal(await page.getByRole('button',{name:/publish/i}).count(),0,'No browser-local publish action');
+  const slug='original-yarn-note-'+width;
+  await page.getByLabel('Editorial title').fill('A thoughtful original crochet yarn note');
+  await page.getByLabel('Permanent slug').fill(slug);
+  await page.getByRole('button',{name:'Save in this browser'}).click();
+  await page.getByText('Saved on this browser only.',{exact:false}).waitFor();
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.getByRole('button',{name:/A thoughtful original crochet yarn note/}).click();
+  assert.equal(await page.getByLabel('Permanent slug').inputValue(),slug);
+  assert.equal(await page.getByRole('button',{name:/publish/i}).count(),0);
+  const overflowStudio=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  assert(overflowStudio<=1,`Studio horizontal overflow ${overflowStudio}px at ${width}`);
   const unpublished=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/patterns/untested-celtic-bag',{waitUntil:'domcontentloaded'});
   assert.equal(unpublished.status(),404,'No unpublished fake patterns may be publicly available');
   await page.close();

@@ -208,7 +208,9 @@ CREATE POLICY craft_events_staff_read ON public.craft_events FOR SELECT TO authe
 
 -- Even authenticated members cannot directly publish or write audit events.
 REVOKE ALL ON public.craft_staff, public.craft_settings, public.craft_posts, public.craft_events FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON public.craft_posts TO anon;
+-- Anonymous users may read ONLY public article columns, not author UUIDs,
+-- tester/rights evidence, editorial review notes, or internal SEO provenance.
+GRANT SELECT (slug,title,description,body,kind,category,images,steps,materials,terminology,hook_size_mm,yarn_weight,gauge,finished_dimensions,source_links,published_at) ON public.craft_posts TO anon;
 GRANT SELECT,INSERT,UPDATE ON public.craft_posts TO authenticated;
 GRANT SELECT ON public.craft_staff,public.craft_events TO authenticated;
 REVOKE ALL ON FUNCTION public.craft_role() FROM PUBLIC;

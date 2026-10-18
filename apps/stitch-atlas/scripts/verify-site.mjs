@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const cwd=process.cwd();
 const read=p=>readFileSync(join(cwd,p),'utf8');
-const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/AdvancedMakerTools.jsx','components/EditorialStudio.jsx','components/Footer.jsx','app/studio/page.jsx','app/patterns/[slug]/page.jsx','app/api/studio/posts/route.js','app/api/studio/posts/[id]/route.js'];
+const jsFiles=['app/layout.jsx','app/page.jsx','app/patterns/page.jsx','app/learn/page.jsx','app/tools/page.jsx','app/about/page.jsx','components/SiteHeader.jsx','components/PatternDirectory.jsx','components/MakerTools.jsx','components/AdvancedMakerTools.jsx','components/EditorialStudio.jsx','components/OfflineDraftStudio.jsx','components/Footer.jsx','app/studio/page.jsx','app/patterns/[slug]/page.jsx','app/api/studio/posts/route.js','app/api/studio/posts/[id]/route.js'];
 for(const f of jsFiles)assert(existsSync(join(cwd,f)),`Required page or component missing: ${f}`);
 assert(existsSync(join(cwd,'public/images/editorial-hero.jpg')),'Original generated editorial hero missing');
 for(const category of ['bag','stitch','blanket','square','flower','yarn'])assert(existsSync(join(cwd,`public/category/${category}.svg`)),`Missing category illustration: ${category}`);
@@ -29,3 +29,7 @@ assert(schema.includes('item.author_id=auth.uid()'),'Independent reviewer guard 
 assert(read('lib/studio-server.mjs').includes("CROCHET_PUBLISHING_ENABLED!=='true'"),'Server launch gate required');
 assert(!read('app/studio/page.jsx').includes('robots:{index:true'),'Private studio must not be indexable');
 console.log('Stitch Atlas editorial CMS structural checks passed: RLS, independent review and default-deny publication.');
+
+assert(existsSync(join(cwd,'lib/offline-workspace.mjs')),'Browser-only draft contract missing');
+assert(read('app/studio/page.jsx').includes('OfflineDraftStudio'),'No-database staging must offer safe local drafts');
+assert(read('lib/offline-workspace.mjs').includes('publication_enabled:false'),'Local archive must explicitly block publication');

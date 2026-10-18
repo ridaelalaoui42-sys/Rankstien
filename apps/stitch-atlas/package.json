@@ -10,7 +10,7 @@
     "lint": "node scripts/verify-site.mjs",
     "test": "node scripts/verify-site.mjs",
     "test:browser": "node tests/browser-checks.mjs",
-    "test:editorial": "node --test tests/editorial-contract.test.mjs tests/editorial-sql-gates.test.mjs"
+    "test:editorial": "node --test tests/editorial-contract.test.mjs tests/editorial-sql-gates.test.mjs tests/offline-workspace.test.mjs"
   },
   "dependencies": {
     "next": "15.5.28",

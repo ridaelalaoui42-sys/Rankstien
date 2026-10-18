@@ -1,6 +1,6 @@
 # Stitch Atlas CMS and Rankstien integration — Phase 2
 
-**Current status:** Source implementation and test suite only. The live Stitch Atlas preview is intentionally `noindex`, and the CMS is disabled until a **new, dedicated Supabase project** is provisioned. This document is not evidence a database was created or a recipe was physically tested.
+**Current status:** Free-plan project limit reached in the existing Supabase organization (two active recipe projects). This phase delivers a **local-only draft desk**, with full future authenticated CMS source ready but **no new Supabase project created**. The Stitch Atlas preview remains `noindex`; public publishing is disabled. This document is not evidence a database was created or a recipe was physically tested.
 
 ## Safety / isolation boundaries
 
@@ -99,3 +99,46 @@ python -m rankstein.crochet_handoff \
 ```
 
 An authorized editor may import this JSON locally through `/studio`. Its proposals have `status=draft`, blank original content, no images and `test_status=untested`; they cannot be published. Search volumes stay explicitly third-party or unknown.
+
+
+## Free-plan fallback: browser-only draft desk (implemented)
+
+When `NEXT_PUBLIC_CROCHET_SUPABASE_URL` and the dedicated key are absent, `/studio` is a **personal browser-only workspace**, not an authenticated CMS. Drafts can be edited and retained in `localStorage` in that browser profile, and imported/exported as UTF-8 JSON backups. Rankstien `stitch-atlas-editorial-handoff-v1` research exports can be imported as **unfinished draft proposals**, not content ready for publication.
+
+- No database connection, server upload, user accounts, review approval or publishing action exists in fallback mode. Browser storage is **not secure for confidential documents** and can be cleared or read by others using that browser profile.
+- Every draft persisted/imported is normalized to `status: draft`, `offline_only: true`, and `test_status: untested` with human attestation removed. Browser storage cannot create credentials, review attestations or live posts.
+- Explicit JSON backup with `publication_enabled: false`; validate import format, reject invalid/fake/cross-brand URLs, prevent duplicate slugs and 75-draft/1.5MB overflow. Never turn a backup into a published record automatically.
+- Existing recipe Supabase projects remain explicitly blocked; no migration is applied anywhere. Future dedicated database deployment must revalidate all imported drafts and physical test evidence with a separate reviewer.
+- For privacy, the offline state is intentionally visible **only in the current browser/device**. Back up via `Export JSON backup` regularly.
+
+### Local verification
+
+`npm run test:editorial` runs offline draft isolation and roundtrip tests alongside the CMS/SQL contract checks. `npm run test:browser` exercises save/reload behavior in 360, 390, 768, 1024 and 1440px browser viewports, verifying the absence of any publication action.
+
+
+## Phase 2.1 — Database-free offline editorial desk
+
+While Supabase's two-project free limit is in force, the `/studio` URL shows **LOCAL ONLY / Publishing is locked**. No login is simulated, no approval state is available, and nothing is transmitted to Rankstien, Pinterest or the backend. The browser stores drafts in `localStorage` under `stitch-atlas:offline-drafts:v1`. This is **not** encrypted or a substitute for a secure multi-user CMS; anyone with access to the same browser profile can see the drafts. Export a JSON backup regularly because cache clearing, incognito sessions, or device migration can erase local data.
+
+- Create and edit original unpublished draft stories; no fabricated editor names, physically tested claims, keyword metrics or scraped pattern text.
+- Import a Rankstien `stitch-atlas-editorial-handoff-v1` JSON artifact produced by `python -m rankstein.crochet_handoff`. This **always** strips proposed approval states, testing attestations, rights claims, media and generated content. Imported rows are blank-content draft proposals, not a campaign pushed to production.
+- Save and reload up to 60 draft records in the same browser profile. Export `stitch-atlas-offline-workspace-v1` JSON; same files can be imported back later. `publication_enabled:false` is mandatory in every import/export.
+- Use the article reading preview and quality checklist to prepare manuscripts. The checklist is structural validation only; genuine testing and editorial reviews still need independent people.
+- Published URLs (`/patterns/[slug]`) still 404; neither public nor private API routes expose local drafts, and Supabase recipe projects remain disconnected.
+- Once a **user-approved independent** database project is available, migrate only reviewed draft JSON through authenticated create-draft actions; do not bypass release gates, make all drafts public, or enable indexing automatically.
+
+### Local development without database or cloud credentials
+
+```shell
+cd apps/stitch-atlas
+npm install
+npm run test:editorial
+npm test
+npm run build
+npm run start
+# open http://localhost:3000/studio to save a draft locally
+```
+
+### Security improvement in the pending schema
+
+`craft_posts` anon `SELECT` grants only publication-safe columns such as article text, steps and licensed image metadata. Tester attestation, identities, internal SEO research evidence and reviewer notes are **not** granted to anonymous readers. Confirm all RLS policies and column grants against a real dedicated Supabase project before connecting the CMS.
