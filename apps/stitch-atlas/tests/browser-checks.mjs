@@ -24,6 +24,29 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'80 stitches');
   await page.getByLabel('Your approximate target').fill('1');
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
+  // With no database, the studio remains a browser-local, never-published workbench.
+  const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
+  assert.equal(studio.status(),200);
+  await page.getByTestId('offline-studio').waitFor();
+  await page.getByText('Publishing is locked').waitFor();
+  assert.equal(await page.getByRole('button',{name:/^publish/i}).count(),0,'No browser-local publish action');
+  const slug='original-yarn-note-'+width;
+  await page.getByLabel('Working headline').fill('A thoughtful original crochet yarn note');
+  await page.getByLabel('URL slug').fill(slug);
+  await page.getByLabel('Editorial summary').fill('An original tutorial draft about keeping accurate crochet row counts and interpreting turning chains for new crocheters.');
+  await page.getByRole('button',{name:'Save local draft'}).click();
+  await page.getByText('Draft saved in this browser only.',{exact:false}).waitFor();
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.getByTestId('offline-studio').waitFor();
+  await page.getByRole('button',{name:/A thoughtful original crochet yarn note/}).click();
+  assert.equal(await page.getByLabel('URL slug').inputValue(),slug);
+  await page.getByRole('button',{name:'Private reading preview'}).click();
+  await page.getByText('UNPUBLISHED DRAFT / LOCAL PREVIEW').waitFor();
+  assert.equal(await page.getByRole('button',{name:/^publish/i}).count(),0);
+  const overflowStudio=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  assert(overflowStudio<=1,`Studio horizontal overflow ${overflowStudio}px at ${width}`);
+  const unpublished=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/patterns/untested-celtic-bag',{waitUntil:'domcontentloaded'});
+  assert.equal(unpublished.status(),404,'No unpublished fake patterns may be publicly available');
   await page.close();
  }
  console.log('Stitch Atlas cross-viewport browser checks passed.');

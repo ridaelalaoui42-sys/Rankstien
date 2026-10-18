@@ -1,0 +1,60 @@
+name: Stitch Atlas editorial CMS and Rankstien handoff
+
+on:
+  pull_request:
+    paths:
+      - 'apps/stitch-atlas/**'
+      - 'rankstein/crochet_handoff.py'
+      - 'rankstein/cli.py'
+      - 'tests/unit/test_crochet_handoff.py'
+      - '.github/workflows/stitch-atlas-cms.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-contract-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated website dependencies
+        working-directory: apps/stitch-atlas
+        run: npm install --no-audit --no-fund
+      - name: Draft validation and authorization gates
+        working-directory: apps/stitch-atlas
+        run: npm run test:editorial
+      - name: Editorial structural integrity
+        working-directory: apps/stitch-atlas
+        run: npm test
+      - name: Production Next.js build with CMS disconnected
+        working-directory: apps/stitch-atlas
+        run: npm run build
+      - name: Headless Chromium
+        working-directory: apps/stitch-atlas
+        run: npx playwright install --with-deps chromium
+      - name: Preview route and mobile/desktop safety checks
+        working-directory: apps/stitch-atlas
+        run: |
+          set -e
+          npm run start -- -p 3000 > /tmp/stitch-atlas-cms.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:3000/ > /dev/null; then break; fi
+            sleep 2
+          done
+          STITCH_ATLAS_BASE_URL=http://127.0.0.1:3000 node scripts/smoke.mjs
+          STITCH_ATLAS_BASE_URL=http://127.0.0.1:3000 npm run test:browser
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/studio/posts)" = '503'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Rankstien nonpublishing handoff tests
+        run: |
+          python -m pip install pytest
+          python -m pytest tests/unit/test_crochet_handoff.py -q

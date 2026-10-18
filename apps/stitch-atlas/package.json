@@ -9,12 +9,14 @@
     "start": "next start",
     "lint": "node scripts/verify-site.mjs",
     "test": "node scripts/verify-site.mjs",
-    "test:browser": "node tests/browser-checks.mjs"
+    "test:browser": "node tests/browser-checks.mjs",
+    "test:editorial": "node --test tests/editorial-contract.test.mjs tests/editorial-sql-gates.test.mjs tests/offline-workspace.test.mjs"
   },
   "dependencies": {
     "next": "15.5.28",
     "react": "19.1.10",
-    "react-dom": "19.1.10"
+    "react-dom": "19.1.10",
+    "@supabase/supabase-js": "^2.57.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"
