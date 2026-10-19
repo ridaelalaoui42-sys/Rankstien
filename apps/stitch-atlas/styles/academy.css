@@ -130,3 +130,25 @@
 .academy-lesson-guide-cta{display:inline-block;padding:12px 0;color:#aa654f;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #b66e57;margin-top:15px}
 
 .academy-badge-mark{overflow:hidden;padding:0;border:0;background:transparent!important;width:92px;height:92px;box-shadow:none}.academy-badge-mark img{width:100%;height:100%}.academy-earned .academy-badge-mark{border:0}.academy-quiz-illustration{overflow:hidden;margin-bottom:24px;border:5px solid #fffaf2;box-shadow:9px 9px 0 #dedccc}.academy-quiz-illustration img{display:block;width:100%;height:auto;aspect-ratio:1200/720;object-fit:cover}.academy-quiz-illustration+.academy-quiz-top{padding-top:0}@media(max-width:650px){.academy-badge-mark{width:76px;height:76px}.academy-quiz-illustration{margin-bottom:22px}}
+
+
+/* Optional Google cloud backup — guest-first and never a login wall. */
+.academy-account-wrap{padding-top:10px;padding-bottom:58px}
+.academy-cloud-account{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(250px,.7fr);gap:42px;align-items:center;padding:34px clamp(20px,4vw,55px);background:#f5eee3;border:1px solid #d7d0c2;position:relative;overflow:hidden}
+.academy-cloud-account:before{content:'✳';position:absolute;right:19px;top:-59px;font:166px var(--serif);opacity:.07;color:#8b715d;pointer-events:none}
+.academy-cloud-copy{position:relative;z-index:1;min-width:0}
+.academy-cloud-copy h2{font-size:clamp(1.65rem,3vw,2.95rem);line-height:1.12;letter-spacing:-.035em;margin:7px 0 13px}
+.academy-cloud-copy>p:not(.academy-overline){font-size:12px;color:#637467;line-height:1.7;max-width:610px;margin:0}
+.academy-cloud-copy .academy-cloud-privacy{font-size:10px!important;color:#7d7869!important;margin-top:13px!important}
+.academy-cloud-actions{display:flex;flex-direction:column;gap:10px;align-items:stretch;position:relative;z-index:1;min-width:0}
+.academy-google-button,.academy-cloud-button{min-height:51px;padding:12px 22px;border:1px solid #345e48;background:#234737;color:#fffdf4;font-weight:750;font-size:12px;letter-spacing:.03em;display:flex;justify-content:center;gap:14px;align-items:center;cursor:pointer}
+.academy-google-button span{background:#fff;color:#4285f4;border-radius:50%;font-family:Arial,sans-serif;font-size:18px;width:28px;height:28px;display:grid;place-items:center}
+.academy-cloud-button[disabled],.academy-google-button[disabled]{opacity:.65;cursor:wait}
+.academy-cloud-secondary{border:1px solid #c3cbbd;background:transparent;color:#3b5644;padding:12px 20px;font-size:12px;cursor:pointer}
+.academy-cloud-identity{display:flex;flex-direction:column;gap:5px;color:#2a4736;border-bottom:1px solid #dbd3c5;padding-bottom:12px;min-width:0}
+.academy-cloud-identity strong{font-size:14px;overflow-wrap:anywhere}
+.academy-cloud-identity small{font-size:11px;color:#677267;overflow-wrap:anywhere}
+.academy-cloud-unconfigured{font-size:12px;color:#607460;padding:16px 18px;border-left:3px solid #9a8b70;background:#fff9ef;line-height:1.7}
+.academy-cloud-status,.academy-cloud-error{font-size:11px;margin:4px 0 0;line-height:1.6}
+.academy-cloud-status{color:#3e6e52}.academy-cloud-error{color:#ac4538}
+@media(max-width:760px){.academy-cloud-account{grid-template-columns:1fr;gap:20px;padding:25px 21px}.academy-account-wrap{padding-bottom:34px}}
