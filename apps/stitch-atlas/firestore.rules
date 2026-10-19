@@ -17,9 +17,12 @@ service cloud.firestore {
        );
      }
      function validDocument() {
-       return request.resource.data.keys().hasAll(['version','completed','updatedAt'])
-         && request.resource.data.keys().hasOnly(['version','completed','updatedAt'])
+       return request.resource.data.keys().hasAll(['version','generation','completed','updatedAt'])
+         && request.resource.data.keys().hasOnly(['version','generation','completed','updatedAt'])
          && request.resource.data.version == 1
+         && request.resource.data.generation is int
+         && request.resource.data.generation >= 0
+         && request.resource.data.generation <= 1000000
          && request.resource.data.completed is map
          && request.resource.data.completed.keys().hasOnly([
            'us-uk-crochet-terms',
