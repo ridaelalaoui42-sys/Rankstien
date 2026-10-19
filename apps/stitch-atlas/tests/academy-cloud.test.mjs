@@ -55,6 +55,8 @@ test('Firestore rules restrict own document, known lessons, safe scores and disa
   assert.match(rules,/allow list: if false/);
   assert.match(rules,/allow delete: if false/);
   assert.match(rules,/updatedAt == request\.time/);
+  assert.match(rules,/data\.generation is int/);
+  assert.match(rules,/data\.generation >= 0/);
   assert.match(rules,/completed is map/);
   assert.match(rules,/score >= 2/);
   assert.match(rules,/score <= 3/);
@@ -74,6 +76,11 @@ test('dashboard presents a guest path and an account path without publishing per
   assert(hook.includes('removeItem(ACADEMY_OWNER_KEY)'));
   assert(hook.includes('syncAcademyGoogleProgress'));
   assert(hook.includes('clearAcademyGoogleProgress'));
+  assert(hook.includes('ACADEMY_GUEST_KEY'));
+  assert(hook.includes('generationRef.current'));
+  assert(hook.includes('importGuest'));
+  assert(panel.includes('guestCount'));
+  assert(panel.includes('Yes, import guest progress'));
 });
 
 test('Firebase public config requires four values and no service role credentials',()=>{
