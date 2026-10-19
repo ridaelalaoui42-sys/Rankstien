@@ -60,7 +60,11 @@ export async function syncAcademyGoogleProgress(user,localProgress){
     const snap=await transaction.get(ref);
     const remote=cleanAcademyProgress(snap.exists()?snap.data():null);
     const merged=mergeAcademyScores(remote,localProgress);
-    transaction.set(ref,{version:ACADEMY_VERSION,completed:merged.completed,updatedAt:dbApi.serverTimestamp()});
+    // Reading an unchanged record must not consume a billable write on every
+    // Next.js route visit. A brand-new guest also needs no empty cloud document.
+    if(JSON.stringify(remote.completed)!==JSON.stringify(merged.completed)){
+      transaction.set(ref,{version:ACADEMY_VERSION,completed:merged.completed,updatedAt:dbApi.serverTimestamp()});
+    }
     return merged;
   },{maxAttempts:5});
 }
