@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ACADEMY_STORAGE_KEY,cleanAcademyProgress,applyQuizResult,getAcademyStats} from '../lib/academy.mjs';
-import {mergeAcademyScores} from '../lib/academy-backup.mjs';
+import {mergeAcademyScores,mergeAcademyBackup,serializeAcademyBackup} from '../lib/academy-backup.mjs';
 import {
  ACADEMY_OWNER_KEY,academyCloudConfigured,watchAcademyGoogleUser,
  signInAcademyWithGoogle,signOutAcademyGoogle,syncAcademyGoogleProgress,
@@ -158,6 +158,14 @@ export function useAcademyProgress(){
    try{await signOutAcademyGoogle()}catch{setCloudError('Could not sign out. Please retry.');}
  },[]);
  const syncNow=useCallback(()=>{if(userRef.current)return synchronize(userRef.current)},[synchronize]);
+ const exportProgress=useCallback(()=>serializeAcademyBackup(currentRef.current),[]);
+ const importProgress=useCallback(async text=>{
+   const merged=mergeAcademyBackup(text,currentRef.current);
+   const user=userRef.current;
+   updateProgress(merged,user?.uid||null);
+   if(user)await synchronize(user,merged);
+   return getAcademyStats(merged).completedCount;
+ },[updateProgress,synchronize]);
  const stats=useMemo(()=>getAcademyStats(progress),[progress]);
- return {progress,stats,ready,record,reset,storageError,cloudConfigured:academyCloudConfigured,account,cloudStatus,cloudError,signIn,signOut,syncNow};
+ return {progress,stats,ready,record,reset,storageError,cloudConfigured:academyCloudConfigured,account,cloudStatus,cloudError,signIn,signOut,syncNow,exportProgress,importProgress};
 }
