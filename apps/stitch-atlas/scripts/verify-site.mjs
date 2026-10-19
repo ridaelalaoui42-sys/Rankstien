@@ -40,3 +40,11 @@ assert(guideModule.includes('learningGuides')&&!guideModule.includes('aggregateR
 for(const slug of ['count-stitches','us-uk-terms','gauge-swatch','bag-yarn','bag-lining','moss-stitch'])assert(existsSync(join(cwd,`public/guides/${slug}.svg`)),`Guide visual missing: ${slug}`);
 assert(read('app/layout.jsx').includes("STITCH_ATLAS_INDEXING_ENABLED")===false,'Indexable guide gate must not silently change the overall noindex preview');
 console.log('Stitch Atlas learning library structural audit passed.');
+
+// Gamified academy must remain honest, local-only and fully illustrated.
+for(const name of ['app/academy/page.jsx','app/academy/[pathId]/page.jsx','app/academy/[pathId]/[lessonId]/page.jsx','components/AcademyDashboard.jsx','components/AcademyPath.jsx','components/AcademyQuiz.jsx','components/useAcademyProgress.jsx','lib/academy.mjs','lib/advanced-guides.mjs','styles/academy.css','tests/academy-content.test.mjs'])assert(existsSync(join(cwd,name)),`Missing academy asset: ${name}`);
+assert(read('app/layout.jsx').includes("'../styles/academy.css'"),'Missing academy style import');
+assert(read('components/SiteHeader.jsx').includes("['/academy','Academy"),'Academy must be discoverable');
+assert(!read('lib/academy.mjs').includes('fetch('),'No remote academy tracking until accounts are approved');
+assert(read('app/layout.jsx').includes('index:false,follow:false'),'Academy preview must remain noindex');
+console.log('Stitch Atlas Academy structure passed: original lessons, no remote accounts, honest preview indexing and quiz pages.');

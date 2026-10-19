@@ -38,7 +38,7 @@
       "image": "/pins/how-to-choose-yarn-for-crochet-bags.png",
       "targetPath": "/guides/how-to-choose-yarn-for-crochet-bags",
       "pinTitle": "Choose bag yarn with intention",
-      "pinDescription": "Structure, handles, load and fabric\u2014together. Read the free learning guide at Stitch Atlas.",
+      "pinDescription": "Structure, handles, load and fabric—together. Read the free learning guide at Stitch Atlas.",
       "status": "draft_no_verified_canonical_or_pinterest_account",
       "approvedToPublish": false,
       "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
@@ -62,6 +62,66 @@
       "status": "draft_no_verified_canonical_or_pinterest_account",
       "approvedToPublish": false,
       "imageRights": "Original Stitch Atlas diagram artwork; no competitor photography."
+    },
+    {
+      "slug": "crochet-yarn-weights-and-hook-sizes",
+      "image": "/pins/crochet-yarn-weights-and-hook-sizes.png",
+      "targetPath": "/guides/crochet-yarn-weights-and-hook-sizes",
+      "pinTitle": "Yarn weights & hooks, illustrated",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
+    },
+    {
+      "slug": "how-to-make-magic-ring-crochet",
+      "image": "/pins/how-to-make-magic-ring-crochet.png",
+      "targetPath": "/guides/how-to-make-magic-ring-crochet",
+      "pinTitle": "Magic ring made understandable",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
+    },
+    {
+      "slug": "crochet-right-side-vs-wrong-side",
+      "image": "/pins/crochet-right-side-vs-wrong-side.png",
+      "targetPath": "/guides/crochet-right-side-vs-wrong-side",
+      "pinTitle": "Which crochet side faces out?",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
+    },
+    {
+      "slug": "crochet-increases-decreases-stitch-math",
+      "image": "/pins/crochet-increases-decreases-stitch-math.png",
+      "targetPath": "/guides/crochet-increases-decreases-stitch-math",
+      "pinTitle": "Crochet shaping math made simple",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
+    },
+    {
+      "slug": "how-to-weave-in-crochet-ends",
+      "image": "/pins/how-to-weave-in-crochet-ends.png",
+      "targetPath": "/guides/how-to-weave-in-crochet-ends",
+      "pinTitle": "Finish crochet ends neatly",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
+    },
+    {
+      "slug": "how-to-avoid-stretchy-crochet-bag-straps",
+      "image": "/pins/how-to-avoid-stretchy-crochet-bag-straps.png",
+      "targetPath": "/guides/how-to-avoid-stretchy-crochet-bag-straps",
+      "pinTitle": "Understand stronger bag straps",
+      "pinDescription": "Original visual crochet technique guide. Discover clear explanations and free learning paths at Stitch Atlas.",
+      "status": "draft_no_verified_canonical_or_pinterest_account",
+      "approvedToPublish": false,
+      "imageRights": "Original Stitch Atlas educational schematic; no competitor photographs or tested-pattern claims."
     }
   ]
 }

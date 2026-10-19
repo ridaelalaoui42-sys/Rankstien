@@ -26,7 +26,7 @@ try{
   assert.equal(await page.locator('[data-testid="repeat-estimate"]').textContent(),'8 stitches');
   const guides=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/guides',{waitUntil:'domcontentloaded'});
   assert.equal(guides.status(),200,'Guide library must be accessible');
-  assert.equal(await page.locator('.guide-card').count(),6);
+  assert.equal(await page.locator('.guide-card').count(),12);
   await page.getByLabel('Find a guide').fill('US vs UK');
   assert.equal(await page.locator('.guide-card').count(),1,'US/UK guide search should match exactly once');
   await page.locator('.guide-card').first().click();
@@ -43,6 +43,35 @@ try{
   assert.equal(await page.locator('script[type="application/ld+json"]').count(),0,'Stage must not emit live Article schema');
   const missingGuide=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/guides/fictional-tested-bag',{waitUntil:'domcontentloaded'});
   assert.equal(missingGuide.status(),404,'Unknown guide must never return a fake content page');
+  // Academy: lesson paths, visual quiz grading, progress persistence and badges.
+  const academy=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/academy',{waitUntil:'domcontentloaded'});
+  assert.equal(academy.status(),200);
+  assert.equal(await page.locator('.academy-path-card').count(),3,'Three academy journeys available');
+  await page.locator('.academy-path-card').first().getByRole('link',{name:/Explore the journey/}).click();
+  assert.equal(await page.locator('.academy-route-step').count(),4);
+  await page.getByRole('link',{name:/Start lesson/}).first().click();
+  await page.locator('.academy-quiz-fieldset').waitFor();
+  await page.locator('.academy-quiz-option').nth(0).click();
+  await page.getByRole('button',{name:/Check my answer/}).click();
+  await page.locator('.academy-answer-note').waitFor();
+  await page.getByRole('button',{name:/Next question/}).click();
+  await page.locator('.academy-quiz-option').nth(1).click();
+  await page.getByRole('button',{name:/Check my answer/}).click();
+  await page.getByRole('button',{name:/Next question/}).click();
+  await page.locator('.academy-quiz-option').nth(1).click();
+  await page.getByRole('button',{name:/Check my answer/}).click();
+  await page.getByRole('button',{name:/Finish checkpoint/}).click();
+  await page.getByTestId('academy-result').getByText('3/3 answers right').waitFor();
+  await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/academy',{waitUntil:'domcontentloaded'});
+  assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
+  assert.equal(await page.getByTestId('academy-xp').textContent(),'75');
+  assert.equal(await page.locator('.academy-badge.academy-earned').count(),2,'First Loop + Perfect Swatch');
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
+  const overflowAcademy=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  assert(overflowAcademy<=1,`Academy horizontal overflow ${overflowAcademy}px at ${width}`);
+  const missingPath=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/academy/not-real',{waitUntil:'domcontentloaded'});
+  assert.equal(missingPath.status(),404);
   // With no database, the studio remains a browser-local, never-published workbench.
   const studio=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/studio',{waitUntil:'domcontentloaded'});
   assert.equal(studio.status(),200);

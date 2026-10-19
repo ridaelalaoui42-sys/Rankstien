@@ -2,7 +2,7 @@
 import {useState,useEffect} from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-const links=[['/patterns','Pattern library'],['/guides','Free guides'],['/learn','Learn crochet'],['/tools','Maker tools'],['/about','Our story']];
+const links=[['/patterns','Pattern library'],['/guides','Free guides'],['/academy','Academy ✳'],['/learn','Learn crochet'],['/tools','Maker tools'],['/about','Our story']];
 export default function SiteHeader(){
  const[open,setOpen]=useState(false);
  useEffect(()=>{function key(e){if(e.key==='Escape')setOpen(false)}document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key)},[]);

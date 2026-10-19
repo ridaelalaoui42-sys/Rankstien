@@ -7,8 +7,8 @@ const root=resolve(import.meta.dirname,'..');
 const file=rel=>readFileSync(join(root,rel));
 const text=rel=>file(rel).toString('utf8');
 
-test('six substantive independently written guide references with unique SEO targets',()=>{
-  assert.equal(learningGuides.length,6);
+test('twelve substantive independently written guide references with unique SEO targets',()=>{
+  assert.equal(learningGuides.length,12);
   const slugs=new Set(),titles=new Set();
   for(const g of learningGuides){
     assert.match(g.slug,/^[a-z][a-z0-9-]{4,70}$/);assert(!slugs.has(g.slug));slugs.add(g.slug);
@@ -54,7 +54,7 @@ test('all educational SVG assets have accessible labels and zero prohibited exte
   }
 });
 
-test('all six Pinterest concept graphics are real 1000×1500 PNGs with no unapproved destinations',()=>{
+test('all twelve Pinterest concept graphics are real 1000×1500 PNGs with no unapproved destinations',()=>{
   const pins=JSON.parse(text('docs/PINTEREST_ASSETS_MANIFEST.json'));
   assert.equal(pins.site,'Stitch Atlas');assert.equal(pins.destinationHost,null);assert.equal(pins.autopublish,false);
   assert.equal(pins.pins.length,learningGuides.length);

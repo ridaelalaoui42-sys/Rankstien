@@ -31,9 +31,12 @@ jobs:
       - name: Editorial structural integrity
         working-directory: apps/stitch-atlas
         run: npm test
-      - name: Six original craft guides, SEO integrity and Pinterest media
+      - name: Twelve original craft guides, SEO integrity and Pinterest media
         working-directory: apps/stitch-atlas
         run: npm run test:guides
+      - name: Academy paths, quiz grading, badges, and twelve educational sources
+        working-directory: apps/stitch-atlas
+        run: npm run test:academy
       - name: Production Next.js build with CMS disconnected
         working-directory: apps/stitch-atlas
         run: npm run build
