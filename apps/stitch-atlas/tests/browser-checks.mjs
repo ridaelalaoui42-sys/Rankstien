@@ -48,7 +48,10 @@ try{
   assert.equal(academy.status(),200);
   assert.equal(await page.locator('.academy-path-card').count(),3,'Three academy journeys available');
   await page.locator('.academy-path-card').first().getByRole('link',{name:/Explore the journey/}).click();
-  assert.equal(await page.locator('.academy-route-step').count(),4);
+  // Next.js client navigation is asynchronous; wait for the destination and its content.
+  await page.waitForURL(/\/academy\/first-stitches(?:[/?#]|$)/);
+  await page.locator('.academy-route-step').first().waitFor({state:'visible'});
+  assert.equal(await page.locator('.academy-route-step').count(),4,'All four learning steps should render');
   await page.getByRole('link',{name:/Start lesson/}).first().click();
   await page.locator('.academy-quiz-fieldset').waitFor();
   await page.locator('.academy-quiz-option').nth(0).click();
