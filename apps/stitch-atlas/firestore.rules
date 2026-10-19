@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+   match /academyProgress/{userId} {
+     function validOne(id) {
+       return !(id in request.resource.data.completed) || (
+         request.resource.data.completed[id] is map
+         && request.resource.data.completed[id].keys().hasOnly(['score','completedAt'])
+         && request.resource.data.completed[id].keys().hasAll(['score'])
+         && request.resource.data.completed[id].score is int
+         && request.resource.data.completed[id].score >= 2
+         && request.resource.data.completed[id].score <= 3
+         && (!('completedAt' in request.resource.data.completed[id])
+           || request.resource.data.completed[id].completedAt == null
+           || (request.resource.data.completed[id].completedAt is string
+             && request.resource.data.completed[id].completedAt.size() <= 40))
+       );
+     }
+     function validDocument() {
+       return request.resource.data.keys().hasAll(['version','completed','updatedAt'])
+         && request.resource.data.keys().hasOnly(['version','completed','updatedAt'])
+         && request.resource.data.version == 1
+         && request.resource.data.completed is map
+         && request.resource.data.completed.keys().hasOnly([
+           'us-uk-crochet-terms',
+           'crochet-yarn-weights-and-hook-sizes',
+           'how-to-count-crochet-stitches',
+           'how-to-make-magic-ring-crochet',
+           'moss-stitch-crochet-explained',
+           'crochet-right-side-vs-wrong-side',
+           'how-to-measure-crochet-gauge',
+           'crochet-increases-decreases-stitch-math',
+           'how-to-choose-yarn-for-crochet-bags',
+           'how-to-avoid-stretchy-crochet-bag-straps',
+           'how-to-line-a-crochet-bag',
+           'how-to-weave-in-crochet-ends'
+         ])
+         && request.resource.data.updatedAt == request.time
+         && validOne('us-uk-crochet-terms')
+         && validOne('crochet-yarn-weights-and-hook-sizes')
+         && validOne('how-to-count-crochet-stitches')
+         && validOne('how-to-make-magic-ring-crochet')
+         && validOne('moss-stitch-crochet-explained')
+         && validOne('crochet-right-side-vs-wrong-side')
+         && validOne('how-to-measure-crochet-gauge')
+         && validOne('crochet-increases-decreases-stitch-math')
+         && validOne('how-to-choose-yarn-for-crochet-bags')
+         && validOne('how-to-avoid-stretchy-crochet-bag-straps')
+         && validOne('how-to-line-a-crochet-bag')
+         && validOne('how-to-weave-in-crochet-ends');
+     }
+     // The only accessible document must have ID exactly matching auth.uid.
+     allow get: if request.auth != null && request.auth.uid == userId;
+     allow list: if false;
+     allow create, update: if request.auth != null && request.auth.uid == userId
+       && validDocument();
+     allow delete: if false;
+   }
+   // No other collections are accessible from the browser.
+   match /{path=**} { allow read, write: if false; }
+ }
+}
