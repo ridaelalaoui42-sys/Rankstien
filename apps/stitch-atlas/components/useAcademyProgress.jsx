@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ACADEMY_STORAGE_KEY,cleanAcademyProgress,applyQuizResult,getAcademyStats} from '../lib/academy.mjs';
 import {mergeAcademyScores,mergeAcademyBackup,serializeAcademyBackup} from '../lib/academy-backup.mjs';
 import {
- ACADEMY_OWNER_KEY,academyCloudConfigured,watchAcademyGoogleUser,
+ ACADEMY_OWNER_KEY,ACADEMY_GUEST_KEY,academyGenerationKey,sanitizeGeneration,academyCloudConfigured,watchAcademyGoogleUser,
  signInAcademyWithGoogle,signOutAcademyGoogle,syncAcademyGoogleProgress,
  clearAcademyGoogleProgress,
 } from '../lib/academy-cloud.mjs';
@@ -22,10 +22,12 @@ export function useAcademyProgress(){
  const [account,setAccount]=useState(null);
  const [cloudStatus,setCloudStatus]=useState(academyCloudConfigured?'connecting':'unconfigured');
  const [cloudError,setCloudError]=useState('');
+ const [guestCount,setGuestCount]=useState(0);
  const currentRef=useRef(blank());
  const userRef=useRef(null);
  const mountedRef=useRef(false);
  const syncVersionRef=useRef(0);
+ const generationRef=useRef(0);
  const updateProgress=useCallback((value,uid)=>{
    const cleaned=cleanAcademyProgress(value);
    currentRef.current=cleaned;
@@ -35,7 +37,7 @@ export function useAcademyProgress(){
      if(storage){
        storage.setItem(ACADEMY_STORAGE_KEY,JSON.stringify(cleaned));
        if(uid)storage.setItem(ACADEMY_OWNER_KEY,uid);
-       else storage.removeItem(ACADEMY_OWNER_KEY);
+       else{storage.removeItem(ACADEMY_OWNER_KEY);storage.setItem(ACADEMY_GUEST_KEY,JSON.stringify(cleaned));}
      }
      if(mountedRef.current)setStorageError('');
    }catch{
@@ -48,10 +50,14 @@ export function useAcademyProgress(){
    const callId=++syncVersionRef.current;
    if(mountedRef.current){setCloudStatus('syncing');setCloudError('');}
    try{
-     const server=await syncAcademyGoogleProgress(user,initial);
+     const result=await syncAcademyGoogleProgress(user,initial,generationRef.current);
      if(!mountedRef.current||userRef.current?.uid!==user.uid||callId!==syncVersionRef.current)return;
-     // A quiz may have finished while the network was busy. Never erase its new score.
-     const combined=mergeAcademyScores(currentRef.current,server);
+     if(result.generation>generationRef.current){
+       generationRef.current=result.generation;
+       try{window.localStorage.setItem(academyGenerationKey(user.uid),String(result.generation))}catch{}
+     }
+     // A reset on another device must override older cached lessons.
+     const combined=result.stale?result.progress:mergeAcademyScores(currentRef.current,result.progress);
      updateProgress(combined,user.uid);
      if(mountedRef.current)setCloudStatus('saved');
      // If local progress advanced after transaction began, send it on the next
@@ -76,8 +82,10 @@ export function useAcademyProgress(){
        const local=cleanAcademyProgress(raw?JSON.parse(raw):null);
        currentRef.current=local;
        setProgress(local);
+       try{storage?.setItem(ACADEMY_GUEST_KEY,JSON.stringify(local))}catch{}
      }
    }catch{setStorageError('Saved progress could not be read. Your lessons still work; a backup may help recover it.');}
+   try{const raw=storage?.getItem(ACADEMY_GUEST_KEY);setGuestCount(raw?Object.keys(cleanAcademyProgress(JSON.parse(raw)).completed).length:0)}catch{}
    setReady(true);
    if(academyCloudConfigured){
      watchAcademyGoogleUser(async user=>{
@@ -87,8 +95,10 @@ export function useAcademyProgress(){
          // After sign-out on a shared device, remove previous account's cached scores.
          const previousOwner=storage?.getItem(ACADEMY_OWNER_KEY);
          if(previousOwner){
-           currentRef.current=blank();setProgress(blank());
-           try{storage?.removeItem(ACADEMY_STORAGE_KEY);storage?.removeItem(ACADEMY_OWNER_KEY)}catch{}
+           const guestRaw=storage?.getItem(ACADEMY_GUEST_KEY);
+           const savedGuest=cleanAcademyProgress(guestRaw?JSON.parse(guestRaw):null);
+           currentRef.current=savedGuest;setProgress(savedGuest);
+           try{storage?.setItem(ACADEMY_STORAGE_KEY,JSON.stringify(savedGuest));storage?.removeItem(ACADEMY_OWNER_KEY)}catch{}
          }
          return;
        }
@@ -97,11 +107,18 @@ export function useAcademyProgress(){
        let local=blank();
        try{
          const recordedOwner=storage?.getItem(ACADEMY_OWNER_KEY)||'';
-         if(!recordedOwner||recordedOwner===user.uid){
+         if(!recordedOwner){
+           const raw=storage?.getItem(ACADEMY_STORAGE_KEY);
+           const guest=cleanAcademyProgress(raw?JSON.parse(raw):null);
+           storage?.setItem(ACADEMY_GUEST_KEY,JSON.stringify(guest));
+           setGuestCount(Object.keys(guest.completed).length);
+         }else if(recordedOwner===user.uid){
            const raw=storage?.getItem(ACADEMY_STORAGE_KEY);
            local=cleanAcademyProgress(raw?JSON.parse(raw):null);
          }
+         generationRef.current=sanitizeGeneration(Number(storage?.getItem(academyGenerationKey(user.uid))||0));
        }catch{}
+       // Guest lessons are NEVER uploaded automatically on a shared device.
        // Immediately isolate this account, even when online cloud sync is blocked.
        updateProgress(local,user.uid);
        await synchronize(user,local);
@@ -132,19 +149,36 @@ export function useAcademyProgress(){
    if(user){
      setCloudStatus('syncing');setCloudError('');
      try{
-       await clearAcademyGoogleProgress(user);
-       if(userRef.current?.uid!==user.uid)return;
+       const generation=await clearAcademyGoogleProgress(user);
+       if(userRef.current?.uid!==user.uid)return false;
        syncVersionRef.current++;
-       updateProgress(blank(),user.uid);setCloudStatus('saved');
+       generationRef.current=generation;
+       try{window.localStorage.setItem(academyGenerationKey(user.uid),String(generation))}catch{}
+       updateProgress(blank(),user.uid);setCloudStatus('saved');return true;
      }catch{
        setCloudStatus('error');
-       setCloudError('Cloud progress could not be cleared. Your existing milestones have been kept.');
+       setCloudError('Cloud progress could not be cleared. Your existing milestones have been kept.');return false;
      }
    }else{
      syncVersionRef.current++;
      currentRef.current=blank();setProgress(blank());
-     try{const storage=safeLocal();storage?.removeItem(ACADEMY_STORAGE_KEY);storage?.removeItem(ACADEMY_OWNER_KEY);setStorageError('')}catch{setStorageError('Unable to clear saved progress in this browser.');}
+     try{const storage=safeLocal();storage?.removeItem(ACADEMY_STORAGE_KEY);storage?.removeItem(ACADEMY_GUEST_KEY);storage?.removeItem(ACADEMY_OWNER_KEY);setStorageError('');setGuestCount(0)}catch{setStorageError('Unable to clear saved progress in this browser.');}
+     return true;
    }
+ },[updateProgress]);
+ const importGuest=useCallback(async()=>{
+   const user=userRef.current,storage=safeLocal();if(!user||!storage)return false;
+   try{
+     const raw=storage.getItem(ACADEMY_GUEST_KEY);
+     const guest=cleanAcademyProgress(raw?JSON.parse(raw):null);
+     if(!Object.keys(guest.completed).length)return true;
+     setCloudStatus('syncing');setCloudError('');
+     // Explicit opt-in only. Confirm the transaction before erasing the guest copy.
+     const response=await syncAcademyGoogleProgress(user,mergeAcademyScores(currentRef.current,guest),generationRef.current);
+     if(userRef.current?.uid!==user.uid)return false;
+     if(response.stale){generationRef.current=response.generation;updateProgress(response.progress,user.uid);setCloudError('Your account was reset on another device. Please review and retry importing.');setCloudStatus('error');return false;}
+     updateProgress(response.progress,user.uid);storage.removeItem(ACADEMY_GUEST_KEY);setGuestCount(0);setCloudStatus('saved');return true;
+   }catch{setCloudStatus('error');setCloudError('Guest import could not reach the private account. Your guest backup is still on this device.');return false;}
  },[updateProgress]);
  const signIn=useCallback(async()=>{
    if(!academyCloudConfigured)return;
@@ -167,5 +201,5 @@ export function useAcademyProgress(){
    return getAcademyStats(merged).completedCount;
  },[updateProgress,synchronize]);
  const stats=useMemo(()=>getAcademyStats(progress),[progress]);
- return {progress,stats,ready,record,reset,storageError,cloudConfigured:academyCloudConfigured,account,cloudStatus,cloudError,signIn,signOut,syncNow,exportProgress,importProgress};
+ return {progress,stats,ready,record,reset,storageError,cloudConfigured:academyCloudConfigured,account,cloudStatus,cloudError,guestCount,importGuest,signIn,signOut,syncNow,exportProgress,importProgress};
 }
