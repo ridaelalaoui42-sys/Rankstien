@@ -1,3 +1,4 @@
+import {advancedGuides} from './advanced-guides.mjs';
 /**
  * Original skill/reference journalism for the preview publication.
  * Intentionally NOT a collection of invented, physically tested patterns.
@@ -204,7 +205,7 @@ export const learningGuides = [
       ]},
     ],related:['how-to-count-crochet-stitches','us-uk-crochet-terms','how-to-measure-crochet-gauge'],sources:[{title:'Craft Yarn Council: common crochet stitch abbreviations',url:'https://media.craftyarncouncil.com/?q=node%2F31'}]
   }
-];
+, ...advancedGuides];
 
 export const guideCategories = [
   {id:'all',label:'All guides'},
