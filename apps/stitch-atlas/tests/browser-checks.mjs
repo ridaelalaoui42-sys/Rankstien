@@ -65,11 +65,15 @@ try{
   await page.getByRole('button',{name:/Check my answer/}).click();
   await page.getByRole('button',{name:/Finish checkpoint/}).click();
   await page.getByTestId('academy-result').getByText('3/3 answers right').waitFor();
+  const storedAcademy=await page.evaluate(()=>JSON.parse(localStorage.getItem('stitch-atlas.academy.progress.v1')||'null'));
+  assert.equal(storedAcademy?.completed?.['us-uk-crochet-terms']?.score,3,'Perfect quiz must persist to local storage before navigating away');
   await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/academy',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='1/12');
   assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
   assert.equal(await page.getByTestId('academy-xp').textContent(),'75');
   assert.equal(await page.locator('.academy-badge.academy-earned').count(),2,'First Loop + Perfect Swatch');
   await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='1/12');
   assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
   const overflowAcademy=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   assert(overflowAcademy<=1,`Academy horizontal overflow ${overflowAcademy}px at ${width}`);
