@@ -12,6 +12,9 @@ const config={
   appId:process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 export const ACADEMY_OWNER_KEY='stitch-atlas.academy.local-owner.v1';
+export const ACADEMY_GUEST_KEY='stitch-atlas.academy.guest-progress.v1';
+export const academyGenerationKey=uid=>`stitch-atlas.academy.generation.${uid}`;
+export const sanitizeGeneration=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000?n:0;
 export const academyCloudConfigured=Boolean(
   config.apiKey && config.authDomain && config.projectId && config.appId &&
   /^[-\w]+\.firebaseapp\.com$/.test(config.authDomain) &&
@@ -49,19 +52,22 @@ export async function signOutAcademyGoogle(){
   const {auth,authApi}=await runtime();
   return authApi.signOut(auth);
 }
-export async function syncAcademyGoogleProgress(user,localProgress){
+export async function syncAcademyGoogleProgress(user,localProgress,clientGeneration=0){
   if(!user?.uid)throw Error('A signed-in Google account is required.');
   const {auth,db,dbApi}=await runtime();
   if(auth.currentUser?.uid!==user.uid)throw Error('The Google account changed. Progress was not uploaded.');
-  // Firestore transactions merge with latest cloud scores to avoid regressions
-  // from older devices and concurrent sessions. Single owned document / user.
   const ref=dbApi.doc(db,'academyProgress',user.uid);
   return dbApi.runTransaction(db,async transaction=>{
     const snap=await transaction.get(ref);
-    const remote=cleanAcademyProgress(snap.exists()?snap.data():null);
+    const data=snap.exists()?snap.data():null;
+    const remote=cleanAcademyProgress(data);
+    const generation=sanitizeGeneration(data?.generation);
+    // A reset on another device supersedes stale local results. Do not resurrect them.
+    if(generation>sanitizeGeneration(clientGeneration))return {progress:remote,generation,stale:true};
     const merged=mergeAcademyScores(remote,localProgress);
-    transaction.set(ref,{version:ACADEMY_VERSION,completed:merged.completed,updatedAt:dbApi.serverTimestamp()});
-    return merged;
+    if(!snap.exists()||JSON.stringify(remote.completed)!==JSON.stringify(merged.completed))
+      transaction.set(ref,{version:ACADEMY_VERSION,generation,completed:merged.completed,updatedAt:dbApi.serverTimestamp()});
+    return {progress:merged,generation,stale:false};
   },{maxAttempts:5});
 }
 export async function clearAcademyGoogleProgress(user){
@@ -69,5 +75,10 @@ export async function clearAcademyGoogleProgress(user){
   const {auth,db,dbApi}=await runtime();
   if(auth.currentUser?.uid!==user.uid)throw Error('Google account changed during reset.');
   const ref=dbApi.doc(db,'academyProgress',user.uid);
-  await dbApi.setDoc(ref,{version:ACADEMY_VERSION,completed:{},updatedAt:dbApi.serverTimestamp()});
+  return dbApi.runTransaction(db,async transaction=>{
+    const snap=await transaction.get(ref);
+    const generation=sanitizeGeneration(snap.exists()?snap.data()?.generation:0)+1;
+    transaction.set(ref,{version:ACADEMY_VERSION,generation,completed:{},updatedAt:dbApi.serverTimestamp()});
+    return generation;
+  });
 }
