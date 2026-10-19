@@ -55,8 +55,25 @@ service cloud.firestore {
      // The only accessible document must have ID exactly matching auth.uid.
      allow get: if request.auth != null && request.auth.uid == userId;
      allow list: if false;
-     allow create, update: if request.auth != null && request.auth.uid == userId
-       && validDocument();
+     // A device with an old score snapshot cannot undo a cross-device reset.
+     // On a regular sync no learned lessons may disappear; reset must use a
+     // strictly increasing generation with an empty completion map.
+     function safeUpdate() {
+       return (
+         request.resource.data.generation == resource.data.generation
+         && request.resource.data.completed.keys().hasAll(resource.data.completed.keys())
+       ) || (
+         request.resource.data.generation == resource.data.generation + 1
+         && request.resource.data.completed.size() == 0
+       );
+     }
+     allow create: if request.auth != null && request.auth.uid == userId
+       && validDocument()
+       && (request.resource.data.generation == 0
+         || (request.resource.data.generation == 1
+           && request.resource.data.completed.size() == 0));
+     allow update: if request.auth != null && request.auth.uid == userId
+       && validDocument() && safeUpdate();
      allow delete: if false;
    }
    // No other collections are accessible from the browser.

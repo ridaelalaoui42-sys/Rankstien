@@ -13,7 +13,8 @@
     "test:editorial": "node --test tests/editorial-contract.test.mjs tests/editorial-sql-gates.test.mjs tests/offline-workspace.test.mjs",
     "test:guides": "node --test tests/guides-content.test.mjs",
     "test:academy": "node --test tests/academy-content.test.mjs",
-    "test:cloud": "node --test tests/academy-cloud.test.mjs"
+    "test:cloud": "node --test tests/academy-cloud.test.mjs",
+    "test:firestore": "node --test tests/firestore-emulator.test.mjs"
   },
   "dependencies": {
     "next": "15.5.28",
@@ -23,6 +24,7 @@
     "firebase": "^13.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "@firebase/rules-unit-testing": "6.0.0"
   }
 }
