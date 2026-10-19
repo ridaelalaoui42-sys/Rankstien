@@ -152,3 +152,10 @@
 .academy-cloud-status,.academy-cloud-error{font-size:11px;margin:4px 0 0;line-height:1.6}
 .academy-cloud-status{color:#3e6e52}.academy-cloud-error{color:#ac4538}
 @media(max-width:760px){.academy-cloud-account{grid-template-columns:1fr;gap:20px;padding:25px 21px}.academy-account-wrap{padding-bottom:34px}}
+
+.academy-backup-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.academy-backup-buttons button{background:#fffdf8;border:1px solid #c4d0bf;color:#2f5840;min-height:45px;padding:9px 12px;font-size:10px;line-height:1.4;font-weight:750;cursor:pointer}
+.academy-backup-buttons button:hover{background:#e8eee6}
+.academy-backup-buttons button:focus-visible,.academy-cloud-actions button:focus-visible{outline:3px solid #a8543e;outline-offset:3px}
+.academy-backup-status{margin:3px 0 0;font-size:11px;color:#6e705e;line-height:1.7}
+@media(max-width:420px){.academy-backup-buttons{grid-template-columns:1fr}}
