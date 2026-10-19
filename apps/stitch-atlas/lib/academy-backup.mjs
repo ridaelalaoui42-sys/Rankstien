@@ -15,6 +15,19 @@ export function serializeAcademyBackup(progress,now=new Date().toISOString()){
   },null,2);
 }
 
+/** Highest-score merge. No remote leaderboard, no claims of verified proficiency. */
+export function mergeAcademyScores(a,b){
+  const left=cleanAcademyProgress(a),right=cleanAcademyProgress(b);
+  const merged={version:ACADEMY_VERSION,completed:{...left.completed}};
+  for(const [id,incoming] of Object.entries(right.completed)){
+    const old=merged.completed[id];
+    if(!old || incoming.score>old.score){
+      merged.completed[id]={score:incoming.score,completedAt:old?.completedAt||incoming.completedAt||null};
+    }
+  }
+  return merged;
+}
+
 export function mergeAcademyBackup(raw,currentProgress){
   if(typeof raw!=='string'||raw.length>MAX_ACADEMY_BACKUP_BYTES||raw.length===0)
     throw Error('Academy backup must be a nonempty JSON file under 64 KB.');
