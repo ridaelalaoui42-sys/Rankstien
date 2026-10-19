@@ -65,7 +65,7 @@ export async function syncAcademyGoogleProgress(user,localProgress,clientGenerat
     // A reset on another device supersedes stale local results. Do not resurrect them.
     if(generation>sanitizeGeneration(clientGeneration))return {progress:remote,generation,stale:true};
     const merged=mergeAcademyScores(remote,localProgress);
-    if(!snap.exists()||JSON.stringify(remote.completed)!==JSON.stringify(merged.completed))
+    if((snap.exists()||Object.keys(merged.completed).length>0) && (!snap.exists()||JSON.stringify(remote.completed)!==JSON.stringify(merged.completed)))
       transaction.set(ref,{version:ACADEMY_VERSION,generation,completed:merged.completed,updatedAt:dbApi.serverTimestamp()});
     return {progress:merged,generation,stale:false};
   },{maxAttempts:5});

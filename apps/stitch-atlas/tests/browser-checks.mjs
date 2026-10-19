@@ -1,5 +1,6 @@
 /** Optional Playwright smoke suite: run with STITCH_ATLAS_BASE_URL after the site starts. */
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 let playwright;
 try { playwright=await import('@playwright/test'); } catch {console.log('Playwright not installed; see staging CI for full browser audit');process.exit(0)}
 const browser=await playwright.chromium.launch({headless:true});
@@ -72,6 +73,23 @@ try{
   assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
   assert.equal(await page.getByTestId('academy-xp').textContent(),'75');
   assert.equal(await page.locator('.academy-badge.academy-earned').count(),2,'First Loop + Perfect Swatch');
+  if(width===390){
+    // True browser round-trip: export → reset locally → import and restore XP.
+    const [backupDownload]=await Promise.all([
+      page.waitForEvent('download'),page.getByRole('button',{name:/Export progress backup/}).click(),
+    ]);
+    assert.equal(backupDownload.suggestedFilename(),'stitch-atlas-academy-progress.json');
+    const archived=readFileSync(await backupDownload.path());
+    assert.equal(JSON.parse(archived.toString()).kind,'stitch-atlas-academy-backup');
+    await page.getByRole('button',{name:/Start over on this device/}).click();
+    await page.getByRole('button',{name:/Yes, clear progress/}).click();
+    await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='0/12');
+    await page.locator('input[aria-label="Select progress backup JSON file"]').setInputFiles({
+      name:'stitch-atlas-backup.json',mimeType:'application/json',buffer:archived,
+    });
+    await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='1/12');
+    assert.equal(await page.getByTestId('academy-xp').textContent(),'75');
+  }
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='1/12');
   assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
