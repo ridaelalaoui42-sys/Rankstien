@@ -11,6 +11,8 @@ try{
   const response=await page.goto(process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000',{waitUntil:'networkidle'});
   assert.equal(response.status(),200,`Homepage HTTP response at ${width}`);
   assert.equal(await page.locator('h1').count(),1,'Exactly one homepage H1');
+  assert.match(await page.getByRole('link',{name:/Start learning for free/}).getAttribute('href'),/^\/academy$/,'Primary homepage action must open the free Academy');
+  assert.match(await page.locator('.header-cta').getAttribute('href'),/^\/academy$/,'Header CTA must open free lessons');
   const documentWidth=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   assert(documentWidth<=1,`Horizontal overflow ${documentWidth}px at ${width}`);
   if(width<1024){const button=page.getByRole('button',{name:'Open navigation'});await button.click();assert.equal(await page.getByRole('navigation',{name:'Main navigation'}).isVisible(),true);await page.keyboard.press('Escape')}
