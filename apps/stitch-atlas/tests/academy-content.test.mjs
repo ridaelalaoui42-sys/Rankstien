@@ -73,6 +73,16 @@ test('progress is local, replay-safe, only mastered lessons earn badges and poin
  assert.equal(stats.badges.length,ACADEMY_BADGES.length);assert(stats.paths.every(p=>p.complete));
 });
 
+test('homepage and header direct visitors to real free lessons, not unfinished pattern concepts',()=>{
+ const homepage=text('app/page.jsx'),header=text('components/SiteHeader.jsx');
+ assert(homepage.includes('Start learning for free'));
+ assert(homepage.includes('href="/academy"'));
+ assert(homepage.includes('Explore free guides'));
+ assert(homepage.includes('will only be published after real testing'));
+ assert(header.includes('className="header-cta">Learn for free'));
+ assert(header.includes("['/patterns','Pattern library']"),'Research library remains accessible from navigation');
+});
+
 test('recommended next lesson resumes in order, ignores corrupt scores and handles full completion',()=>{
  const start=getAcademyNextLesson(null);
  assert.equal(start.pathId,'first-stitches');
