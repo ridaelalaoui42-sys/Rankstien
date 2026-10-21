@@ -2,7 +2,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {useState} from 'react';
-import {ACADEMY_BADGES,academyPaths} from '../lib/academy.mjs';
+import {ACADEMY_BADGES,academyPaths,getAcademyNextLesson} from '../lib/academy.mjs';
+import {guideBySlug} from '../lib/guides.mjs';
 import {useAcademyProgress} from './useAcademyProgress.jsx';
 import AcademyCloudAccount from './AcademyCloudAccount.jsx';
 
@@ -25,6 +26,8 @@ export default function AcademyDashboard(){
  const academy=useAcademyProgress();
  const {progress,stats,ready,reset,storageError}=academy;
  const [confirmReset,setConfirmReset]=useState(false);
+ const nextLesson=ready?getAcademyNextLesson(progress):null;
+ const nextGuide=nextLesson?guideBySlug(nextLesson.lessonId):null;
  return <main id="main" className="academy-root">
    <div className="academy-masthead"><div className="container academy-masthead-inner"><div className="academy-masthead-text">
       <p className="academy-overline">STITCH ATLAS PRESENTS · THE MAKER'S ACADEMY</p>
@@ -40,6 +43,24 @@ export default function AcademyDashboard(){
      <Wreath percent={ready?stats.percent:0}/>
      <div className="academy-stats-panel"><div><strong data-testid="academy-completed">{ready?stats.completedCount:0}<span>/{stats.totalCount}</span></strong><small>LESSONS FINISHED</small></div><div><strong data-testid="academy-xp">{ready?stats.xp:0}</strong><small>LEARNING POINTS</small></div></div>
    </section>
+   {ready?<section className="container academy-next-wrap" aria-labelledby="academy-next-title" data-testid="academy-next-panel">
+     <div className="academy-next-card">
+       {nextLesson?<><div className="academy-next-copy">
+         <p className="academy-overline">{nextLesson.completedCount?'PICK UP WHERE YOU LEFT OFF':'A LOVELY PLACE TO BEGIN'}</p>
+         <h2 id="academy-next-title">{nextLesson.completedCount?'Your next little':'Your very first'} <em>discovery.</em></h2>
+         <p className="academy-next-lesson-name">{nextGuide?.shortTitle||nextGuide?.title||nextLesson.pathTitle}</p>
+         <p>Journey: {nextLesson.pathTitle} · Lesson {nextLesson.lessonNumber} of {nextLesson.lessonsInPath}. Read the illustrated guide, then try the three-question checkpoint.</p>
+       </div><div className="academy-next-action">
+         <span>{nextLesson.completedCount} of {nextLesson.totalCount} lessons finished</span>
+         <Link data-testid="academy-next-lesson" href={nextLesson.href} className="academy-next-link">{nextLesson.completedCount?'Continue learning':'Start the first lesson'} <span aria-hidden="true">↗</span></Link>
+         <a href="#paths" className="academy-next-secondary">Browse all journeys ↓</a>
+       </div></>:<><div className="academy-next-copy">
+         <p className="academy-overline">EVERY LITTLE LOOP COUNTS</p>
+         <h2 id="academy-next-title">You've explored <em>every journey.</em></h2>
+         <p>All twelve learning checkpoints are complete. Your guides stay free to revisit, and your best quiz scores remain saved on this device.</p>
+       </div><div className="academy-next-action"><span>12 of 12 lessons finished</span><Link href="/guides" className="academy-next-link">Revisit the guides ↗</Link><a href="#paths" className="academy-next-secondary">Review learning paths ↓</a></div></>}
+     </div>
+   </section>:null}
    {storageError?<p className="container academy-storage-warning" role="status">{storageError}</p>:null}
    <div className="container academy-account-wrap"><AcademyCloudAccount {...academy}/></div>
    <section id="paths" className="academy-paths-section" aria-labelledby="academy-paths-title"><div className="container"><div className="academy-section-heading"><p className="academy-overline">THE LEARNING MAP / SELECT A JOURNEY</p><h2 id="academy-paths-title">A world of <em>wonderful loops.</em></h2><p>Each lesson links to a free in-depth guide, plus a three-question checkpoint. You can revisit any step at any time.</p></div><div className="academy-path-grid">{academyPaths.map((path,i)=><PathTile key={path.id} path={path} index={i} progress={progress}/>)}</div></div></section>

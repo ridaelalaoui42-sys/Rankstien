@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {existsSync,readFileSync,statSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {learningGuides,guideBySlug,guideWordCount} from '../lib/guides.mjs';
-import {ACADEMY_STORAGE_KEY,ACADEMY_QUESTIONS_PER_LESSON,PASS_SCORE,ACADEMY_BADGES,academyPaths,academyQuizzes,gradeQuiz,getAcademyLesson,getAcademyPath,applyQuizResult,cleanAcademyProgress,getAcademyStats,totalAcademyLessons} from '../lib/academy.mjs';
+import {ACADEMY_STORAGE_KEY,ACADEMY_QUESTIONS_PER_LESSON,PASS_SCORE,ACADEMY_BADGES,academyPaths,academyQuizzes,gradeQuiz,getAcademyLesson,getAcademyPath,applyQuizResult,cleanAcademyProgress,getAcademyStats,getAcademyNextLesson,totalAcademyLessons} from '../lib/academy.mjs';
 const root=resolve(import.meta.dirname,'..');
 const text=rel=>readFileSync(join(root,rel),'utf8');
 const read=rel=>readFileSync(join(root,rel));
@@ -71,6 +71,42 @@ test('progress is local, replay-safe, only mastered lessons earn badges and poin
  for(const path of academyPaths)for(const id of path.lessons){const q=academyQuizzes[id];all=applyQuizResult(all,id,gradeQuiz(id,q.map(x=>x.answer)));}
  const stats=getAcademyStats(all);assert.equal(stats.completedCount,12);assert.equal(stats.percent,100);assert.equal(stats.xp,900);
  assert.equal(stats.badges.length,ACADEMY_BADGES.length);assert(stats.paths.every(p=>p.complete));
+});
+
+test('homepage and header direct visitors to real free lessons, not unfinished pattern concepts',()=>{
+ const homepage=text('app/page.jsx'),header=text('components/SiteHeader.jsx');
+ assert(homepage.includes('Start learning for free'));
+ assert(homepage.includes('href="/academy"'));
+ assert(homepage.includes('Explore free guides'));
+ assert(homepage.includes('will only be published after real testing'));
+ assert(header.includes('className="header-cta">Learn for free'));
+ assert(header.includes("['/patterns','Pattern library']"),'Research library remains accessible from navigation');
+});
+
+test('recommended next lesson resumes in order, ignores corrupt scores and handles full completion',()=>{
+ const start=getAcademyNextLesson(null);
+ assert.equal(start.pathId,'first-stitches');
+ assert.equal(start.lessonId,'us-uk-crochet-terms');
+ assert.equal(start.href,'/academy/first-stitches/us-uk-crochet-terms');
+ assert.equal(start.completedCount,0);
+ let progress=cleanAcademyProgress(null);
+ const passed=id=>gradeQuiz(id,academyQuizzes[id].map(q=>q.answer));
+ progress=applyQuizResult(progress,'us-uk-crochet-terms',passed('us-uk-crochet-terms'));
+ const next=getAcademyNextLesson(progress);
+ assert.equal(next.lessonId,'crochet-yarn-weights-and-hook-sizes');
+ assert.equal(next.lessonNumber,2);
+ assert.equal(next.completedCount,1);
+ assert.equal(getAcademyNextLesson({completed:{'unknown':{score:3}}}).lessonId,start.lessonId);
+ for(const id of academyPaths[0].lessons.slice(1))progress=applyQuizResult(progress,id,passed(id));
+ assert.equal(getAcademyNextLesson(progress).pathId,'read-the-fabric');
+ for(const path of academyPaths.slice(1))for(const id of path.lessons)progress=applyQuizResult(progress,id,passed(id));
+ assert.equal(getAcademyNextLesson(progress),null,'Completing everything must never suggest a finished lesson');
+ assert.equal(getAcademyNextLesson({completed:{}}).lessonId,start.lessonId);
+ const dashboard=text('components/AcademyDashboard.jsx');
+ assert(dashboard.includes('getAcademyNextLesson'));
+ assert(dashboard.includes('data-testid="academy-next-lesson"'));
+ assert(dashboard.includes('Revisit the guides'));
+ assert(text('app/layout.jsx').includes("import '../styles/continue-learning.css'"));
 });
 
 test('new editorial illustrations and 12 Pinterest drafts are original and ready for later verified destinations',()=>{
