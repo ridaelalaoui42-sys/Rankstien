@@ -48,6 +48,8 @@ try{
   const academy=await page.goto((process.env.STITCH_ATLAS_BASE_URL||'http://localhost:3000')+'/academy',{waitUntil:'domcontentloaded'});
   assert.equal(academy.status(),200);
   assert.equal(await page.locator('.academy-path-card').count(),3,'Three academy journeys available');
+  await page.getByTestId('academy-next-panel').waitFor();
+  assert.match(await page.getByTestId('academy-next-lesson').getAttribute('href'),/\/academy\/first-stitches\/us-uk-crochet-terms$/,'Empty progress should suggest the first lesson');
   await page.locator('.academy-path-card').first().getByRole('link',{name:/Explore the journey/}).click();
   // Next.js client navigation is asynchronous; wait for the destination and its content.
   await page.waitForURL(/\/academy\/first-stitches(?:[/?#]|$)/);
@@ -72,6 +74,7 @@ try{
   await page.waitForFunction(()=>document.querySelector('[data-testid="academy-completed"]')?.textContent?.trim()==='1/12');
   assert.match(await page.getByTestId('academy-completed').textContent(),/1\/12/);
   assert.equal(await page.getByTestId('academy-xp').textContent(),'75');
+  assert.match(await page.getByTestId('academy-next-lesson').getAttribute('href'),/\/academy\/first-stitches\/crochet-yarn-weights-and-hook-sizes$/,'Resume CTA should advance past the completed lesson');
   assert.equal(await page.locator('.academy-badge.academy-earned').count(),2,'First Loop + Perfect Swatch');
   if(width===390){
     // True browser round-trip: export → reset locally → import and restore XP.
