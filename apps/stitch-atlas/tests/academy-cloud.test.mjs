@@ -69,6 +69,7 @@ test('Firestore reset generation is monotonic and only increases by one for an e
   assert.match(rules,/function validTransition\(\)/);
   assert.match(rules,/request\.resource\.data\.generation == resource\.data\.generation/);
   assert.match(rules,/request\.resource\.data\.generation == resource\.data\.generation \+ 1/);
+  assert.match(rules,/request\.resource\.data\.completed\.keys\(\)\.hasAll\(resource\.data\.completed\.keys\(\)\)/);
   assert.match(rules,/request\.resource\.data\.completed\.keys\(\)\.size\(\) == 0/);
   assert.match(rules,/allow create: if[\s\S]*?validDocument\(\);/);
   assert.match(rules,/allow update: if[\s\S]*?validDocument\(\)[\s\S]*?&& validTransition\(\);/);
