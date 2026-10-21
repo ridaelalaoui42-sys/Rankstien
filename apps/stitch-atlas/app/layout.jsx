@@ -1,6 +1,7 @@
 import './globals.css';
 import '../styles/guides.css';
 import '../styles/academy.css';
+import '../styles/continue-learning.css';
 import SiteHeader from '../components/SiteHeader';
 import Footer from '../components/Footer';
 const title='Stitch Atlas | Crochet Patterns, Stitches & Handmade Living';
