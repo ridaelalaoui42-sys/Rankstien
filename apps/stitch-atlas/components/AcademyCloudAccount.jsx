@@ -1,9 +1,10 @@
 'use client';
 /** Calm optional account UI. No dark patterns or forced signup. */
 import {useRef,useState} from 'react';
-export default function AcademyCloudAccount({cloudConfigured,account,cloudStatus,cloudError,signIn,signOut,syncNow,exportProgress,importProgress}){
+export default function AcademyCloudAccount({cloudConfigured,account,cloudStatus,cloudError,guestCount,importGuest,signIn,signOut,syncNow,exportProgress,importProgress}){
  const inputRef=useRef(null);
  const [backupStatus,setBackupStatus]=useState('');
+ const [confirmGuest,setConfirmGuest]=useState(false);
  const downloadBackup=()=>{try{
    const data=exportProgress();
    const blob=new Blob([data],{type:'application/json'});
@@ -32,6 +33,7 @@ export default function AcademyCloudAccount({cloudConfigured,account,cloudStatus
      {account?<><div className="academy-cloud-identity"><strong>{account.name}</strong><small>{account.email}</small></div><button type="button" className="academy-cloud-button" onClick={syncNow} disabled={cloudStatus==='syncing'}>↻ {cloudStatus==='syncing'?'Syncing your progress…':'Sync progress now'}</button><button type="button" className="academy-cloud-secondary" onClick={signOut}>Sign out of Google</button></>:
        cloudConfigured?<button className="academy-google-button" type="button" disabled={cloudStatus==='connecting'} onClick={signIn}><span aria-hidden="true">G</span> {cloudStatus==='connecting'?'Connecting…':'Continue with Google'}</button>:
        <div className="academy-cloud-unconfigured" role="status">✳ Google cloud saving is not connected yet. Your guest progress stays on this device.</div>}
+     {account&&guestCount>0?<div className="academy-cloud-guest-import"><p>{guestCount} guest lesson result{guestCount===1?'':'s'} remain on this browser. They have <strong>not</strong> been uploaded to this Google account.</p>{confirmGuest?<div className="academy-cloud-guest-confirm"><span>Merge these guest lessons into this account? Highest scores will be kept.</span><button type="button" onClick={async()=>{if(await importGuest())setConfirmGuest(false)}}>Yes, import guest progress</button><button type="button" onClick={()=>setConfirmGuest(false)}>Not now</button></div>:<button type="button" onClick={()=>setConfirmGuest(true)}>Import guest progress ↗</button>}</div>:null}
      {account&&cloudStatus==='saved'?<p className="academy-cloud-status" role="status">✓ Best scores synced to your private account.</p>:null}
      <div className="academy-backup-buttons" role="group" aria-label="Portable Academy progress">
        <button type="button" onClick={downloadBackup}>↓ Export progress backup</button>

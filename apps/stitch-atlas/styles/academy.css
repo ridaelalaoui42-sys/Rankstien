@@ -159,3 +159,13 @@
 .academy-backup-buttons button:focus-visible,.academy-cloud-actions button:focus-visible{outline:3px solid #a8543e;outline-offset:3px}
 .academy-backup-status{margin:3px 0 0;font-size:11px;color:#6e705e;line-height:1.7}
 @media(max-width:420px){.academy-backup-buttons{grid-template-columns:1fr}}
+
+/* Guest progress is never uploaded into a Google account without affirmative consent. */
+.academy-cloud-guest-import{background:#fff6e9;border-left:3px solid #ba795b;padding:15px 17px;color:#3f5947;font-size:12px;line-height:1.7}
+.academy-cloud-guest-import p{margin:0 0 12px;line-height:1.75}
+.academy-cloud-guest-import button{background:#2e523d;color:#fff;padding:11px 15px;border:0;font-size:11px;font-weight:700;cursor:pointer;min-height:40px}
+.academy-cloud-guest-import button:hover{background:#436e51}
+.academy-cloud-guest-import button:focus-visible{outline:3px solid #b56c4f;outline-offset:3px}
+.academy-cloud-guest-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.academy-cloud-guest-confirm>span{font-weight:600}
+.academy-cloud-guest-confirm button:last-child{background:transparent;color:#2e523d;border:1px solid #9fb3a2}

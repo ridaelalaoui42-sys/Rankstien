@@ -16,10 +16,21 @@ service cloud.firestore {
              && request.resource.data.completed[id].completedAt.size() <= 40))
        );
      }
+     // A reset is the ONLY operation that may advance the account generation.
+     // Older devices must not decrease it or resurrect pre-reset scores.
+     function validTransition() {
+       return (request.resource.data.generation == resource.data.generation
+           && request.resource.data.completed.keys().hasAll(resource.data.completed.keys()))
+         || (request.resource.data.generation == resource.data.generation + 1
+           && request.resource.data.completed.keys().size() == 0);
+     }
      function validDocument() {
-       return request.resource.data.keys().hasAll(['version','completed','updatedAt'])
-         && request.resource.data.keys().hasOnly(['version','completed','updatedAt'])
+       return request.resource.data.keys().hasAll(['version','generation','completed','updatedAt'])
+         && request.resource.data.keys().hasOnly(['version','generation','completed','updatedAt'])
          && request.resource.data.version == 1
+         && request.resource.data.generation is int
+         && request.resource.data.generation >= 0
+         && request.resource.data.generation <= 1000000
          && request.resource.data.completed is map
          && request.resource.data.completed.keys().hasOnly([
            'us-uk-crochet-terms',
@@ -52,8 +63,11 @@ service cloud.firestore {
      // The only accessible document must have ID exactly matching auth.uid.
      allow get: if request.auth != null && request.auth.uid == userId;
      allow list: if false;
-     allow create, update: if request.auth != null && request.auth.uid == userId
+     allow create: if request.auth != null && request.auth.uid == userId
        && validDocument();
+     allow update: if request.auth != null && request.auth.uid == userId
+       && validDocument()
+       && validTransition();
      allow delete: if false;
    }
    // No other collections are accessible from the browser.
