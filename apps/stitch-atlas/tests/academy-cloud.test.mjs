@@ -64,6 +64,17 @@ test('Firestore rules restrict own document, known lessons, safe scores and disa
   for(const path of academyPaths)for(const id of path.lessons)assert(rules.includes("validOne('"+id+"')"));
 });
 
+test('Firestore reset generation is monotonic and only increases by one for an empty reset',()=>{
+  const rules=file('firestore.rules');
+  assert.match(rules,/function validTransition\(\)/);
+  assert.match(rules,/request\.resource\.data\.generation == resource\.data\.generation/);
+  assert.match(rules,/request\.resource\.data\.generation == resource\.data\.generation \+ 1/);
+  assert.match(rules,/request\.resource\.data\.completed\.keys\(\)\.size\(\) == 0/);
+  assert.match(rules,/allow create: if[\s\S]*?validDocument\(\);/);
+  assert.match(rules,/allow update: if[\s\S]*?validDocument\(\)[\s\S]*?&& validTransition\(\);/);
+  assert.doesNotMatch(rules,/allow create, update:/);
+});
+
 test('dashboard presents a guest path and an account path without publishing personal details',()=>{
   const dash=file('components/AcademyDashboard.jsx');
   const panel=file('components/AcademyCloudAccount.jsx');
