@@ -19,7 +19,8 @@ service cloud.firestore {
      // A reset is the ONLY operation that may advance the account generation.
      // Older devices must not decrease it or resurrect pre-reset scores.
      function validTransition() {
-       return request.resource.data.generation == resource.data.generation
+       return (request.resource.data.generation == resource.data.generation
+           && request.resource.data.completed.keys().hasAll(resource.data.completed.keys()))
          || (request.resource.data.generation == resource.data.generation + 1
            && request.resource.data.completed.keys().size() == 0);
      }
