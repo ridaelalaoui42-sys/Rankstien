@@ -110,6 +110,25 @@ export function applyQuizResult(progress,lessonId,grade,completedAt=new Date().t
  base.completed[lessonId]={score,completedAt:base.completed[lessonId]?.completedAt||completedAt};
  return base;
 }
+/** A deterministic, privacy-preserving next step: no cookies, API calls, or accounts.
+ * Recommend the earliest unfinished checkpoint in the original reading order.
+ * Returning null is the explicit all-completed state.
+ */
+export function getAcademyNextLesson(progress){
+ const safe=cleanAcademyProgress(progress);
+ const done=new Set(Object.keys(safe.completed));
+ for(const path of academyPaths){
+  const index=path.lessons.findIndex(id=>!done.has(id));
+  if(index!==-1)return {
+   pathId:path.id,pathTitle:path.title,lessonId:path.lessons[index],
+   lessonNumber:index+1,lessonsInPath:path.lessons.length,
+   completedCount:done.size,totalCount:totalAcademyLessons,
+   href:`/academy/${path.id}/${path.lessons[index]}`
+  };
+ }
+ return null;
+}
+
 export function getAcademyStats(progress){
  const safe=cleanAcademyProgress(progress),ids=Object.keys(safe.completed),complete=new Set(ids);
  const paths=academyPaths.map(path=>({...path,completedCount:path.lessons.filter(id=>complete.has(id)).length,complete:path.lessons.every(id=>complete.has(id))}));
