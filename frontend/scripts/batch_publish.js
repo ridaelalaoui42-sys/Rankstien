@@ -3,8 +3,15 @@ const fs = require('fs');
 const path = require('path');
 
 async function publishPosts() {
-  const CMS_API_KEY = 'aura_cms_secure_receta_2026';
-  const PUBLISH_URL = 'http://localhost:3000/api/publish';
+  const CMS_API_KEY = process.env.CMS_API_KEY;
+  const PUBLISH_URL = process.env.PUBLISH_URL || 'http://localhost:3000/api/publish';
+  if (!CMS_API_KEY) {
+    throw new Error('CMS_API_KEY environment variable is required; do not embed publishing credentials in source control.');
+  }
+  const parsedUrl = new URL(PUBLISH_URL);
+  if (parsedUrl.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(parsedUrl.hostname)) {
+    throw new Error('Remote publishing requires an HTTPS PUBLISH_URL.');
+  }
   
   const files = fs.readdirSync('.').filter(f => f.startsWith('temp_post_') && f.endsWith('.json'));
   
